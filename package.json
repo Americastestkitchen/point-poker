@@ -1,0 +1,24 @@
+{
+  "name": "point-poker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "node --env-file-if-exists=.env.local --watch server/index.ts",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env.local server/index.ts",
+    "test": "node --test server/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "ws": "^8.22.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

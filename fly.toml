@@ -1,0 +1,35 @@
+# Point Poker on Fly.io.
+# Tables live in memory, so this must run as exactly ONE machine that never
+# sleeps: a second machine would split players, and sleeping wipes tables.
+# Jira credentials and HOST_PASSCODE are Fly secrets (`fly secrets set`), not here.
+
+app = "point-poker"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 500
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
