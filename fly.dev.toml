@@ -1,0 +1,35 @@
+# Point Poker DEV on Fly.io (deployed on every push to develop).
+# Still exactly ONE machine (tables live in memory), but it may sleep when idle.
+# Jira credentials and HOST_PASSCODE are Fly secrets (`fly secrets set`), not here.
+
+app = "point-poker-dev"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # dev may sleep when idle (tables are wiped then; fine for testing)
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 500
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
