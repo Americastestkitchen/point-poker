@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { settle } from "./game.ts";
-import { parseIssueKey, adfToText } from "./jira.ts";
+import { DECKS } from "../../shared/catalog/decks.ts";
+import { settle as settleWith } from "./coins.ts";
+
+const settle = (votes: Map<string, number>, finalPoints: number) => settleWith(votes, finalPoints, DECKS.classic.cards);
 
 test("closest single player takes the whole pot", () => {
   const r = settle(new Map([["a", 2], ["b", 5], ["c", 8]]), 5);
@@ -36,17 +38,8 @@ test("nobody voted means nobody wins", () => {
   assert.deepEqual(settle(new Map(), 5), { pot: 0, winners: [], share: 0 });
 });
 
-test("issue keys come out of links and bare keys", () => {
-  assert.equal(parseIssueKey("https://x.atlassian.net/browse/SD-1975"), "SD-1975");
-  assert.equal(parseIssueKey("https://x.atlassian.net/jira/software/c/projects/SD/boards/1?selectedIssue=SD-42"), "SD-42");
-  assert.equal(parseIssueKey(" sd-7 "), "SD-7");
-  assert.equal(parseIssueKey("nope"), null);
-});
-
-test("ADF flattens to text", () => {
-  const doc = { type: "doc", content: [
-    { type: "paragraph", content: [{ type: "text", text: "Hello " }, { type: "text", text: "world" }] },
-    { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "one" }] }] }] },
-  ] };
-  assert.equal(adfToText(doc).trim(), "Hello world\n\n• one");
+test("'within one card' follows the deck's order, not the numbers", () => {
+  const sizes = [1, 2, 4, 8, 16].map((p) => ({ label: String(p), points: p }));
+  assert.deepEqual(settleWith(new Map([["a", 4]]), 8, sizes).winners, ["a"]);
+  assert.deepEqual(settleWith(new Map([["a", 2]]), 8, sizes).winners, []);
 });

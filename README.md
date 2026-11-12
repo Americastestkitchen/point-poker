@@ -61,9 +61,16 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 ### Where to go next
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets.
-- [TODO.md](TODO.md): what we're thinking about next.
-- The code: `server/` (game rules, Jira, rooms), `client/` (3D table and UI), and
-  `shared/protocol.ts` (the messages between them, which is the best place to start reading).
+- [GitHub issues](https://github.com/JaiiR320/point-poker/issues): what we're thinking about next.
+- The code: `shared/protocol.ts` (the messages between server and browser, as Zod schemas)
+  is the best place to start reading. Then:
+  - `server/main.ts` reads the environment and wires everything together.
+  - `server/table/` is one poker table: its state, rules, commands and payouts (`coins.ts`).
+    It's plain logic with unit tests, no sockets.
+  - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
+    (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
+  - `client/` is the 3D table and UI.
+  - `test/session.test.ts` plays a whole game against the real server.
 
 ## How to play
 

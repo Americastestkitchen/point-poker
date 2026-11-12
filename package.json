@@ -3,20 +3,21 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "main": "server/index.ts",
+  "main": "server/main.ts",
   "scripts": {
     "dev": "vite",
-    "dev:server": "node --env-file-if-exists=.env.local --watch server/index.ts",
+    "dev:server": "node --env-file-if-exists=.env.local --watch server/main.ts",
     "build": "vite build",
-    "start": "node --env-file-if-exists=.env.local server/index.ts",
-    "test": "node --test \"server/**/*.test.ts\" \"test/*.test.ts\"",
+    "start": "node --env-file-if-exists=.env.local server/main.ts",
+    "test": "node --test \"shared/**/*.test.ts\" \"server/**/*.test.ts\" \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run build",
     "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "three": "^0.187.0",
-    "ws": "^8.22.2"
+    "ws": "^8.22.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
