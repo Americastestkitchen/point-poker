@@ -2,32 +2,72 @@
 
 # Point Poker
 
-Story-point poker in a dingy 3D basement. The dealer puts a Jira ticket (or an epic) on the table, everyone secretly plays a Fibonacci card, the cards flip, and the dealer sets the final points. Closest guess takes the pot (the sum of all cards) as long as it is within one card of the final call, otherwise the house keeps it; ties split it.
+A silly 3D story-point poker game for our standups. The dealer puts a Jira ticket on the
+table, everyone secretly plays a card (1, 2, 3, 5, 8), the cards flip, and the dealer
+calls the final points. The closest guess wins the pot.
 
-## Run
+- **Live:** https://point-poker.fly.dev
+- **Dev (latest `develop`):** https://point-poker-dev.fly.dev
+
+## Start here
+
+### Where things live
+
+| Thing | Where | You need access? |
+|---|---|---|
+| Code | this GitHub repo | Yes: ask Jair to add you |
+| Live and dev sites | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you |
+| Tickets | Jira (the game only **reads** it) | Only to show real tickets locally |
+| Secrets (Jira token, host passcode) | Fly, plus `.env.local` on your machine | Ask Jair if you need them |
+
+### How a change reaches people
+
+```
+you open a pull request ──▶ its own preview site, linked in a PR comment
+you push to develop ──▶ dev site updates (about 1 min)
+merge to main + npm run release ──▶ live site updates + a GitHub Release
+```
+
+Everything in that path is automatic. See [CONTRIBUTING.md](CONTRIBUTING.md) for the exact commands.
+
+### Run it on your machine
 
 ```sh
 npm install
 npm run build
-npm start            # http://localhost:8787
+npm start                  # http://localhost:8787
 ```
 
-`.env.local` (gitignored):
+That's enough to play with hand-typed tickets. To show real Jira tickets, create
+`.env.local` (it's never committed):
 
 ```
 JIRA_BASE_URL=https://yoursite.atlassian.net
 JIRA_EMAIL=you@example.com
-JIRA_API_TOKEN=...
-HOST_PASSCODE=...          # needed to open a table; players only need the invite link
-JIRA_POINTS_FIELD=customfield_10004   # optional
-JIRA_PROJECT=SD                       # optional, for "Sprint tickets"
+JIRA_API_TOKEN=...         # make one at id.atlassian.com → Security → API tokens
+HOST_PASSCODE=...          # anything; you type it when opening a table
 ```
 
-Jira access is read-only (GET requests only). Without Jira settings the dealer can type tickets in by hand.
+For hot reload while coding, run `npm run dev:server` and `npm run dev` together.
 
-Dev mode with hot reload: `npm run dev:server` and `npm run dev` (Vite proxies `/api` and `/ws`).
+### Good to know
 
-## Play
+- **Never write to Jira.** The game only reads tickets, and that's on purpose. Points get
+  entered in Jira by a person.
+- **Tables live in memory.** Restarting or deploying a site wipes its open tables, so only
+  release to the live site when nobody is mid-game.
+- **Secrets never go in the repo.** If you see a token in a diff, stop and tell someone.
 
-- **Dealer:** "Open a table", copy the invite link, paste a ticket or epic link, Deal → Reveal → pick final points → Settle → Next. An epic loads its child tickets as a queue.
-- **Players:** open the link, pick a name/colour/hat, click a card (or ←/→ + Enter). Drag to look around, Z X C V to emote, click someone to flick a chip at their head, and click the duck to make it squeak.
+### Where to go next
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets.
+- [TODO.md](TODO.md): what we're thinking about next.
+- The code: `server/` (game rules, Jira, rooms), `client/` (3D table and UI), and
+  `shared/protocol.ts` (the messages between them, which is the best place to start reading).
+
+## How to play
+
+- **Dealer:** open a table (needs the host passcode) and share the invite link. Then add a
+  ticket (or an epic, to queue its children), reveal the cards, and pick the final points.
+- **Players:** open the invite link, pick a body, colour and hat, and click a card.
+  Drag to look around, use Z X C V to emote, click someone to throw a chip, and click the duck.

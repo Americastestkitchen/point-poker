@@ -1,0 +1,70 @@
+# Every pull request gets its own throwaway site: https://point-poker-pr-<number>.fly.dev
+# It's created when the PR opens, redeployed on every push, and deleted when the PR closes.
+# Previews have no Jira connection (type tickets in by hand).
+name: PR preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+concurrency:
+  group: pr-preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  APP: point-poker-pr-${{ github.event.number }}
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PREVIEW }}
+  FLY_ORG: personal
+  MARKER: "<!-- point-poker-preview -->"
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Create the preview app (first push only)
+        run: flyctl status -a "$APP" >/dev/null 2>&1 || flyctl apps create "$APP" --org "$FLY_ORG"
+      - name: Set the host passcode
+        run: flyctl secrets set HOST_PASSCODE="$HOST_PASSCODE" -a "$APP" --stage
+        env:
+          HOST_PASSCODE: ${{ secrets.HOST_PASSCODE }}
+      - name: Deploy
+        run: flyctl deploy --remote-only --ha=false --config fly.dev.toml -a "$APP"
+      - name: Comment the link on the PR
+        run: |
+          body="$MARKER
+          🃏 **Preview:** https://$APP.fly.dev
+          Updated for \`${GITHUB_SHA::7}\`. It sleeps when idle and is deleted when this PR closes. No Jira here, so type tickets in by hand."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$id" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" >/dev/null
+          else gh pr comment ${{ github.event.number }} --body "$body"; fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+
+  destroy:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Delete the preview app
+        run: flyctl apps destroy "$APP" --yes || echo "Nothing to delete"
+      - name: Note it on the PR
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          [ -n "$id" ] && gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$MARKER
+          🃏 Preview deleted (PR closed)." >/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}

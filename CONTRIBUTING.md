@@ -1,7 +1,5 @@
 # Making changes
 
-Simple on purpose. We'll add to it as we need more.
-
 ## Branches and environments
 
 | Branch | What it is | Deploys to |
@@ -23,7 +21,11 @@ git push                 # -> CI, then deploys to the dev site
 ```
 
 For bigger changes, branch off `develop` (`feature/whatever`) and open a pull request into
-`develop`. CI runs on every pull request.
+`develop`. Every pull request gets:
+- **CI:** typecheck, tests and build.
+- **A preview site:** `https://point-poker-pr-<number>.fly.dev`, linked in a PR comment. It
+  redeploys on every push and is deleted when the PR closes. Previews have no Jira, so type
+  tickets in by hand.
 
 ## Releasing to production
 
@@ -49,6 +51,8 @@ GitHub Actions then:
 - **Fly (runtime):** `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` and `HOST_PASSCODE` are set
   per app with `fly secrets set -a point-poker` / `-a point-poker-dev`.
 - **GitHub (deploys):** `FLY_API_TOKEN_DEV` and `FLY_API_TOKEN_PROD` are app-scoped Fly deploy tokens.
+  `FLY_API_TOKEN_PREVIEW` can create and delete apps in the Fly org, which previews need.
+  `HOST_PASSCODE` is copied to each preview.
 - **Local:** use `.env.local` (gitignored) for `npm start`.
 
 ## Handy commands
