@@ -231,12 +231,28 @@ button.pcard, button.pcard:hover:not(:disabled), button.pcard:active, button.pca
 .pop-h.sm { font-size: 13px; color: var(--dim); margin-top: 6px; }
 .pop ol, .pop ul { margin: 0 0 8px; padding-left: 20px; color: #d8cbb2; }
 kbd { background: #ffffff18; border-radius: 4px; padding: 0 5px; font-size: 12px; }
+.dealer-only { display: none; }
+body.is-dealer .dealer-only { display: inline-flex; }
+.dc-sec { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin: 10px 0 6px; }
+.dc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dc-grid .btn { padding: 8px 10px; font-size: 13px; justify-content: flex-start; gap: 6px; }
+.dc-grid .btn small { display: block; font-size: 11px; opacity: .7; font-weight: 400; }
+.dc-grid .btn.danger:not(:disabled):hover { background: linear-gradient(#6a2a2a, #4a1c1c); }
+.dc-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 8px; }
+.dc-row:hover { background: #ffffff08; }
+.dc-row .lb-name { flex: 1; }
+.dc-state { font-size: 12px; color: var(--dim); }
+.dc-kick { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: #3a1c1c; border: 1px solid #ff6b4a55; color: #ffb3a0; }
+.dc-kick:hover:not(:disabled) { background: #5a2424 !important; }
+.dc-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #d8cbb2; margin-top: 10px; cursor: pointer; }
 .lb-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 8px; }
 .lb-row.me { background: #e6be5a18; }
 .lb-row.away { opacity: .5; }
 .lb-rank { width: 22px; text-align: center; color: var(--dim); }
 .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-chips { color: #ffe08a; font-weight: 600; }
+.lb-hh .btn.link { float: right; text-transform: none; letter-spacing: 0; font-size: 12px; margin-top: -3px; }
+.lb-hist { max-height: 40vh; overflow-y: auto; }
 .lb-hh { margin-top: 10px; padding-top: 8px; border-top: 1px solid #ffffff14; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
 .lb-h { font-size: 13px; color: #d8cbb2; padding: 2px 0; }
 

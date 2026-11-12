@@ -1,7 +1,7 @@
 // Messages and state shared by the server and the browser client.
 
 /** The cards in every player's hand. */
-export const DECK = [0, 1, 2, 3, 5, 8, 13, 21] as const;
+export const DECK = [1, 2, 3, 5, 8] as const;
 export type CardValue = (typeof DECK)[number];
 
 export const MAX_PLAYERS = 8; // not counting the dealer
@@ -91,6 +91,8 @@ export interface RoomState {
   /** Nobody was within one card of the final call; `winners` is the dealer. */
   houseWon: boolean;
   history: RoundResult[];
+  /** Ticket keys the dealer skipped this session. */
+  skipped: string[];
   jiraEnabled: boolean;
   dealerPlays: boolean;
   /** Set when the dealer loaded an epic; its children become the queue. */
@@ -117,6 +119,10 @@ export type ClientMsg =
   | { t: "reveal" }
   | { t: "settle"; finalPoints: number }
   | { t: "nextRound" }
+  /** Drop the current round (no payout) and go back to picking a ticket. */
+  | { t: "cancelRound" }
+  /** Skip the current ticket (no payout) and deal the next one in the queue. */
+  | { t: "skip" }
   | { t: "clearQueue" }
   | { t: "kick"; id: string };
 

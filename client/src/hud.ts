@@ -78,15 +78,16 @@ export class Hud {
     mute.onclick = () => { sfx.setMuted(!sfx.muted); paint(); };
     $("help").onclick = () => this.togglePop("help-pop");
     $("wallet").onclick = () => this.togglePop("board");
+    $("dealer-btn").onclick = () => this.togglePop("dealer-pop");
     $("ticket-tab").onclick = () => this.openSheet();
-    for (const id of ["help-pop", "board"]) {
+    for (const id of ["help-pop", "board", "dealer-pop"]) {
       $(id).addEventListener("click", (e) => { if ((e.target as HTMLElement).closest("[data-close]")) $(id).hidden = true; });
     }
     addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       this.closeSheet();
       if (this.st?.ticket) this.closePicker();
-      $("help-pop").hidden = $("board").hidden = true;
+      $("help-pop").hidden = $("board").hidden = $("dealer-pop").hidden = true;
     });
   }
 
@@ -141,6 +142,7 @@ export class Hud {
     this.renderStatus(st);
     this.renderDock(st, phaseChanged);
     this.renderBoard(st);
+    this.renderDealer(st);
     this.renderWallet(st, prev);
 
     if (!prev) {
@@ -296,7 +298,7 @@ export class Hud {
           `${counts.get(v) ? `<span class="c-votes">${voteDots(v)}</span>` : ""}${!settled && v === top ? `<span class="c-ribbon">most votes</span>` : ""}`)).join("")}</div>`;
         if (!settled) side = `<button class="btn link" data-act="redeal">Vote again</button>`;
         else {
-          const played = new Set(st.history.map((h) => h.key));
+          const played = new Set([...st.history.map((h) => h.key), ...st.skipped]);
           const next = st.queue.find((x) => !played.has(x.key) && x.key !== st.ticket?.key && x.points === null)
             ?? st.queue.find((x) => !played.has(x.key) && x.key !== st.ticket?.key);
           side = next
@@ -390,11 +392,13 @@ export class Hud {
       ? `${others.slice(0, 8).map((p) => `<span class="dot in" style="--c:${p.color}" title="${esc(p.name)}"></span>`).join("")}<span>${others.length} at the table</span>`
       : `<span>Nobody's here yet</span>`;
     $("pk-invite").classList.toggle("gold", others.length === 0);
-    const played = new Set(st.history.map((h) => h.key));
+    const done = new Set(st.history.map((h) => h.key));
+    const skipped = new Set(st.skipped);
+    const played = new Set([...done, ...skipped]);
     $("pk-queue").innerHTML = st.queue.length ? `<div class="pk-qh">${esc(st.queueLabel)} · tap one to deal it</div>
       <div class="pk-list">${st.queue.map((q) => `<button class="pk-item ${played.has(q.key) ? "played" : ""} ${q.key === st.ticket?.key ? "current" : ""}" data-key="${esc(q.key)}">
         <span class="k">${esc(q.key)}</span><span class="s">${esc(q.summary)}</span>
-        <span class="p">${played.has(q.key) ? "✓ done" : q.points !== null ? `${q.points} pts` : ""}</span></button>`).join("")}</div>` : "";
+        <span class="p">${done.has(q.key) ? "✓ done" : skipped.has(q.key) ? "skipped" : q.points !== null ? `${q.points} pts` : ""}</span></button>`).join("")}</div>` : "";
     $("pk-queue").querySelectorAll<HTMLButtonElement>("[data-key]").forEach((b) => (b.onclick = () => {
       this.h.send({ t: "loadTicket", ref: b.dataset.key! });
       this.startLoading(`Fetching ${b.dataset.key}…`);
@@ -430,6 +434,47 @@ export class Hud {
   }
 
   // ------------------------------------------------------------------ wallet + leaderboard
+
+  /** The dealer's control panel: round actions and the player list with kick buttons. */
+  private renderDealer(st: RoomState) {
+    if (!this.me.isDealer) return;
+    const live = st.phase === "voting" || st.phase === "revealed";
+    const nextUp = st.queue.find((q) => !q.played && q.key !== st.ticket?.key && q.points === null)
+      ?? st.queue.find((q) => !q.played && q.key !== st.ticket?.key);
+    const btn = (act: string, label: string, sub: string, on: boolean, cls = "") =>
+      `<button class="btn ${cls}" data-dc="${act}" ${on ? "" : "disabled"}><span>${label}<small>${sub}</small></span></button>`;
+    const players = st.players.filter((p) => !p.isDealer);
+    $("dealer-body").innerHTML = `
+      <div class="dc-sec">This round</div>
+      <div class="dc-grid">
+        ${btn("redeal", "🔁 Restart vote", "everyone picks again", live)}
+        ${btn("skip", "⏭️ Skip ticket", nextUp ? `no payout · next ${esc(nextUp.key)}` : "no payout", live)}
+        ${btn("cancel", "✋ Cancel round", "no payout, clear ticket", live, "danger")}
+        ${btn("picker", "🗂️ Pick a ticket", "load or switch", true)}
+      </div>
+      <div class="dc-sec">Players (${players.length})</div>
+      ${players.length ? players.map((p) => `<div class="dc-row">
+        <span class="dot in" style="--c:${p.color}"></span>
+        <span class="lb-name">${esc(p.name)}</span>
+        <span class="dc-state">${!p.connected ? "away" : st.phase === "voting" ? (p.hasVoted ? "✓ voted" : "thinking…") : ""}</span>
+        <button class="dc-kick" data-kick="${p.id}" data-name="${esc(p.name)}">Kick</button>
+      </div>`).join("") : `<div class="dc-state">Nobody else here yet. Send the invite link.</div>`}
+      <label class="dc-toggle"><input type="checkbox" id="dc-plays" ${st.dealerPlays ? "checked" : ""}> I play a card too</label>`;
+    const body = $("dealer-body");
+    body.querySelectorAll<HTMLButtonElement>("[data-dc]").forEach((b) => (b.onclick = () => {
+      const act = b.dataset.dc;
+      if (act === "redeal") this.h.send({ t: "deal" });
+      else if (act === "skip") { this.h.send({ t: "skip" }); if (nextUp) this.startLoading(`Skipping to ${nextUp.key}…`); }
+      else if (act === "cancel") { if (confirm("Cancel this round? Nobody gets paid and the ticket is cleared.")) this.h.send({ t: "cancelRound" }); }
+      else if (act === "picker") this.openPicker();
+      $("dealer-pop").hidden = true;
+    }));
+    body.querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => {
+      if (confirm(`Kick ${b.dataset.name} from the table? They won't be able to rejoin.`)) this.h.send({ t: "kick", id: b.dataset.kick! });
+    }));
+    const plays = body.querySelector<HTMLInputElement>("#dc-plays")!;
+    plays.onchange = () => this.h.send({ t: "dealerPlays", plays: plays.checked });
+  }
 
   private renderWallet(st: RoomState, prev: RoomState | null) {
     const mine = st.players.find((p) => p.id === this.me.id)?.chips ?? 0;
@@ -467,7 +512,15 @@ export class Hud {
       </div>`).join("");
     const hist = st.history.slice().reverse().map((h) =>
       `<div class="lb-h"><b>${esc(h.key)}</b> → ${h.finalPoints} pts · ${h.houseWon ? `house wins · ${esc(names(h.winners))} +${h.share}` : h.winners.length ? `${esc(names(h.winners))} +${h.share}` : "no cards played"}</div>`).join("");
-    $("board-body").innerHTML = `${rows}${hist ? `<div class="lb-hh">Rounds played</div>${hist}` : ""}`;
+    $("board-body").innerHTML = `${rows}${hist ? `<div class="lb-hh">Rounds played <button class="btn link" id="copy-rounds">📋 Copy for Jira</button></div><div class="lb-hist">${hist}</div>` : ""}`;
+    $("board-body").querySelector<HTMLButtonElement>("#copy-rounds")?.addEventListener("click", async () => {
+      // latest result per ticket, oldest first: "SD-123  5 pts  Summary"
+      const latest = new Map<string, (typeof st.history)[number]>();
+      for (const h of st.history) latest.set(h.key, h);
+      const text = [...latest.values()].map((h) => `${h.key}\t${h.finalPoints} pts\t${h.summary}`).join("\n");
+      try { await navigator.clipboard.writeText(text); this.toast(`📋 Copied ${latest.size} ticket${latest.size === 1 ? "" : "s"} and their points`); }
+      catch { prompt("Copy these:", text.replace(/\n/g, " | ")); }
+    });
     $("board-body").querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => this.h.send({ t: "kick", id: b.dataset.kick! })));
   }
 

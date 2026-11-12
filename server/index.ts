@@ -44,6 +44,9 @@ interface Room {
   houseWon: boolean;
   pot: number;
   history: RoomState["history"];
+  skipped: Set<string>;
+  /** Tokens of players the dealer kicked; they can't rejoin this table. */
+  banned: Set<string>;
   dealerPlays: boolean;
   epic: RoomState["epic"];
   queue: RoomState["queue"];
@@ -65,7 +68,7 @@ function newCode(): string {
 function createRoom(): Room {
   const room: Room = {
     code: newCode(), dealerKey: randomUUID(), players: new Map(), phase: "waiting", round: 0,
-    ticket: null, finalPoints: null, winners: [], share: 0, houseWon: false, pot: 0, history: [], dealerPlays: false, epic: null, queue: [], queueLabel: "",
+    ticket: null, finalPoints: null, winners: [], share: 0, houseWon: false, pot: 0, history: [], skipped: new Set(), banned: new Set(), dealerPlays: false, epic: null, queue: [], queueLabel: "",
     lastActive: Date.now(),
   };
   rooms.set(room.code, room);
@@ -84,9 +87,9 @@ function publicState(room: Room): RoomState {
   return {
     code: room.code, phase: room.phase, round: room.round, ticket: room.ticket, players,
     pot: showVotes ? room.pot : 0, finalPoints: room.finalPoints, winners: room.winners,
-    share: room.share, houseWon: room.houseWon, history: room.history.slice(-12), jiraEnabled, dealerPlays: room.dealerPlays,
+    share: room.share, houseWon: room.houseWon, history: room.history.slice(-100), skipped: [...room.skipped], jiraEnabled, dealerPlays: room.dealerPlays,
     epic: room.epic, queueLabel: room.queueLabel,
-    queue: room.queue.map((q) => ({ ...q, played: room.history.some((h) => h.key === q.key) })),
+    queue: room.queue.map((q) => ({ ...q, played: room.history.some((h) => h.key === q.key) || room.skipped.has(q.key) })),
   };
 }
 
@@ -137,7 +140,7 @@ function resetTable(room: Room) {
 
 /** First queued ticket that hasn't been played yet, preferring ones with no points. */
 function nextInQueue(room: Room) {
-  const played = new Set(room.history.map((h) => h.key));
+  const played = new Set([...room.history.map((h) => h.key), ...room.skipped]);
   if (room.ticket) played.add(room.ticket.key);
   const open = room.queue.filter((q) => !played.has(q.key));
   return open.find((q) => q.points === null) ?? open[0];
@@ -277,6 +280,11 @@ function handle(room: Room, me: Player, msg: ClientMsg) {
         key: room.ticket?.key ?? "?", summary: room.ticket?.summary ?? "", finalPoints: msg.finalPoints,
         pot: result.pot, share: result.share, winners: result.winners.map((id) => room.players.get(id)!.name), houseWon: room.houseWon,
       });
+      // a permanent trail in the server logs (`fly logs`), so a forgotten Jira update can be recovered
+      console.log("POINTED " + JSON.stringify({
+        at: new Date().toISOString(), room: room.code, key: room.ticket?.key, summary: room.ticket?.summary,
+        points: msg.finalPoints, votes: Object.fromEntries([...votes].map(([id, v]) => [room.players.get(id)?.name ?? id, v])),
+      }));
       return pushState(room);
     }
     case "nextRound": {
@@ -288,11 +296,32 @@ function handle(room: Room, me: Player, msg: ClientMsg) {
       }
       return pushState(room);
     }
+    case "cancelRound": {
+      if (room.phase === "waiting" && !room.ticket) return;
+      if (room.phase === "settled") return; // already paid out; just pick the next ticket
+      resetTable(room);
+      room.ticket = null;
+      broadcast(room, { t: "toast", text: "🎩 The dealer cancelled this round" }, me.id);
+      return pushState(room);
+    }
+    case "skip": {
+      if (!room.ticket || room.phase === "settled") return;
+      const skippedKey = room.ticket.key;
+      room.skipped.add(skippedKey);
+      const next = nextInQueue(room);
+      resetTable(room);
+      room.ticket = null;
+      broadcast(room, { t: "toast", text: `⏭️ The dealer skipped ${skippedKey}` }, me.id);
+      if (next) loadTicket(room, next.key).catch((e) => send(me.socket, { t: "loadFailed", text: `${next.key}: ${e.message}` }));
+      return pushState(room);
+    }
     case "kick": {
       const p = room.players.get(msg.id);
       if (!p || p.isDealer) return;
-      p.socket?.close(4001, "kicked");
+      room.banned.add(p.token);
+      p.socket?.close(4001, "Removed by the dealer");
       room.players.delete(p.id);
+      broadcast(room, { t: "toast", text: `👋 ${p.name} was removed from the table` });
       return pushState(room);
     }
   }
@@ -357,6 +386,7 @@ wss.on("connection", (ws, req) => {
     if (!me) {
       if (msg.t !== "join") return;
       const isDealer = msg.dealerKey === room.dealerKey;
+      if (!isDealer && msg.token && room.banned.has(msg.token)) return ws.close(4001, "Removed by the dealer");
       const existing = [...room.players.values()].find((p) => p.token === msg.token || (isDealer && p.isDealer));
       if (existing) {
         existing.socket?.close(4002, "Joined from another tab");

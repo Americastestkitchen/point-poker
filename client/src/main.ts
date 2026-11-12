@@ -252,6 +252,7 @@ function startGame() {
   }));
   net.onStatus = (s, reason) => {
     $("conn").textContent = s === "open" ? "" : s === "connecting" ? "reconnecting…" : `disconnected: ${reason ?? ""}`;
+    if (s === "closed" && reason === "Removed by the dealer") hud.toast("👋 The dealer removed you from this table.", "error");
   };
   net.onMessage = onMessage;
   net.connect();
@@ -485,7 +486,7 @@ function playCard(i: number) {
   myVote = v;
   net.send({ t: "vote", value: v });
   if (seat) {
-    const from = world.camera.localToWorld(new THREE.Vector3((i - 3.5) * 0.06, -0.35, -0.5));
+    const from = world.camera.localToWorld(new THREE.Vector3((i - (DECK.length - 1) / 2) * 0.06, -0.35, -0.5));
     if (had) seat.card.hide();
     seat.card.show(v, from);
     seat.card.faceUp(false);

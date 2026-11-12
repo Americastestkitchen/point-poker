@@ -57,6 +57,7 @@
 
   <div id="hud" hidden>
     <div id="topbar">
+      <button id="dealer-btn" class="chip-btn dealer-only" title="Dealer controls: skip, cancel, kick">🎩 Dealer</button>
       <button id="wallet" class="chip-btn" title="Leaderboard"><span class="coin"></span><b id="wallet-n">0</b></button>
       <button id="invite" class="chip-btn">🔗 Invite</button>
       <button id="wardrobe" class="chip-btn" title="Change your character's body, color and hat"><span class="me-bean"></span>Look</button>
@@ -75,6 +76,10 @@
     <div id="board" class="pop" hidden>
       <div class="pop-h">Leaderboard <button class="x" data-close>✕</button></div>
       <div id="board-body"></div>
+    </div>
+    <div id="dealer-pop" class="pop" hidden>
+      <div class="pop-h">Dealer controls <button class="x" data-close>✕</button></div>
+      <div id="dealer-body"></div>
     </div>
     <div id="help-pop" class="pop" hidden>
       <div class="pop-h">How it works <button class="x" data-close>✕</button></div>
