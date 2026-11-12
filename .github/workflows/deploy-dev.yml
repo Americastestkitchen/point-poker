@@ -1,9 +1,10 @@
-# Every push to develop goes live on https://point-poker-dev.fly.dev
+# Every push to main goes live on the dev site, https://point-poker-dev.fly.dev
+# (production only updates when you cut a release)
 name: Deploy dev
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:

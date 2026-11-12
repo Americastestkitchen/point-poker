@@ -1,50 +1,49 @@
 # Making changes
 
-## Branches and environments
+## How it fits together
 
-| Branch | What it is | Deploys to |
+There's one branch, `main`.
+
+| When | What happens | Where |
 |---|---|---|
-| `develop` | day-to-day work | **https://point-poker-dev.fly.dev**, automatically on every push |
-| `main` | what's released | **https://point-poker.fly.dev**, only when a version tag is pushed |
+| you push to `main` | checks run, then the dev site updates | **https://point-poker-dev.fly.dev** |
+| you run `npm run release` | checks run, then the live site updates and a GitHub Release is published | **https://point-poker.fly.dev** |
+| you open a pull request (optional) | checks run, then a preview site is created | `https://point-poker-pr-<number>.fly.dev` |
 
-Production saves its tables to a small disk, so a deploy only causes a few seconds of
-"reconnecting…" and everyone lands back where they were. The dev site and PR previews don't
+Production saves its tables to a small disk, so a release only causes a few seconds of
+"reconnecting…" and everyone lands back where they were. The dev site and previews don't
 save tables: they're wiped whenever those sites redeploy or go to sleep.
 
 ## Day to day
 
 ```sh
-git switch develop && git pull
+git pull
 # ...make changes...
 npm run check            # typecheck + tests + build
 git commit -am "Describe the change"
-git push                 # -> CI, then deploys to the dev site
+git push                 # -> dev site updates in about a minute
 ```
 
-For bigger changes, branch off `develop` (`feature/whatever`) and open a pull request into
-`develop`. Every pull request gets:
-- **CI:** typecheck, tests and build.
-- **A preview site:** `https://point-poker-pr-<number>.fly.dev`, linked in a PR comment. It
-  redeploys on every push and is deleted when the PR closes. Previews have no Jira, so type
-  tickets in by hand.
+For a bigger or riskier change, use a branch and open a pull request instead. It gets its own
+preview site, linked in a PR comment, which redeploys on every push and is deleted when the PR
+closes. Previews have no Jira, so type tickets in by hand.
 
-## Releasing to production
+## Releasing
 
-When `develop` looks good on the dev site, run one command from any branch:
+When the dev site looks good, run this from `main`:
 
 ```sh
 npm run release              # small fixes: 0.2.0 -> 0.2.1
 npm run release -- minor     # new features: 0.2.0 -> 0.3.0
 ```
 
-It merges `develop` into `main`, runs the checks, bumps the version, tags it (`v0.3.0`),
-pushes, and merges `main` back into `develop` so the two stay level. It refuses to run if
-you have uncommitted changes or unpushed commits on `develop`, so what you release is exactly
-what you tested on the dev site. GitHub Actions then:
+It runs the checks, bumps the version, tags it (like `v0.3.0`) and pushes. It refuses to run if
+you have uncommitted or unpushed work, so what you release is what you tried on the dev site.
+GitHub Actions then:
 1. checks the tag is on `main`,
 2. runs typecheck, tests and build,
 3. deploys production on Fly,
-4. publishes a GitHub Release with notes generated from the commits since the last tag.
+4. publishes a GitHub Release with notes generated from the commits since the last release.
 
 ## Secrets
 

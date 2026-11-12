@@ -1,4 +1,4 @@
-# Point Poker DEV on Fly.io (deployed on every push to develop).
+# Point Poker DEV on Fly.io (deployed on every push to main).
 # Still exactly ONE machine (tables live in memory), but it may sleep when idle.
 # Jira credentials and HOST_PASSCODE are Fly secrets (`fly secrets set`), not here.
 

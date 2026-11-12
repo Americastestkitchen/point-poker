@@ -7,7 +7,7 @@ table, everyone secretly plays a card (1, 2, 3, 5, 8), the cards flip, and the d
 calls the final points. The closest guess wins the pot.
 
 - **Live:** https://point-poker.fly.dev
-- **Dev (latest `develop`):** https://point-poker-dev.fly.dev
+- **Dev (latest `main`):** https://point-poker-dev.fly.dev
 
 ## Start here
 
@@ -23,9 +23,9 @@ calls the final points. The closest guess wins the pot.
 ### How a change reaches people
 
 ```
-you open a pull request ──▶ its own preview site, linked in a PR comment
-you push to develop ──▶ dev site updates (about 1 min)
-merge to main + npm run release ──▶ live site updates + a GitHub Release
+you push to main ──▶ dev site updates (about 1 min)
+npm run release ──▶ live site updates + a GitHub Release
+you open a pull request (optional) ──▶ its own preview site
 ```
 
 Everything in that path is automatic. See [CONTRIBUTING.md](CONTRIBUTING.md) for the exact commands.

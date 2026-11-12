@@ -1,14 +1,12 @@
 #!/usr/bin/env node
-// Ship whatever is on develop to production, in one command:
-//   1. merge develop into main
-//   2. run the checks
-//   3. bump the version and tag it (v1.2.3)
-//   4. push. GitHub Actions then deploys production and publishes the release
-//   5. merge main back into develop so they stay level
+// Ship what's on main to production, in one command:
+//   1. run the checks
+//   2. bump the version and tag it (v1.2.3)
+//   3. push. GitHub Actions then deploys production and publishes the release
 //
-//   npm run release            -> patch (0.1.0 -> 0.1.1)
-//   npm run release -- minor   -> 0.1.0 -> 0.2.0
-//   npm run release -- major   -> 0.1.0 -> 1.0.0
+//   npm run release            -> patch (0.2.0 -> 0.2.1)
+//   npm run release -- minor   -> 0.2.0 -> 0.3.0
+//   npm run release -- major   -> 0.2.0 -> 1.0.0
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -21,26 +19,18 @@ const sh = (cmd) => execSync(cmd, { stdio: ["ignore", "pipe", "inherit"] }).toSt
 const run = (cmd) => { console.log(`\n$ ${cmd}`); execSync(cmd, { stdio: "inherit" }); };
 const fail = (msg) => { console.error(`\n✖ ${msg}`); process.exit(1); };
 
+if (sh("git rev-parse --abbrev-ref HEAD") !== "main") fail("Releases are cut from main. Run `git switch main` first.");
 if (sh("git status --porcelain")) fail("You have uncommitted changes. Commit or stash them first.");
-const startBranch = sh("git rev-parse --abbrev-ref HEAD");
-
 run("git fetch origin");
-const ahead = sh("git rev-list --count origin/develop..develop");
-if (ahead !== "0") fail(`Your local develop has ${ahead} commit(s) that aren't pushed. Push develop first, so what you release is what you tested on the dev site.`);
-if (sh("git rev-list --count origin/develop..origin/main") !== "0") fail("main has commits that develop doesn't. Merge main into develop first.");
-if (sh("git rev-list --count origin/main..origin/develop") === "0") fail("Nothing to release: main already has everything on develop.");
-
-run("git switch main");
+const ahead = sh("git rev-list --count origin/main..main");
+if (ahead !== "0") fail(`You have ${ahead} commit(s) on main that aren't pushed. Push first, so what you release is what you tried on the dev site.`);
 run("git merge --ff-only origin/main");
-run("git merge --ff-only origin/develop");
+const lastTag = sh("git describe --tags --abbrev=0 2>/dev/null || true");
+if (lastTag && sh(`git rev-list --count ${lastTag}..HEAD`) === "0") fail(`Nothing to release: main hasn't changed since ${lastTag}.`);
+
 run("npm run check");
 run(`npm version ${bump} -m "Release v%s"`);
 run("git push origin main --follow-tags");
-run("git switch develop");
-run("git merge --ff-only origin/develop");
-run("git merge --ff-only main");
-run("git push origin develop");
-if (startBranch !== "develop") run(`git switch ${startBranch}`);
 
 const { version } = JSON.parse(readFileSync("package.json", "utf8"));
 console.log(`\n✔ Tagged v${version}. GitHub is now deploying production and publishing the release:`);
