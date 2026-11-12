@@ -1,6 +1,7 @@
 # Point Poker on Fly.io.
-# Tables live in memory, so this must run as exactly ONE machine that never
-# sleeps: a second machine would split players, and sleeping wipes tables.
+# Exactly ONE machine that never sleeps: tables live in memory, so a second
+# machine would split players. Tables are saved to the /data volume, so they
+# survive deploys and restarts.
 # Jira credentials and HOST_PASSCODE are Fly secrets (`fly secrets set`), not here.
 
 app = "point-poker"
@@ -10,6 +11,11 @@ primary_region = "iad"
 
 [env]
   PORT = "8080"
+  DATA_DIR = "/data"
+
+[mounts]
+  source = "pp_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 8080

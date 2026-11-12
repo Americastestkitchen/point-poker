@@ -54,8 +54,8 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 
 - **Never write to Jira.** The game only reads tickets, and that's on purpose. Points get
   entered in Jira by a person.
-- **Tables live in memory.** Restarting or deploying a site wipes its open tables, so only
-  release to the live site when nobody is mid-game.
+- **Releasing is safe mid-game.** The live site saves its tables, so a release just causes a
+  few seconds of "reconnecting…". The dev site and previews don't save tables.
 - **Secrets never go in the repo.** If you see a token in a diff, stop and tell someone.
 
 ### Where to go next

@@ -7,8 +7,9 @@
 | `develop` | day-to-day work | **https://point-poker-dev.fly.dev**, automatically on every push |
 | `main` | what's released | **https://point-poker.fly.dev**, only when a version tag is pushed |
 
-Production deploys wipe any open tables, because tables live in memory. That's why
-production only deploys on a release, never on a plain merge.
+Production saves its tables to a small disk, so a deploy only causes a few seconds of
+"reconnecting…" and everyone lands back where they were. The dev site and PR previews don't
+save tables: they're wiped whenever those sites redeploy or go to sleep.
 
 ## Day to day
 
@@ -29,18 +30,17 @@ For bigger changes, branch off `develop` (`feature/whatever`) and open a pull re
 
 ## Releasing to production
 
-When `develop` looks good on the dev site and nobody is mid-game:
+When `develop` looks good on the dev site, run one command from any branch:
 
 ```sh
-git switch main && git pull
-git merge --ff-only develop    # or open a PR develop -> main and merge it
-npm run release                # patch: 0.1.0 -> 0.1.1
-# npm run release -- minor     # 0.1.0 -> 0.2.0
-git switch develop && git merge --ff-only main && git push   # keep develop level with main
+npm run release              # small fixes: 0.2.0 -> 0.2.1
+npm run release -- minor     # new features: 0.2.0 -> 0.3.0
 ```
 
-`npm run release` bumps the version in `package.json`, creates a tag like `v0.1.1` and pushes it.
-GitHub Actions then:
+It merges `develop` into `main`, runs the checks, bumps the version, tags it (`v0.3.0`),
+pushes, and merges `main` back into `develop` so the two stay level. It refuses to run if
+you have uncommitted changes or unpushed commits on `develop`, so what you release is exactly
+what you tested on the dev site. GitHub Actions then:
 1. checks the tag is on `main`,
 2. runs typecheck, tests and build,
 3. deploys production on Fly,

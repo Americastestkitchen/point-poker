@@ -9,6 +9,7 @@ import {
   type ClientMsg, type Hat, type PublicPlayer, type RoomState, type ServerMsg, type Ticket,
 } from "../shared/protocol.ts";
 import { settle } from "./game.ts";
+import { loadRooms, persistEnabled, saveRooms } from "./persist.ts";
 import { defaultProject, defaultQueueJql, epicChildrenJql, fetchTicket, jiraEnabled, parseIssueKey, searchTickets } from "./jira.ts";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -54,7 +55,8 @@ interface Room {
   lastActive: number;
 }
 
-const rooms = new Map<string, Room>();
+// tables saved before the last restart come back; players reconnect to them on their own
+const rooms: Map<string, Room> = loadRooms();
 
 function newCode(): string {
   const letters = "BCDFGHJKLMNPQRSTVWXZ";
@@ -436,6 +438,19 @@ setInterval(() => {
   }
 }, 10 * 60_000).unref();
 
+// Save tables every few seconds, and once more on shutdown (Fly sends SIGINT on deploys).
+if (persistEnabled) {
+  setInterval(() => saveRooms(rooms), 5_000).unref();
+  for (const sig of ["SIGINT", "SIGTERM"] as const) {
+    process.on(sig, () => {
+      saveRooms(rooms);
+      console.log(`saved ${rooms.size} table(s), shutting down`);
+      process.exit(0);
+    });
+  }
+}
+
 server.listen(PORT, () => {
-  console.log(`Point Poker on http://localhost:${PORT} (Jira ${jiraEnabled ? "connected" : "not configured"})`);
+  console.log(`Point Poker on http://localhost:${PORT} (Jira ${jiraEnabled ? "connected" : "not configured"}, ` +
+    `${persistEnabled ? `${rooms.size} saved table(s) restored` : "tables not saved"})`);
 });
