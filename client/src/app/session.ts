@@ -82,6 +82,9 @@ export function createSession(deps: SessionDeps): Session {
       case "toast":
       case "fx":
         return store.events.emit(m);
+      default:
+        // a new server message stops compiling here until it's handled
+        return m satisfies never;
     }
   }
 
