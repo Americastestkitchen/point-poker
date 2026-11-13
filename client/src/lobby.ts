@@ -1,7 +1,7 @@
 // The landing page and the character creator (plain DOM until #4 replaces it).
 import { BODIES } from "../../shared/catalog/bodies.ts";
 import { COLORS } from "../../shared/catalog/colors.ts";
-import { COSMETICS, type CosmeticId } from "../../shared/catalog/cosmetics.ts";
+import { COSMETICS } from "../../shared/catalog/cosmetics.ts";
 import { randomLook, wear, wornIn } from "../../shared/look.ts";
 import { OpenedTable, TableInfo } from "../../shared/protocol.ts";
 import type { Actions } from "./app/actions.ts";
@@ -103,7 +103,7 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
 
     choices($("colors"), COLORS, (c) => c === me.look.color, (b, c) => (b.style.background = c), (color) => (me.look = { ...me.look, color }));
     choices($("bodies"), BODIES, (b) => b.id === me.look.body, (el, b) => (el.innerHTML = icon(b)), (b) => (me.look = { ...me.look, body: b.id }));
-    choices($("hats"), HATS, (h) => h.id === wornIn(me.look, "head"), (b, h) => (b.innerHTML = icon(h)), (h) => (me.look = wear(me.look, "head", h.id as CosmeticId | null)));
+    choices($("hats"), HATS, (h) => h.id === wornIn(me.look, "head"), (b, h) => (b.innerHTML = icon(h)), (h) => (me.look = wear(me.look, "head", h.id)));
     preview ??= createTurntable($<HTMLCanvasElement>("preview"), me.look, { dealer: !!dealerKey, visible: () => !$("lobby").hidden });
     preview.setLook(me.look);
 
