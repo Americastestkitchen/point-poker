@@ -1,0 +1,14 @@
+/* The UI layer: game type, no browser chrome. */
+.root {
+  font-family: var(--pp-font-body);
+  font-size: var(--pp-size-md);
+  color: var(--pp-color-ink);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  /* anything that has to scroll gets a thin gold rail instead of the browser's scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--pp-color-edge) transparent;
+}
+.root :global(*), .root :global(*::before), .root :global(*::after) { box-sizing: border-box; }
+.root :global(*) { scrollbar-width: thin; scrollbar-color: var(--pp-color-edge) transparent; }
+.root :global(::selection) { background: color-mix(in srgb, var(--pp-color-gold) 40%, transparent); }

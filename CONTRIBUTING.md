@@ -28,6 +28,14 @@ For a bigger or riskier change, use a branch and open a pull request instead. It
 preview site, linked in a PR comment, which redeploys on every push and is deleted when the PR
 closes. Previews have no Jira, so type tickets in by hand.
 
+## UI kit
+
+Screens are built from the game UI kit in `client/src/ui/` (React, drawn on top of the canvas;
+the 3D world stays plain Three.js). Colours, fonts, spacing and glows live in
+`client/src/ui/tokens.ts` only: the kit's stylesheets use the `--pp-*` variables, and a test
+fails on raw colours. To see every primitive in every state, run `npm run dev` and open
+`/gallery.html` (dev only; it isn't built).
+
 ## Releasing
 
 When the dev site looks good, run this from `main`:

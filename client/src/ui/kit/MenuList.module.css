@@ -1,0 +1,32 @@
+.menu { display: grid; gap: var(--pp-space-1); }
+
+.item {
+  display: flex; align-items: center; gap: var(--pp-space-2);
+  width: 100%; padding: var(--pp-space-2) var(--pp-space-3);
+  font: inherit; text-align: left; color: var(--pp-color-dim);
+  background: transparent; border: 1px solid transparent; border-radius: var(--pp-radius-md);
+  cursor: pointer; outline: none; user-select: none;
+  transition: color var(--pp-motion-base), background var(--pp-motion-base), transform var(--pp-motion-fast);
+}
+.marker {
+  font-size: var(--pp-size-lg);
+  color: var(--pp-color-gold); opacity: 0; transform: translateX(-6px);
+  transition: opacity var(--pp-motion-base), transform var(--pp-motion-base) var(--pp-motion-spring);
+}
+.text { display: grid; }
+.label { font-family: var(--pp-font-display); font-size: var(--pp-size-lg); font-weight: var(--pp-weight-strong); }
+.hint { font-size: var(--pp-size-sm); color: var(--pp-color-faint); }
+
+/* hover and keyboard focus are the same highlight: the mouse moves focus */
+.item:focus, .item:hover:not(:disabled), .item[data-demo="hover"], .item[data-demo="focus"] {
+  color: var(--pp-color-ink);
+  background: color-mix(in srgb, var(--pp-color-gold) 12%, transparent);
+  border-color: var(--pp-color-edge);
+}
+.item:focus .marker, .item[data-demo="focus"] .marker, .item[data-demo="hover"] .marker { opacity: 1; transform: none; }
+.item:focus .hint, .item[data-demo="focus"] .hint { color: var(--pp-color-dim); }
+.item:active:not(:disabled), .item[data-demo="pressed"] {
+  transform: translateY(1px);
+  background: color-mix(in srgb, var(--pp-color-gold) 22%, transparent);
+}
+.item:disabled { opacity: .4; cursor: default; }
