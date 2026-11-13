@@ -1,0 +1,38 @@
+.slider {
+  display: grid; gap: var(--pp-space-2);
+  padding: var(--pp-space-2) var(--pp-space-3);
+  border: 1px solid transparent; border-radius: var(--pp-radius-md);
+  outline: none; user-select: none; touch-action: none;
+  transition: background var(--pp-motion-base), border-color var(--pp-motion-base);
+}
+.head { display: flex; justify-content: space-between; gap: var(--pp-space-3); }
+.label { font-size: var(--pp-size-md); }
+.value { font-weight: var(--pp-weight-strong); color: var(--pp-color-gold); font-variant-numeric: tabular-nums; }
+
+/* a tall hit area around a thin track, so it's easy to grab on a phone */
+.track { position: relative; display: block; height: 24px; cursor: pointer; }
+.track::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 8px; transform: translateY(-50%);
+  background: var(--pp-color-well); border: var(--pp-border-panel); border-radius: var(--pp-radius-pill);
+}
+.fill {
+  position: absolute; left: 0; top: 50%; height: 8px; transform: translateY(-50%);
+  background: linear-gradient(90deg, var(--pp-color-gold-low), var(--pp-color-gold-hi));
+  border-radius: var(--pp-radius-pill);
+}
+.thumb {
+  position: absolute; right: -11px; top: 50%; width: 22px; height: 22px; transform: translateY(-50%);
+  border-radius: var(--pp-radius-pill);
+  background: radial-gradient(circle at 35% 30%, var(--pp-color-gold-hi), var(--pp-color-gold-mid) 50%, var(--pp-color-gold-low));
+  box-shadow: inset 0 -2px 0 var(--pp-color-gold-shadow), var(--pp-shadow-button);
+  transition: transform var(--pp-motion-fast);
+}
+
+.slider:focus, .slider:hover:not(.disabled), .slider[data-demo="hover"], .slider[data-demo="focus"] {
+  background: color-mix(in srgb, var(--pp-color-gold) 8%, transparent);
+  border-color: var(--pp-color-edge);
+}
+.slider:focus .thumb, .slider[data-demo="focus"] .thumb { box-shadow: inset 0 -2px 0 var(--pp-color-gold-shadow), var(--pp-glow-focus); }
+.track:active .thumb, .slider[data-demo="pressed"] .thumb { transform: translateY(-50%) scale(1.2); }
+.disabled { opacity: .45; }
+.disabled .track { cursor: default; }

@@ -1,0 +1,17 @@
+.stack {
+  position: fixed; left: var(--pp-space-4); bottom: var(--pp-space-4); z-index: var(--pp-layer-toast);
+  display: grid; gap: var(--pp-space-2); justify-items: start; pointer-events: none;
+}
+.toast {
+  display: inline-flex; align-items: center; gap: var(--pp-space-2);
+  padding: var(--pp-space-2) var(--pp-space-4);
+  font-size: var(--pp-size-md); color: var(--pp-color-ink);
+  background: var(--pp-color-panel); border: var(--pp-border-soft); border-radius: var(--pp-radius-pill);
+  box-shadow: var(--pp-shadow-panel); backdrop-filter: blur(8px);
+  animation: slide var(--pp-motion-slow) var(--pp-motion-spring);
+}
+@keyframes slide { from { transform: translateX(-30px); opacity: 0; } }
+.dot { width: 8px; height: 8px; border-radius: var(--pp-radius-pill); background: var(--pp-color-gold); flex: none; }
+.success .dot { background: var(--pp-color-success); }
+.error { border-color: var(--pp-color-error); }
+.error .dot { background: var(--pp-color-error); box-shadow: var(--pp-glow-error); }

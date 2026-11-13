@@ -88,6 +88,10 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
     squeak: () => tone(1400, 0.18, "square", 0.06, 2200),
     hover: () => tone(1800, 0.03, "sine", 0.03),
     pop: () => tone(600, 0.1, "triangle", 0.15, 1200),
+    /** UI kit: a button or menu item was chosen. */
+    confirm: () => { tone(660, 0.07, "triangle", 0.12); tone(990, 0.09, "triangle", 0.1, undefined, 0.05); },
+    /** UI kit: Esc, or a dialog closed. */
+    back: () => tone(700, 0.1, "triangle", 0.1, 420),
     deal: () => { for (let i = 0; i < 5; i++) noise(0.06, 3000, 0.2, i * 0.07); },
     win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.25, "triangle", 0.15, undefined, i * 0.09)),
   };

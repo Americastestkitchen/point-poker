@@ -1,0 +1,37 @@
+.slots { display: grid; gap: var(--pp-space-2); justify-items: center; user-select: none; }
+.label { font-size: var(--pp-size-sm); color: var(--pp-color-dim); }
+.row { position: relative; display: flex; gap: var(--pp-space-2); }
+
+.slot {
+  width: clamp(40px, 12vw, 52px); aspect-ratio: 13 / 16; display: grid; place-items: center;
+  font-family: var(--pp-font-display); font-weight: var(--pp-weight-display); font-size: var(--pp-size-xxl);
+  color: var(--pp-color-ink);
+  background: var(--pp-color-well);
+  border: var(--pp-border-panel); border-bottom-width: 3px; border-radius: var(--pp-radius-md);
+  transition: border-color var(--pp-motion-base), box-shadow var(--pp-motion-base), transform var(--pp-motion-fast);
+}
+.filled { animation: drop var(--pp-motion-slow) var(--pp-motion-spring); border-color: var(--pp-color-gold); }
+@keyframes drop { from { transform: translateY(-8px) scale(1.15); } }
+.cursor { border-color: var(--pp-color-gold); box-shadow: var(--pp-glow-focus); }
+.cursor::after {
+  content: ""; width: 3px; height: 30px; border-radius: 2px; background: var(--pp-color-gold);
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.slots:hover .slot, .slots[data-demo="hover"] .slot { border-color: var(--pp-color-gold); }
+.slots[data-demo="pressed"] .slot { transform: translateY(1px); }
+
+/* the real input sits on top, invisible: it gets the taps, the keyboard and pastes */
+.input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; font-size: 16px; /* 16px stops iOS zooming in */
+  border: 0; padding: 0; cursor: text; caret-color: transparent;
+}
+
+.error .slot { border-color: var(--pp-color-error); box-shadow: var(--pp-glow-error); }
+.error .row { animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+.disabled { opacity: .45; }
+.disabled .input { cursor: default; }

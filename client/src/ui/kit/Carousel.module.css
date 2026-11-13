@@ -1,0 +1,37 @@
+.carousel {
+  display: grid; gap: var(--pp-space-1); justify-items: stretch;
+  padding: var(--pp-space-2) var(--pp-space-3);
+  border: 1px solid transparent; border-radius: var(--pp-radius-md);
+  outline: none; user-select: none;
+  transition: background var(--pp-motion-base), border-color var(--pp-motion-base);
+}
+.label { font-size: var(--pp-size-sm); color: var(--pp-color-dim); }
+.row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--pp-space-2); }
+.value {
+  display: grid; place-items: center; min-width: 0; min-height: 40px; overflow: hidden;
+  font-family: var(--pp-font-display); font-size: var(--pp-size-lg); font-weight: var(--pp-weight-strong);
+}
+.option { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation: swap var(--pp-motion-slow) var(--pp-motion-spring); }
+@keyframes swap { from { opacity: 0; transform: scale(.8); } }
+
+.arrow {
+  width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
+  font-size: var(--pp-size-sm); color: var(--pp-color-gold);
+  background: var(--pp-color-well); border: var(--pp-border-panel); border-radius: var(--pp-radius-pill);
+  cursor: pointer; transition: transform var(--pp-motion-fast), background var(--pp-motion-base);
+}
+.arrow:hover:not(:disabled) { background: var(--pp-color-panel-raised); }
+.arrow:active:not(:disabled) { transform: scale(.9); }
+
+.dots { display: flex; justify-content: center; gap: var(--pp-space-1); }
+.dot { width: 6px; height: 6px; border-radius: var(--pp-radius-pill); background: var(--pp-color-faint); opacity: .5; transition: all var(--pp-motion-base); }
+.dot.on { width: 14px; background: var(--pp-color-gold); opacity: 1; }
+
+.carousel:focus, .carousel:hover:not(.disabled), .carousel[data-demo="hover"], .carousel[data-demo="focus"] {
+  background: color-mix(in srgb, var(--pp-color-gold) 8%, transparent);
+  border-color: var(--pp-color-edge);
+}
+.carousel:focus .arrow, .carousel[data-demo="focus"] .arrow { border-color: var(--pp-color-gold); box-shadow: var(--pp-glow-focus); }
+.carousel[data-demo="pressed"] .arrow:last-child { transform: scale(.9); }
+.disabled { opacity: .45; }
+.disabled .arrow { cursor: default; }
