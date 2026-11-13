@@ -55,7 +55,6 @@ test("votes stay hidden until the reveal, except your own", async () => {
   const { table, deb, ann, bob, run, view, deal } = setup();
   await deal();
   await run(ann, { t: "vote", value: 3 });
-  await run(bob, { t: "vote", value: 7 }); // not in the deck: counts as no vote
   for (const who of [deb, ann, bob]) {
     const v = view(who);
     assert.ok(v.players.every((p) => p.vote === null || p.id === who.playerId), "someone else's vote leaked");
@@ -76,6 +75,23 @@ test("changing a face-down card shows others a fiddle, not the card", async () =
   await run(ann, { t: "vote", value: 2 });
   await run(ann, { t: "vote", value: 3 });
   assert.deepEqual(events.filter((e) => e.t === "fx"), [{ t: "fx", from: ann.playerId, fx: { kind: "adjust" }, except: ann.playerId }]);
+});
+
+test("a card that isn't in the deck is refused and leaves your card where it was", async () => {
+  const { table, ann, run, player, deal } = setup();
+  await deal();
+  await run(ann, { t: "vote", value: 3 });
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: 7 }), { error: "That card isn't in the deck" });
+  assert.equal(player(ann).hasVoted, true);
+  await run(ann, { t: "vote", value: null }); // takes your card back
+  assert.equal(player(ann).hasVoted, false);
+});
+
+test("a dealer sitting out can't vote", async () => {
+  const { table, deb, view, deal } = setup();
+  await deal();
+  assert.deepEqual(await table.run(deb.playerId, { t: "vote", value: 3 }), { error: "You're sitting this one out" });
+  assert.equal(view(deb).players.find((p) => p.id === deb.playerId)?.hasVoted, false);
 });
 
 test("re-settling takes back the last payout", async () => {
@@ -210,10 +226,19 @@ test("kick removes a player for good, but never the dealer", async () => {
   assert.ok(events.some((e) => e.t === "removed" && e.playerId === cat.playerId && e.reason === "Removed by the dealer"));
   assert.deepEqual(table.join({ name: "Cat", look: {}, token: cat.token }), { ok: false, code: 4001, reason: "Removed by the dealer" });
 
-  await run(deb, { t: "kick", id: deb.playerId });
+  assert.deepEqual(await table.run(deb.playerId, { t: "kick", id: deb.playerId }), { error: "You can't remove yourself" });
   assert.ok(view().players.some((p) => p.id === deb.playerId));
+  assert.deepEqual(await table.run(deb.playerId, { t: "kick", id: cat.playerId }), { error: "They're not at this table" });
+  assert.deepEqual(await table.run(deb.playerId, { t: "kick", id: "nobody" }), { error: "They're not at this table" });
   assert.equal(view().players.length, 3);
   assert.equal(ann.isDealer, false);
+});
+
+test("a ticket typed in by hand needs a summary", async () => {
+  const { table, deb, view } = setup();
+  assert.deepEqual(await table.run(deb.playerId, { t: "manualTicket", key: "SD-1", summary: "  \n ", description: "" }), { error: "The ticket needs a summary" });
+  assert.equal(view().ticket, null);
+  assert.equal(view().phase, "waiting");
 });
 
 test("seat tokens bring players back to their seat; the table fills up at eight", () => {
@@ -299,9 +324,11 @@ test("chip flicks have a cooldown the server enforces", async () => {
   tick(FLICK_COOLDOWN_MS);
   assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
   assert.equal(flicks(), 3);
-  await table.run(ann.playerId, { t: "flick", target: ann.playerId });
-  await table.run(ann.playerId, { t: "flick", target: "nobody" });
+  tick(FLICK_COOLDOWN_MS);
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: ann.playerId }), { error: "You can't flick yourself" });
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: "nobody" }), { error: "There's nobody in that seat" });
   assert.equal(flicks(), 3, "no flicking yourself or empty chairs");
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {}, "and a refused flick doesn't start the cooldown");
 });
 
 test("a look is one object, cleaned up on the way in", async () => {
