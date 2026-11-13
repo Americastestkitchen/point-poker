@@ -3,6 +3,7 @@ import { BODIES } from "../../shared/catalog/bodies.ts";
 import { COLORS } from "../../shared/catalog/colors.ts";
 import { COSMETICS, type CosmeticId } from "../../shared/catalog/cosmetics.ts";
 import { randomLook, wear, wornIn } from "../../shared/look.ts";
+import { OpenedTable, TableInfo } from "../../shared/protocol.ts";
 import type { Actions } from "./app/actions.ts";
 import type { Profile, Storage } from "./app/storage.ts";
 import type { Store } from "./app/store.ts";
@@ -33,9 +34,10 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
       pass = typed.trim();
       res = await tryOpen(pass);
     }
-    if (!res.ok) return alert("Couldn't open a table, try again.");
+    const opened = res.ok ? OpenedTable.safeParse(await res.json().catch(() => null)) : null;
+    if (!opened?.success) return alert("Couldn't open a table, try again.");
     storage.setHostPass(pass);
-    const { code, dealerKey } = await res.json();
+    const { code, dealerKey } = opened.data;
     storage.setDealerKey(code, dealerKey);
     location.search = `?room=${code}`;
   }
@@ -55,8 +57,8 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
 
   async function boot() {
     if (!roomCode) return showStart();
-    const res = await fetch(`/api/rooms/${roomCode}`).then((r) => r.json()).catch(() => ({ exists: false }));
-    if (!res.exists) {
+    const info = await fetch(`/api/rooms/${roomCode}`).then((r) => r.json()).then((j) => TableInfo.parse(j)).catch(() => null);
+    if (!info?.exists) {
       history.replaceState(null, "", location.pathname);
       return showStart(`Table ${roomCode} isn't open anymore. Start a new one?`);
     }

@@ -2,6 +2,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import type { OpenedTable, TableInfo } from "../../shared/protocol.ts";
 import type { DealerAuth } from "../auth/passcode.ts";
 import type { Rooms } from "../rooms.ts";
 
@@ -22,13 +23,13 @@ export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: str
     if (url.pathname === "/api/rooms" && req.method === "POST") {
       if (!auth.canOpenTable(req)) return json(res, 401, { error: "Wrong host passcode" });
       const table = rooms.create();
-      return json(res, 200, { code: table.code, dealerKey: table.snapshot().dealerKey });
+      return json(res, 200, { code: table.code, dealerKey: table.snapshot().dealerKey } satisfies OpenedTable);
     }
     if (url.pathname.startsWith("/api/rooms/") && req.method === "GET") {
       const table = rooms.get(url.pathname.split("/").pop()!);
       return json(res, table ? 200 : 404, {
         exists: !!table, jiraEnabled: table?.viewFor(null).jiraEnabled ?? false, needsPasscode: auth.needsPasscode,
-      });
+      } satisfies TableInfo);
     }
     // static files from dist/, falling back to index.html
     const path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");

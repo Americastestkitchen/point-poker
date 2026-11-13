@@ -150,6 +150,16 @@ export type CommandMsg = z.infer<typeof CommandMsg>;
 export const ClientMsg = z.discriminatedUnion("t", [JoinMsg, FxMsg, CommandMsg]);
 export type ClientMsg = z.infer<typeof ClientMsg>;
 
+// ---------- HTTP ----------
+
+/** POST /api/rooms: a new table, and the key that makes you its dealer. */
+export const OpenedTable = z.object({ code: z.string(), dealerKey: z.string() });
+export type OpenedTable = z.infer<typeof OpenedTable>;
+
+/** GET /api/rooms/:code (a 404 when `exists` is false). */
+export const TableInfo = z.object({ exists: z.boolean(), jiraEnabled: z.boolean(), needsPasscode: z.boolean() });
+export type TableInfo = z.infer<typeof TableInfo>;
+
 // ---------- server → browser ----------
 
 export const ServerMsg = z.discriminatedUnion("t", [

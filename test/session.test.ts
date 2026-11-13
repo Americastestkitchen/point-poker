@@ -8,7 +8,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ServerMsg, TableView } from "../shared/protocol.ts";
+import { OpenedTable, TableInfo, type ServerMsg, type TableView } from "../shared/protocol.ts";
 import { createActions, type Actions } from "../client/src/app/actions.ts";
 import type { GameEvent } from "../client/src/app/events.ts";
 import { createSession, type Session } from "../client/src/app/session.ts";
@@ -159,9 +159,9 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(denied.status, 401);
   const opened = await fetch(`${server.http}/api/rooms`, { method: "POST", headers: { "x-host-passcode": PASSCODE } });
   assert.equal(opened.status, 200);
-  const { code, dealerKey } = await opened.json() as { code: string; dealerKey: string };
+  const { code, dealerKey } = OpenedTable.parse(await opened.json());
   assert.match(code, /^[A-Z]{4}$/);
-  const info = await (await fetch(`${server.http}/api/rooms/${code.toLowerCase()}`)).json();
+  const info = TableInfo.parse(await (await fetch(`${server.http}/api/rooms/${code.toLowerCase()}`)).json());
   assert.deepEqual(info, { exists: true, jiraEnabled: false, needsPasscode: true });
   assert.equal((await fetch(`${server.http}/api/rooms/ZZZZ`)).status, 404);
 
@@ -316,7 +316,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   await server.stop();
   await Promise.all([deb, bob, ann3].map((p) => p.until((x) => x.store.getState().connection.status === "connecting", "line dropped")));
   await server.start();
-  const back = await (await fetch(`${server.http}/api/rooms/${code}`)).json();
+  const back = TableInfo.parse(await (await fetch(`${server.http}/api/rooms/${code}`)).json());
   assert.equal(back.exists, true);
   for (const p of [deb, bob, ann3]) await p.until((x) => x.store.getState().connection.status === "open", "reconnected");
   await deb.untilState((s) => s.players.length === 3 && s.players.every((p) => p.connected), "everyone back");
