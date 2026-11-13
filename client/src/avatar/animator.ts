@@ -3,7 +3,7 @@
 // layers (body, arms, face) and produces a Pose; the rig turns that into
 // meshes. No three.js here, so the same animator can drive the bean and the
 // first-person arms (#6), and tests can run it.
-import { EMOTE_IDS, type EmoteId } from "../../../shared/catalog/emotes.ts";
+import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
 
 export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard";
 
@@ -35,7 +35,6 @@ export interface Pose {
 }
 
 const REST_ARM_X = -1.15;
-const EMOTES = new Set<string>(EMOTE_IDS);
 const ease = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 
 export interface Animator {
@@ -57,11 +56,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
   const phase = random() * 10;
   let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
   let bonkT = 0, celebrateT = 0;
-  let emote: EmoteId | null = null, emoteT = 0;
-  /** Seconds into "reach out and put a card down", or -1. */
-  let placeT = -1;
-  /** Seconds into "square up my card", or -1. */
-  let adjustT = -1;
+  /** The emote playing, and how many seconds in. */
+  let emote: { id: EmoteId; t: number } | null = null;
+  /** What the hands are doing with the card, and how many seconds in. */
+  let hands: { kind: "idle" } | { kind: "placing"; t: number } | { kind: "adjusting"; t: number } = { kind: "idle" };
   let talkTarget = 0, talkAt = 0, talk = 0;
   const arms: [ArmPose, ArmPose] = [{ x: REST_ARM_X, z: -0.25, stretch: 1 }, { x: REST_ARM_X, z: 0.25, stretch: 1 }];
   const pupils = [0, 1].map(() => ({ off: { x: 0, y: 0 }, vel: { x: 0, y: 0 } }));
@@ -79,14 +77,14 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           celebrateT = 2.2;
           return;
         case "placeCard":
-          placeT = 0;
-          adjustT = -1;
+          hands = { kind: "placing", t: 0 };
           return;
         case "adjustCard":
-          if (placeT < 0) adjustT = 0;
+          // squaring it up waits until it's been put down
+          if (hands.kind !== "placing") hands = { kind: "adjusting", t: 0 };
           return;
         default:
-          if (EMOTES.has(clip)) { emote = clip; emoteT = 0; }
+          if (isEmote(clip)) emote = { id: clip, t: 0 };
       }
     },
 
@@ -100,7 +98,7 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       talkAt = now();
     },
 
-    get busyWithCard() { return placeT >= 0 || adjustT >= 0; },
+    get busyWithCard() { return hands.kind !== "idle"; },
 
     update(dt, t) {
       yaw += (targetYaw - yaw) * Math.min(1, dt * 8);
@@ -127,14 +125,14 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       if (celebrateT > 0) { armL = armR = -2.9 + Math.sin(tt * 18) * 0.3; }
       let playing: Pose["emote"] = null;
       if (emote) {
-        emoteT += dt;
-        const e = emoteT;
-        if (emote === "wave") armR = -2.6 + Math.sin(e * 16) * 0.5;
-        if (emote === "laugh") { rotZ = Math.sin(e * 30) * 0.06; y += Math.abs(Math.sin(e * 20)) * 0.04; }
-        if (emote === "think") { rotZ = 0.2 * Math.min(1, e * 4); armL = -2.4; }
-        if (emote === "shock") { y += Math.max(0, 0.15 - e * 0.4); eyeScale = 1.3; }
+        emote.t += dt;
+        const { id, t: e } = emote;
+        if (id === "wave") armR = -2.6 + Math.sin(e * 16) * 0.5;
+        if (id === "laugh") { rotZ = Math.sin(e * 30) * 0.06; y += Math.abs(Math.sin(e * 20)) * 0.04; }
+        if (id === "think") { rotZ = 0.2 * Math.min(1, e * 4); armL = -2.4; }
+        if (id === "shock") { y += Math.max(0, 0.15 - e * 0.4); eyeScale = 1.3; }
         if (e > 2) { emote = null; eyeScale = 1; }
-        else playing = { id: emote, t: e };
+        else playing = { id, t: e };
       }
 
       // ---- arms layer: card handling (reach out with the right arm, let go, both hands square it up)
@@ -150,9 +148,9 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         zR = 0.25 - 0.22 * k + w;
         lean = 0.14 * k;
       };
-      if (placeT >= 0) {
-        placeT += dt;
-        const e = placeT;
+      if (hands.kind === "placing") {
+        hands.t += dt;
+        const e = hands.t;
         armSpeed = 22;
         if (e < 0.55) {
           // reach: right arm swings forward and stretches out to the felt
@@ -162,12 +160,12 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           zR = 0.25 - 0.2 * k;
           lean = 0.18 * k;
         } else if (e < 1.45) fiddle(e - 0.55, 0.9);
-        else placeT = -1;
-      } else if (adjustT >= 0) {
-        adjustT += dt;
+        else hands = { kind: "idle" };
+      } else if (hands.kind === "adjusting") {
+        hands.t += dt;
         armSpeed = 22;
-        if (adjustT < 0.8) fiddle(adjustT, 0.8);
-        else adjustT = -1;
+        if (hands.t < 0.8) fiddle(hands.t, 0.8);
+        else hands = { kind: "idle" };
       }
       const a = Math.min(1, dt * armSpeed);
       const [L, R] = arms;

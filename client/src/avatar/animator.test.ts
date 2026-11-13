@@ -48,6 +48,19 @@ test("putting a card down keeps the hands busy for about a second and a half", (
   assert.equal(a.busyWithCard, true);
 });
 
+test("squaring up the card waits until it's been put down", () => {
+  const a = still();
+  a.play("placeCard");
+  run(a, 1.0);
+  a.play("adjustCard"); // ignored: still putting it down
+  run(a, 0.5);
+  assert.equal(a.busyWithCard, false, "done at about 1.45s, not restarted by the adjust");
+  a.play("adjustCard");
+  a.play("placeCard"); // a new card takes over from the fiddle
+  run(a, 1.0);
+  assert.equal(a.busyWithCard, true);
+});
+
 test("a bonk squashes the body and settles", () => {
   const a = still();
   a.play("bonked");
