@@ -2,35 +2,22 @@
 
 # Point Poker
 
-A silly 3D story-point poker game for our standups. The dealer puts a Jira ticket on the
-table, everyone secretly plays a card (1, 2, 3, 5, 8), the cards flip, and the dealer
-calls the final points. The closest guess wins the pot.
+A silly 3D story-point poker game for standups. The dealer puts a Jira ticket on the table,
+everyone secretly plays a card, the cards flip, and the dealer calls the final points. The
+closest guess wins the pot.
 
-- **Live:** https://point-poker.fly.dev
-- **Dev (latest `main`):** https://point-poker-dev.fly.dev
+**Play:** https://point-poker.fly.dev · **Latest `main`:** https://point-poker-dev.fly.dev
 
-## Start here
+## How to play
 
-### Where things live
+- **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Add a ticket (or an epic, to queue its
+  children), reveal the cards, and pick the final points.
+- **Players:** open the invite link, pick a body, colour and hat, and click a card. Drag to
+  look around, press Z X C V to emote, click someone to throw a chip, and click the duck.
 
-| Thing                              | Where                                       | You need access?                  |
-| ---------------------------------- | ------------------------------------------- | --------------------------------- |
-| Code                               | this GitHub repo                            | Yes: ask Jair to add you          |
-| Live and dev sites                 | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you        |
-| Tickets                            | Jira, as the dealer who signed in           | Only to show real tickets locally |
-| Secrets (Atlassian app, token key) | Fly, plus `.env.local` on your machine      | Ask Jair if you need them         |
+## Quick start
 
-### How a change reaches people
-
-```
-you push to main ──▶ dev site updates (about 1 min)
-npm run release ──▶ live site updates + a GitHub Release
-you open a pull request (optional) ──▶ its own preview site
-```
-
-Everything in that path is automatic. See [CONTRIBUTING.md](CONTRIBUTING.md) for the exact commands.
-
-### Run it on your machine
+Requires Node 26.
 
 ```sh
 npm install
@@ -38,77 +25,34 @@ npm run build
 npm start                  # http://localhost:8787
 ```
 
-That's enough to play with hand-typed tickets. To show real Jira tickets, create
-`.env.local` (it's never committed) with the Atlassian app's credentials, so you sign in with
-your own Jira account when you open a table (see [CONTRIBUTING.md](CONTRIBUTING.md#jira-sign-in)):
+For hot reload, run `npm run dev:server` and `npm run dev` together.
 
-```
-ATLASSIAN_CLIENT_ID=...
-ATLASSIAN_CLIENT_SECRET=...
-TOKEN_KEY=...              # any long random string; seals sign-ins kept in .data/
-```
+## Configuration
 
-Or, without the Atlassian app, one shared API token (no sign-in; a passcode guards opening):
+Everything is optional. Without Jira you type tickets in by hand. Locally, put the variables
+in `.env.local`.
 
-```
-JIRA_BASE_URL=https://yoursite.atlassian.net
-JIRA_EMAIL=you@example.com
-JIRA_API_TOKEN=...         # make one at id.atlassian.com → Security → API tokens
-HOST_PASSCODE=...          # anything; you type it when opening a table
-```
+| Variable                                         | What it does                                                                                                                                                   |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` | Dealers sign in with their own Jira account to open a table, and tickets load with their access. [Setting up the Atlassian app](CONTRIBUTING.md#jira-sign-in). |
+| `TOKEN_KEY`                                      | A long random string that seals those sign-ins on disk. Without it they are lost on restart.                                                                   |
+| `JIRA_SITES`                                     | The Jira sites tables may use, like `acme.atlassian.net`. Without it any Atlassian account can open a table.                                                   |
+| `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`  | Instead of sign-in: one shared API token for every table.                                                                                                      |
+| `HOST_PASSCODE`                                  | With the shared token: required to open a table.                                                                                                               |
+| `JIRA_POINTS_FIELD`                              | The story points field (default `customfield_10004`).                                                                                                          |
+| `JIRA_PROJECT`                                   | The project whose sprints the ticket picker suggests.                                                                                                          |
+| `DATA_DIR`                                       | Saves tables here, so restarts don't end games. Without it, tables live in memory.                                                                             |
+| `PORT`                                           | Defaults to 8787.                                                                                                                                              |
 
-For hot reload while coding, run `npm run dev:server` and `npm run dev` together.
+## Status
 
-### Good to know
+Built for one team and still changing fast: the coin economy, the dealer's role and table
+setup are all being reworked, and there is one room so far. Nothing writes to Jira yet, so the
+final points are entered there by hand. Plans live in the
+[issues](https://github.com/Americastestkitchen/point-poker/issues).
 
-- **Jira writes are deliberate.** The game reads Jira as the dealer who signed in, and the only
-  thing it writes is the points the table settles on (#17). Anything else needs a decision first.
-- **Releasing is safe mid-game.** The live site saves its tables, so a release just causes a
-  few seconds of "reconnecting…". The dev site and previews don't save tables.
-- **Secrets never go in the repo.** If you see a token in a diff, stop and tell someone.
+## Contributing
 
-### Where to go next
-
-- [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets and the UI gallery.
-- [AGENTS.md](AGENTS.md): feature integration recipes and the planned screen contract.
-- [GitHub issues](https://github.com/JaiiR320/point-poker/issues): what we're thinking about next.
-- The code: `shared/protocol.ts` (the messages between server and browser, as Zod schemas)
-  is the best place to start reading. Next to it, `shared/rules.ts` has the rules both sides
-  use, `shared/look.ts` what a bean looks like, and `shared/catalog/` the content (decks,
-  colours, bodies, hats, emotes, environments). Then:
-  - `server/main.ts` reads the environment and wires everything together.
-  - `server/table/` is one poker table: its state, rules, commands, payouts (`coins.ts`) and
-    the round's state machine (`round.ts`: which moves each phase allows).
-    It's plain logic with unit tests, no sockets. Every command a player can send is one
-    `defineCommand()` in `commands.ts`; the client imports their types from there.
-  - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
-    (the dealer's Jira sign-in, or the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
-  - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
-    store, view diffing and the event stream (`events.ts`), `actions`, the session
-    (socket + reconnect) and storage.
-    The 3D world (`scene/`, `avatar/`, `environments/`) and the UI (`screens/`, `ui/`) have
-    separate roles: both read the store, call `actions` and use the event stream. `screens/`
-    is the title screens (`screens/title/`) and the in-game HUD, built with the kit. The generic React kit in `ui/` takes props and injected
-    services; it imports no app/game code. Its gallery alone wires app storage and audio.
-    World and UI do not import each other: your bean on the title screens is drawn by the
-    world (`scene/showcase.ts`) into a box the screen reports through the store.
-    `test/boundaries.test.ts` checks these import rules.
-  - `client/src/scene/layout/layout.ts` says where everything goes (seats, cards,
-    the ticket, the pot, props). `client/src/environments/` says how it looks: the Backlog Basement lives in
-    `environments/basement/`, and a new place is a new folder there.
-  - `client/src/avatar/` is the bean: one file per body shape in `bodies/`, one per hat in
-    `cosmetics/`, the parts every bean has (face, arms, labels, chair) in `parts/`, and an
-    `animator` that works out every pose. `createAvatar(look)` puts it all together.
-  - `client/src/scene/` is grouped by job: `engine/` (renderer, picking, input, camera),
-    `layout/`, `table/` (seats, cards, chips, the pot, the ticket) and `art/` (materials,
-    canvas textures).
-  - `test/session.test.ts` plays a whole game against the real server.
-  - `*.test-d.ts` files check what the types infer (only `npm run typecheck` runs them), with
-    the helpers in `test/types.ts`.
-
-## How to play
-
-- **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Then add a
-  ticket (or an epic, to queue its children), reveal the cards, and pick the final points.
-- **Players:** open the invite link, pick a body, colour and hat, and click a card.
-  Drag to look around, use Z X C V to emote, click someone to throw a chip, and click the duck.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers checks, deploys and releases.
+[AGENTS.md](AGENTS.md) covers the constraints and conventions the code doesn't show. To read
+the code, start at `shared/protocol.ts`: every message between server and browser.
