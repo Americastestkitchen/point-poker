@@ -4,10 +4,16 @@ import { Ticket, type TicketSummary } from "../../shared/protocol.ts";
 import { parseIssueKey } from "../../shared/rules.ts";
 import type { TicketQuery, TicketSource } from "./source.ts";
 
-/** How we sign in to Jira. An API token today; OAuth (#12) becomes a second kind. */
-export type JiraAuth = { kind: "apiToken"; email: string; token: string };
+/**
+ * How we sign in to Jira: one shared API token (local dev), or the dealer's own Atlassian
+ * login, which calls Jira through api.atlassian.com with a token that `token()` keeps fresh.
+ */
+export type JiraAuth =
+  | { kind: "apiToken"; email: string; token: string }
+  | { kind: "oauth"; cloudId: string; token(): Promise<string> };
 
 export interface JiraConfig {
+  /** The site people browse, like https://acme.atlassian.net: ticket links point here. */
   baseUrl: string;
   auth: JiraAuth;
   /** The custom field that holds story points. */
@@ -110,10 +116,20 @@ const upcomingJql = (project: string) =>
   `project = ${project} AND sprint in (openSprints(), futureSprints()) AND statusCategory != Done ORDER BY rank`;
 const epicChildrenJql = (epicKey: string) => `parent = ${epicKey} ORDER BY rank`;
 
+/** What a dealer whose Jira login stopped working is told. */
+export const SIGN_IN_AGAIN =
+  "Your Jira sign-in expired. Sign in again from the title screen and this table picks it up.";
+
 export function jiraSource(cfg: JiraConfig): TicketSource {
   const base = cfg.baseUrl.replace(/\/+$/, "");
+  const { auth } = cfg;
+  /** Where the REST API is: the site itself, or the site through Atlassian's gateway. */
+  const api = auth.kind === "oauth" ? `https://api.atlassian.com/ex/jira/${encodeURIComponent(auth.cloudId)}` : base;
   const pointsField = cfg.pointsField ?? "customfield_10004";
-  const authorization = "Basic " + Buffer.from(`${cfg.auth.email}:${cfg.auth.token}`).toString("base64");
+  const authorization = async () =>
+    auth.kind === "oauth"
+      ? "Bearer " + (await auth.token())
+      : "Basic " + Buffer.from(`${auth.email}:${auth.token}`).toString("base64");
   const fetch = cfg.fetch ?? globalThis.fetch;
 
   /** GETs a Jira endpoint and checks the reply against `schema`. */
@@ -122,13 +138,14 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
     path: string,
     params: Record<string, string> = {},
   ): Promise<z.infer<S>> {
-    const url = new URL(base + path);
+    const url = new URL(api + path);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     const res = await fetch(url, {
       method: "GET",
-      headers: { Authorization: authorization, Accept: "application/json" },
+      headers: { Authorization: await authorization(), Accept: "application/json" },
       signal: AbortSignal.timeout(10_000),
     });
+    if (res.status === 401 && auth.kind === "oauth") throw new Error(SIGN_IN_AGAIN);
     if (res.status === 404) throw new Error("Ticket not found (or no access)");
     if (!res.ok) throw new Error(`Jira answered ${res.status}`);
     const parsed = schema.safeParse(await res.json().catch(() => undefined));

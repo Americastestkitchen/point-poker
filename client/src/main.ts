@@ -13,6 +13,7 @@ import { createAudio } from "./audio/sfx.ts";
 import { mountScene } from "./scene/index.ts";
 import { createStage } from "./scene/engine/stage.ts";
 import { createGameUi } from "./screens/index.tsx";
+import type { SignedIn } from "./screens/title/flow.ts";
 import { createToasts, mountUi } from "./ui/index.ts";
 import "./style.css";
 
@@ -24,6 +25,16 @@ function $<T extends HTMLElement>(id: string, kind: new () => T): T {
 }
 
 const invite = (new URLSearchParams(location.search).get("room") ?? "").toUpperCase();
+
+/** Back from signing in with Jira (`?host=1`, or `?host=failed`): read it once and tidy the address. */
+function takeSignIn(): SignedIn {
+  const url = new URL(location.href);
+  const host = url.searchParams.get("host");
+  if (host === null) return null;
+  url.searchParams.delete("host");
+  history.replaceState(null, "", url);
+  return host === "1" ? "ok" : "failed";
+}
 
 /** Puts `?room=CODE` in the address bar, or takes it out (null), leaving any other parameters. */
 function setRoomParam(code: string | null) {
@@ -57,7 +68,9 @@ const game = createGameUi({
   mic: createMic(),
   title: {
     inviteCode: invite,
+    signedIn: takeSignIn(),
     tables,
+    signIn: () => location.assign("/auth/jira/start"),
     sit: createSit({ store, session, showInvite: setRoomParam }),
     forgetInvite: () => setRoomParam(null),
   },

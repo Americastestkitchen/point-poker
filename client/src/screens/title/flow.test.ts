@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { noTable, start, step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
+import { noTable, SIGN_IN_FAILED, start, step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
 
 const menu = (saved: boolean): TitleState => ({ view: { t: "menu" }, saved, invite: null, requests: 0 });
 
@@ -109,13 +109,13 @@ test("joining without a profile: character select, whose Back returns to the cod
 
 test("opening a table: straight away with a profile, through character select without one", () => {
   const r = run(menu(true), [{ t: "pick", item: "open" }]);
-  assert.deepEqual(r.view, { t: "opening", sending: true, passcode: null, request: 1 });
-  assert.deepEqual(r.effects, [{ t: "open", request: 1, passcode: null }]);
+  assert.deepEqual(r.view, { t: "opening", sending: true, ask: null, request: 1 });
+  assert.deepEqual(r.effects, [{ t: "open", request: 1, passcode: null, site: null }]);
   assert.deepEqual(run(r.state, [{ t: "opened", request: 1, code: "ABCD" }]).effects, [{ t: "sit", code: "ABCD" }]);
 
   const first = run(menu(false), [{ t: "pick", item: "open" }]);
   assert.equal(first.view.t, "character");
-  assert.deepEqual(run(first.state, [{ t: "done" }]).effects, [{ t: "open", request: 1, passcode: null }]);
+  assert.deepEqual(run(first.state, [{ t: "done" }]).effects, [{ t: "open", request: 1, passcode: null, site: null }]);
   assert.deepEqual(run(first.state, [{ t: "back" }]).view, { t: "menu" }, "Back changes your mind");
 });
 
@@ -131,15 +131,15 @@ test("the menu is busy while a table opens: picks wait, and only one open is ask
 test("the host passcode: asked for, sent once, and a wrong one says so", () => {
   const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
   const asked = run(opening, [{ t: "passcodeNeeded", request: 1, tried: false }]);
-  assert.deepEqual(asked.view, { t: "opening", sending: false, passcode: { wrong: false }, request: 1 });
+  assert.deepEqual(asked.view, { t: "opening", sending: false, ask: { t: "passcode", wrong: false }, request: 1 });
 
   const sent = run(asked.state, [{ t: "passcodeEntered", passcode: " hunter2 " }]);
-  assert.deepEqual(sent.effects, [{ t: "open", request: 2, passcode: "hunter2" }]);
+  assert.deepEqual(sent.effects, [{ t: "open", request: 2, passcode: "hunter2", site: null }]);
   assert.deepEqual(run(sent.state, [{ t: "passcodeEntered", passcode: "again" }]).effects, [], "not twice");
   assert.deepEqual(run(asked.state, [{ t: "passcodeEntered", passcode: "  " }]).effects, [], "not blank");
 
   const wrong = run(sent.state, [{ t: "passcodeNeeded", request: 2, tried: true }]);
-  assert.deepEqual(wrong.view, { t: "opening", sending: false, passcode: { wrong: true }, request: 2 });
+  assert.deepEqual(wrong.view, { t: "opening", sending: false, ask: { t: "passcode", wrong: true }, request: 2 });
   assert.deepEqual(run(wrong.state, [{ t: "back" }]).view, { t: "menu" }, "Cancel");
 });
 
@@ -153,7 +153,7 @@ test("a failed open says why, once, and a late answer after Cancel does nothing"
 
 test("Cancel, then Open again: the first ask's late answer isn't taken for the second's", () => {
   const second = run(menu(true), [{ t: "pick", item: "open" }, { t: "back" }, { t: "pick", item: "open" }]);
-  assert.deepEqual(second.effects.at(-1), { t: "open", request: 2, passcode: null });
+  assert.deepEqual(second.effects.at(-1), { t: "open", request: 2, passcode: null, site: null });
   const late = run(second.state, [{ t: "openFailed", request: 1, reason: "slow no" }]);
   assert.deepEqual(late.view, second.view, "still waiting for the second ask");
   assert.deepEqual(late.effects, []);
@@ -164,4 +164,40 @@ test("Character from the menu saves and comes back to the menu", () => {
   const r = run(menu(true), [{ t: "pick", item: "character" }, { t: "done" }]);
   assert.deepEqual(r.view, { t: "menu" });
   assert.deepEqual(r.effects, []);
+});
+
+const SITES = [
+  { id: "c-1", name: "Acme", url: "https://acme.atlassian.net" },
+  { id: "c-2", name: "Side", url: "https://side.atlassian.net" },
+];
+
+test("signing in with Jira: asked for, leaves the page once, and Cancel changes your mind", () => {
+  const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
+  const asked = run(opening, [{ t: "signInNeeded", request: 1 }]);
+  assert.deepEqual(asked.view, { t: "opening", sending: false, ask: { t: "signIn" }, request: 1 });
+  const going = run(asked.state, [{ t: "signIn" }]);
+  assert.deepEqual(going.effects, [{ t: "signIn" }]);
+  assert.equal(going.view.t === "opening" && going.view.sending, true, "the button waits while the page leaves");
+  assert.deepEqual(run(asked.state, [{ t: "back" }]).view, { t: "menu" }, "Cancel");
+  assert.deepEqual(run(opening, [{ t: "signIn" }]).effects, [], "only once asked");
+});
+
+test("back from signing in, the table opens; a sign-in that didn't finish says so on the menu", () => {
+  const ok = start("", true, "ok");
+  assert.deepEqual(ok.state.view, { t: "opening", sending: true, ask: null, request: 1 });
+  assert.deepEqual(ok.effects, [{ t: "open", request: 1, passcode: null, site: null }]);
+  assert.deepEqual(start("", true, "failed"), { state: menu(true), effects: [{ t: "error", text: SIGN_IN_FAILED }] });
+});
+
+test("more than one Jira site: pick one, and only one that was offered", () => {
+  const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
+  const asked = run(opening, [{ t: "sitesOffered", request: 1, sites: SITES }]);
+  assert.deepEqual(asked.view, { t: "opening", sending: false, ask: { t: "site", sites: SITES }, request: 1 });
+  assert.deepEqual(run(asked.state, [{ t: "siteChosen", site: "nope" }]).effects, []);
+  const chosen = run(asked.state, [{ t: "siteChosen", site: "c-2" }]);
+  assert.deepEqual(chosen.effects, [{ t: "open", request: 2, passcode: null, site: "c-2" }]);
+  assert.deepEqual(run(chosen.state, [{ t: "siteChosen", site: "c-1" }]).effects, [], "not twice");
+  assert.deepEqual(run(chosen.state, [{ t: "opened", request: 2, code: "ABCD" }]).effects, [
+    { t: "sit", code: "ABCD" },
+  ]);
 });

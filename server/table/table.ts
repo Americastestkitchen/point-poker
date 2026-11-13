@@ -7,7 +7,7 @@ import type { TicketSource } from "../tickets/source.ts";
 import { findCommand, type DealerCtx } from "./commands.ts";
 import { refusal, startRound } from "./round.ts";
 import { clean, findPlayer, freeSeat } from "./rules.ts";
-import type { TableState } from "./state.ts";
+import type { TableJira, TableState } from "./state.ts";
 import { viewFor } from "./view.ts";
 
 export interface Log {
@@ -16,7 +16,8 @@ export interface Log {
 }
 
 export interface TableDeps {
-  ticketsFor(dealerId: string): TicketSource;
+  /** Where this table's tickets come from: the dealer's Jira login, or the server's own source. */
+  ticketsFor(jira: TableJira | null): TicketSource;
   now(): number;
   random(): number;
   log: Log;
@@ -185,7 +186,7 @@ export class Table {
   }
 
   private tickets() {
-    return this.deps.ticketsFor(this.s.dealerId ?? "");
+    return this.deps.ticketsFor(this.s.jira);
   }
 
   private newId() {

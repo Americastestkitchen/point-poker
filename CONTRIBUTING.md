@@ -31,7 +31,7 @@ If you move a seat, prop or body anchor on purpose, run `npm run test:update-sna
 
 For a bigger or riskier change, use a branch and open a pull request instead. It gets its own
 preview site, linked in a PR comment, which redeploys on every push and is deleted when the PR
-closes. Previews have no Jira, so type tickets in by hand.
+closes. Previews sign in to Jira through the dev site (see [Jira sign-in](#jira-sign-in)).
 
 ## UI kit
 
@@ -72,12 +72,43 @@ GitHub Actions then:
 
 ## Secrets
 
-- **Fly (runtime):** `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` and `HOST_PASSCODE` are set
-  per app with `fly secrets set -a point-poker` / `-a point-poker-dev`.
+- **Fly (runtime):** set per app with `fly secrets set -a point-poker` / `-a point-poker-dev`:
+  - `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`: the Atlassian app (see below).
+  - `TOKEN_KEY`: a long random string (`openssl rand -base64 32`) that seals dealers' Jira
+    sign-ins on the `/data` volume. Changing it signs everyone out.
+  - `JIRA_SITES`: the Jira site hosts tables may use, comma-separated, like
+    `acme.atlassian.net`. Without it any Atlassian account could open a table.
+  - Optional: `JIRA_POINTS_FIELD` (story points field ID), `JIRA_PROJECT` (default project).
 - **GitHub (deploys):** `FLY_API_TOKEN_DEV` and `FLY_API_TOKEN_PROD` are app-scoped Fly deploy tokens.
   `FLY_API_TOKEN_PREVIEW` can create and delete apps in the Fly org, which previews need.
-  `HOST_PASSCODE` is copied to each preview.
+  `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` and `JIRA_SITES` are copied to each preview
+  (without them, previews fall back to `HOST_PASSCODE` and hand-typed tickets). The repository
+  variable `PREVIEW_SIGN_IN=own` makes previews use their own callback URL instead of the dev
+  site's relay; add `https://point-poker-pr-<number>.fly.dev/auth/jira/callback` to the app then.
 - **Local:** use `.env.local` (gitignored) for `npm start`.
+
+## Jira sign-in
+
+Dealers sign in with their own Jira account (Atlassian OAuth 2.0, "3LO") when they open a
+table; players never do. The server keeps each dealer's refresh token sealed with `TOKEN_KEY`,
+and the browser only gets a session cookie, so dealers stay signed in for up to 90 days of not
+playing. Signing out (on the title screen) forgets the login, and that dealer's tables go back
+to hand-typed tickets.
+
+The app lives at [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps/):
+
+- **Permissions:** Jira API `read:jira-work`, `read:jira-user`, `write:jira-work`; Jira Software
+  `read:sprint:jira-software`, `read:board-scope:jira-software`; User identity API `read:me`.
+  `offline_access` isn't in the console: the server asks for it. Adding a scope later makes every
+  dealer sign in again; the list is `SCOPES` in `server/auth/atlassian.ts`.
+- **Authorization → callback URLs:** `https://point-poker.fly.dev/auth/jira/callback`,
+  `https://point-poker-dev.fly.dev/auth/jira/callback` and `http://localhost:8787/auth/jira/callback`.
+  Atlassian only accepts exact URLs, so PR previews sign in through the dev site: a preview sends
+  `ATLASSIAN_CALLBACK_URL` (the dev site's) to Atlassian, and the dev site passes the answer on to
+  any address matching `ATLASSIAN_RELAY` (set in `fly.dev.toml`). Only a one-time code passes
+  through; the preview trades it for tokens itself. To sign in on another address (like a
+  Tailscale one), add its callback URL to the app.
+- **Distribution:** sharing on, or only the app's owner can sign in.
 
 ## Handy commands
 

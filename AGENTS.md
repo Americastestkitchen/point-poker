@@ -1,7 +1,8 @@
 # Integrating features
 
 Read [README.md](README.md) for the code map and [CONTRIBUTING.md](CONTRIBUTING.md)
-for running, releasing and secrets. Keep changes focused; Jira is read-only.
+for running, releasing and secrets. Keep changes focused. The game reads Jira with the dealer's
+own sign-in and only writes the points the table settles on (#17).
 
 ## Boundaries and state
 

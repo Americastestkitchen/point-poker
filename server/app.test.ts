@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "./app.ts";
-import { passcodeAuth } from "./auth/passcode.ts";
+import { passcodeAuth } from "./auth/dealer.ts";
 import { memoryStore } from "./store/memory.ts";
 import { noTickets } from "./tickets/none.ts";
 

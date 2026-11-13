@@ -2,7 +2,7 @@
 # Exactly ONE machine that never sleeps: tables live in memory, so a second
 # machine would split players. Tables are saved to the /data volume, so they
 # survive deploys and restarts.
-# Jira credentials and HOST_PASSCODE are Fly secrets (`fly secrets set`), not here.
+# The Atlassian app's credentials and TOKEN_KEY are Fly secrets (`fly secrets set`), not here.
 
 app = "point-poker"
 primary_region = "iad"

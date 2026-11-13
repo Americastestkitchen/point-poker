@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: true,
     proxy: {
       "/api": api,
+      "/auth": api,
       "/ws": { target: api.replace("http", "ws"), ws: true },
     },
   },

@@ -45,11 +45,28 @@ jobs:
       - name: Create the preview app (first push only)
         if: env.OPEN == 'true'
         run: flyctl status -a "$APP" >/dev/null 2>&1 || flyctl apps create "$APP" --org "$FLY_ORG"
-      - name: Set the host passcode
+      - name: Set the host passcode, or Jira sign-in through the dev site
         if: env.OPEN == 'true'
-        run: flyctl secrets set HOST_PASSCODE="$HOST_PASSCODE" -a "$APP" --stage
+        run: |
+          # PREVIEW_SIGN_IN=own: the preview's own callback (add it to the Atlassian app), for
+          # testing sign-in before the dev site relays it. Otherwise through the dev site.
+          if [ "$PREVIEW_SIGN_IN" = own ]; then CALLBACK="https://$APP.fly.dev/auth/jira/callback"
+          else CALLBACK="https://point-poker-dev.fly.dev/auth/jira/callback"; fi
+          if [ -n "$ATLASSIAN_CLIENT_ID" ]; then
+            flyctl secrets set -a "$APP" --stage \
+              ATLASSIAN_CLIENT_ID="$ATLASSIAN_CLIENT_ID" \
+              ATLASSIAN_CLIENT_SECRET="$ATLASSIAN_CLIENT_SECRET" \
+              ATLASSIAN_CALLBACK_URL="$CALLBACK" \
+              JIRA_SITES="$JIRA_SITES"
+          else
+            flyctl secrets set HOST_PASSCODE="$HOST_PASSCODE" -a "$APP" --stage
+          fi
         env:
           HOST_PASSCODE: ${{ secrets.HOST_PASSCODE }}
+          ATLASSIAN_CLIENT_ID: ${{ secrets.ATLASSIAN_CLIENT_ID }}
+          ATLASSIAN_CLIENT_SECRET: ${{ secrets.ATLASSIAN_CLIENT_SECRET }}
+          JIRA_SITES: ${{ secrets.JIRA_SITES }}
+          PREVIEW_SIGN_IN: ${{ vars.PREVIEW_SIGN_IN }}
       - name: Deploy
         if: env.OPEN == 'true'
         run: flyctl deploy --remote-only --ha=false --config fly.dev.toml -a "$APP"

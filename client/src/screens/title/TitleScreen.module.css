@@ -90,6 +90,14 @@
     transparent 62%
   );
 }
+.account {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--pp-space-2);
+  color: var(--pp-color-dim);
+}
 .menuColumn {
   position: absolute;
   left: 7vw;

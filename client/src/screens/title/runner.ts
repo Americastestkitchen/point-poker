@@ -1,15 +1,19 @@
 // Runs the title flow (flow.ts): holds its state, does the effects it asks for (asking the
 // server, sitting down, tidying the address bar) and feeds the answers back in as events.
 // The title screen reads it with useSyncExternalStore; node tests drive it with fake tables.
-import type { Tables } from "../../app/tables.ts";
-import { start, step, type Step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
+import type { OpenResult, Tables } from "../../app/tables.ts";
+import { start, step, type SignedIn, type Step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
 
 /** What the title screens need from the page: the invite link, opening tables, sitting down. */
 export interface Title {
   /** The table code from the invite link (`?room=`), or "" when the site was opened directly. */
   inviteCode: string;
+  /** How the Jira sign-in you just came back from went (null: you didn't). */
+  signedIn: SignedIn;
   /** Opening a table, and checking an invite's table is still open. */
-  tables: Pick<Tables, "open" | "check" | "savedPasscode">;
+  tables: Pick<Tables, "open" | "check" | "savedPasscode" | "host" | "signOut">;
+  /** Leave for Atlassian's sign-in page; it comes back here to open the table. */
+  signIn(): void;
   /** Sit down at table `code` with the saved profile: the game takes over from the title screens. */
   sit(code: string): void;
   /** Drop the invite from the address bar (its table is gone, or you went back to the menu). */
@@ -24,8 +28,26 @@ export interface TitleFlowDeps {
   error(text: string): void;
 }
 
+/** The flow's event for how opening table request `request` went. */
+function answer(request: number, r: OpenResult): TitleEvent {
+  switch (r.t) {
+    case "opened":
+      return { t: "opened", request, code: r.code };
+    case "passcode":
+      return { t: "passcodeNeeded", request, tried: r.tried };
+    case "signIn":
+      return { t: "signInNeeded", request };
+    case "pickSite":
+      return { t: "sitesOffered", request, sites: r.sites };
+    case "failed":
+      return { t: "openFailed", request, reason: r.reason };
+    default:
+      return r satisfies never;
+  }
+}
+
 export function createTitleFlow({ title, saved, error }: TitleFlowDeps) {
-  const first = start(title.inviteCode, saved);
+  const first = start(title.inviteCode, saved, title.signedIn);
   let state = first.state;
   let started = false;
   /** Answers only count while a screen is showing the flow. */
@@ -53,17 +75,11 @@ export function createTitleFlow({ title, saved, error }: TitleFlowDeps) {
       case "open": {
         const { request } = effect;
         return void title.tables
-          .open(effect.passcode ?? title.tables.savedPasscode())
-          .then((r) =>
-            dispatch(
-              r.t === "opened"
-                ? { t: "opened", request, code: r.code }
-                : r.t === "passcode"
-                  ? { t: "passcodeNeeded", request, tried: r.tried }
-                  : { t: "openFailed", request, reason: r.reason },
-            ),
-          );
+          .open(effect.passcode ?? title.tables.savedPasscode(), effect.site ?? undefined)
+          .then((r) => dispatch(answer(request, r)));
       }
+      case "signIn":
+        return title.signIn();
       case "sit":
         return title.sit(effect.code);
       case "forgetInvite":
