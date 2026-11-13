@@ -1,7 +1,7 @@
 // Cards on the felt: a face-down/face-up card in front of each seat.
 import * as THREE from "three";
+import { layout } from "./layout.ts";
 import { cardBack, cardFront } from "./textures.ts";
-import { seatInfo } from "./world.ts";
 
 export const CARD_W = 0.16, CARD_H = 0.23;
 
@@ -81,10 +81,10 @@ export class TableCard {
     }
   }
 
-  placeAt(slot: number, count: number, reach = 0.62) {
-    const s = seatInfo(slot, count);
-    this.home.copy(s.toward(reach)).y += 0.004;
-    this.yaw = s.facing + Math.PI;
+  placeAt(slot: number, count: number, mine: boolean) {
+    const { position: p, yaw } = layout.card(slot, count, mine);
+    this.home.set(p.x, p.y, p.z);
+    this.yaw = yaw;
   }
 
   /** Someone fiddles with the card: it wiggles and ends up (mostly) straight. */

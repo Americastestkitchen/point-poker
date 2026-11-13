@@ -14,9 +14,11 @@ import type { CameraRig } from "./camera.ts";
 import { TableCard } from "./cards.ts";
 import { makeChip, stackChips } from "./chips.ts";
 import { bonkMe } from "./effects.ts";
+import type { StatusScreen } from "../environments/types.ts";
 import type { Flights } from "./flights.ts";
+import { layout } from "./layout.ts";
 import type { Stage } from "./stage.ts";
-import { TABLE_Y, seatInfo, type World } from "./world.ts";
+import type { TicketPaper } from "./table.ts";
 
 interface Seat {
   avatar: Avatar;
@@ -35,9 +37,11 @@ const DEFERRED = new Set<GameEvent["t"]>(["synced", "joined", "reshaped", "dealt
 const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
 
 export function mountTableView(stage: Stage, deps: {
-  store: Store; actions: Actions; audio: Audio; world: World; flights: Flights; rig: CameraRig;
+  store: Store; actions: Actions; audio: Audio; flights: Flights; rig: CameraRig;
+  ticket: TicketPaper; pot: THREE.Group; screen: StatusScreen;
 }) {
-  const { store, actions, audio, world, flights, rig } = deps;
+  const { store, actions, audio, flights, rig, ticket, pot, screen } = deps;
+  const TABLE_Y = layout.table.y;
   const { scene, camera, picking } = stage;
   const seats = new Map<string, Seat>();
   let pending: GameEvent[] = [];
@@ -93,7 +97,7 @@ export function mountTableView(stage: Stage, deps: {
     for (const p of st.players) {
       const slot = p.isDealer ? -1 : slotOf.get(p.id)!;
       let seat = seats.get(p.id);
-      const info = seatInfo(slot, count);
+      const info = layout.seat(slot, count);
       if (!seat) {
         const { avatar, unpick } = newAvatar(p);
         avatar.group.position.set(info.x, 0, info.z);
@@ -118,8 +122,9 @@ export function mountTableView(stage: Stage, deps: {
       seat.slot = slot;
       seat.pos.set(info.x, 0, info.z);
       seat.facing = info.facing;
-      seat.card.placeAt(slot, count, p.id === me ? 0.42 : 0.62);
-      seat.stack.position.copy(info.toward(0.7)).addScaledVector(info.side, -0.24);
+      seat.card.placeAt(slot, count, p.id === me);
+      const stack = layout.stack(slot, count);
+      seat.stack.position.set(stack.x, stack.y, stack.z);
       seat.avatar.setStyle(p.look.color, hatOf(p));
       seat.avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.look.color, p.connected);
       seat.avatar.group.visible = p.id !== me;
@@ -173,9 +178,9 @@ export function mountTableView(stage: Stage, deps: {
 
     // the pot
     if (st.phase === "revealed") {
-      if (happened("revealed") || !world.pot.children.length) {
-        stackChips(world.pot, st.pot, 99);
-        world.pot.children.forEach((c, i) => {
+      if (happened("revealed") || !pot.children.length) {
+        stackChips(pot, st.pot, 99);
+        pot.children.forEach((c, i) => {
           const to = c.position.clone();
           c.position.y += 0.6 + i * 0.01;
           flights.add({ obj: c, from: c.position.clone(), to, t: -i * 0.03, dur: 0.35, arc: 0, spin: 0, done: () => i % 3 === 0 && audio.chip() });
@@ -184,9 +189,9 @@ export function mountTableView(stage: Stage, deps: {
     } else if (payingOut) {
       payOut(st);
     } else if (st.phase !== "settled") {
-      world.pot.clear();
+      pot.clear();
     }
-    if (settled?.t === "settled" && settled.resettled) world.pot.clear();
+    if (settled?.t === "settled" && settled.resettled) pot.clear();
     if (settled) {
       for (const id of st.winners) seats.get(id)?.avatar.celebrate();
       if (st.winners.includes(me)) audio.win(); else audio.chip();
@@ -200,27 +205,27 @@ export function mountTableView(stage: Stage, deps: {
       }
     }
 
-    // ticket on the table and on the telly
+    // the ticket on the table and on the status screen
     const t = st.ticket;
-    world.setTicket(t ? {
+    ticket.set(t ? {
       key: t.key, type: t.type, summary: t.summary,
       points: st.finalPoints !== null && st.phase === "settled" ? `${st.finalPoints} PTS` : "",
     } : null);
     const playing = voters(st.players);
     const tvLine3 = st.phase === "voting" ? `${playing.filter((p) => p.hasVoted).length}/${playing.length} BETS IN`
       : st.phase === "revealed" ? `POT ${st.pot}` : st.phase === "settled" ? `FINAL ${st.finalPoints} PTS` : "";
-    world.setTv(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", tvLine3);
+    screen.show(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", tvLine3);
   }
 
   /** The pot's chips fly to the winners; their stacks grow when the chips land. */
   function payOut(st: TableView) {
     const winners = st.winners.map((id) => seats.get(id)).filter(Boolean) as Seat[];
-    const chips = [...world.pot.children];
-    if (!winners.length) { world.pot.clear(); return; }
+    const chips = [...pot.children];
+    if (!winners.length) { pot.clear(); return; }
     chips.forEach((chip, i) => {
       const seat = winners[i % winners.length];
       const from = chip.getWorldPosition(new THREE.Vector3());
-      world.pot.remove(chip);
+      pot.remove(chip);
       scene.add(chip);
       chip.position.copy(from);
       flights.add({

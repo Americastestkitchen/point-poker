@@ -15,7 +15,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 /** The hat row: going bare, then everything that sits on your head. */
 const HATS = [{ id: null, label: "bare", icon: "🫥" }, ...COSMETICS.filter((c) => c.slots.includes("head"))];
 
-export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio; actions: Actions; roomCode: string; onSit(): void }) {
+export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio; actions: Actions; roomCode: string; onSit(): void | Promise<void> }) {
   const { store, storage, audio, actions, roomCode } = deps;
   const dealerKey = roomCode ? storage.dealerKey(roomCode) : undefined;
   const saved = storage.profile();
@@ -114,7 +114,7 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
       if (inGame()) {
         store.setUi({ lookOpen: false });
         actions.setLook(me.look);
-      } else deps.onSit();
+      } else void deps.onSit();
     };
     setTimeout(() => nameIn.focus(), 50);
   }

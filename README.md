@@ -75,6 +75,9 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
     store, the event stream (`diff`), `actions`, the session (socket + reconnect) and storage.
     The 3D scene (`scene/`) and the UI (`hud.ts`, `lobby.ts`) only read the store and call
     `actions`; they never import each other.
+  - `client/src/scene/layout.ts` says where everything goes (seats, cards, the ticket, the pot,
+    props). `client/src/environments/` says how it looks: the Backlog Basement lives in
+    `environments/basement/`, and a new place is a new folder there.
   - `test/session.test.ts` plays a whole game against the real server.
 
 ## How to play

@@ -1,20 +1,22 @@
 // Your eyes: the camera sits behind your seat and you drag to look around.
 // Where you look is shared (throttled) so your bean turns its head for others.
 import * as THREE from "three";
-import { TABLE_Y } from "./world.ts";
+import { layout } from "./layout.ts";
 
 export function createCameraRig(camera: THREE.PerspectiveCamera, onGaze: (yaw: number, pitch: number) => void) {
   const pos = new THREE.Vector3(0, 1.3, 3);
   const target = new THREE.Vector3(0, 1.3, 3);
   const view = { yaw: 0, pitch: 0, sentYaw: 0, sentPitch: 0 };
-  const lookAt = new THREE.Vector3(0, TABLE_Y + 0.1, 0);
+  const { lookAt: l } = layout.cameras;
+  const lookAt = new THREE.Vector3(l.x, l.y, l.z);
   const d = new THREE.Vector3();
   let gazeTimer = 0;
 
   return {
     /** Sit behind the seat at (x, z). `snap` skips the glide (first view of the table). */
     seat(x: number, z: number, dealer: boolean, snap: boolean) {
-      target.set(x * 1.06, dealer ? 1.6 : 1.5, z * 1.06);
+      const p = layout.cameras.seat(x, z, dealer);
+      target.set(p.x, p.y, p.z);
       if (snap) pos.copy(target);
     },
     drag(dx: number, dy: number) {
