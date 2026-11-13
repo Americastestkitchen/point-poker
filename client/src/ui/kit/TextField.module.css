@@ -16,10 +16,17 @@
   white-space: nowrap;
 }
 
+/* the box you type in, and whatever goes with it (a submit button) beside it, as tall as the box */
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--pp-space-2);
+  min-width: 0;
+}
 .box {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--pp-space-2);
   min-width: 0;
   background: var(--pp-color-well);
   border: 2px solid var(--pp-color-edge);
@@ -31,7 +38,6 @@
 .trailing {
   display: flex;
   flex: none;
-  padding-right: var(--pp-space-1);
 }
 
 .input {
