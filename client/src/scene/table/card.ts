@@ -2,7 +2,7 @@
 // sits a little crooked, gets fiddled with, and flips over on the reveal.
 import * as THREE from "three";
 import { cardBack, cardFront } from "../art/textures.ts";
-import { layout } from "../layout/layout.ts";
+import type { Layout } from "../layout/layout.ts";
 
 const CARD_W = 0.16, CARD_H = 0.23;
 
@@ -63,7 +63,7 @@ function cardMesh() {
   return { object: g, setValue };
 }
 
-export function createTableCard(scene: THREE.Scene): TableCard {
+export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
   const group = new THREE.Group();
   const card = cardMesh();
   card.object.scale.setScalar(1.5);

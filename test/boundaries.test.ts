@@ -79,6 +79,11 @@ const RULES: Rule[] = [
     why: "the gallery shows the kit with real storage and sound; it doesn't mount the game.",
   },
   {
+    name: "layout is passed in",
+    files: ["client/src/"], except: ["client/src/scene/index.ts"], forbid: ["client/src/scene/layout/layout.ts"], types: true,
+    why: "only scene/index.ts imports the `layout` value; take it as an argument (like buildTable and createTicketPaper) and use `import type { Layout }`.",
+  },
+  {
     name: "no three.js where the header says so",
     files: ["client/src/avatar/animator.ts", "client/src/scene/layout/layout.ts"], forbid: ["three"],
     why: "these files are plain numbers so they run in node tests; keep three.js in the files that build meshes.",
@@ -92,6 +97,12 @@ const TEXT_RULES = [
     files: WORLD,
     pattern: /\bdocument\s*\.\s*(?!createElement\b)\w+|\.querySelector(All)?\s*\(/g,
     why: "don't reach into the page by id or selector; emit a GameEvent on store.events and let the UI react. document.createElement for a canvas is fine.",
+  },
+  {
+    name: "the 3D world waits in frame time",
+    files: WORLD,
+    pattern: /\bset(Timeout|Interval)\b/g,
+    why: "wall-clock timers drift from the frame loop when the tab is hidden or a frame is slow; use stage.after(seconds, fn), or a per-frame dt timer.",
   },
 ];
 
@@ -218,7 +229,7 @@ test("imports stay inside their boundaries", () => {
   assert.equal(stale.length, 0, `\n${stale.map((e) => `${e.file} no longer imports ${e.imports}: delete its entry in EXCEPTIONS (#${e.issue}).`).join("\n")}\n`);
 });
 
-test("the 3D world keeps out of the page", () => {
+test("source-text rules hold", () => {
   const broken: string[] = [];
   for (const rule of TEXT_RULES) {
     for (const file of files) {

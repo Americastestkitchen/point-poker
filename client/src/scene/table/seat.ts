@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { PublicPlayer } from "../../../../shared/protocol.ts";
 import { createAvatar, type Avatar } from "../../avatar/avatar.ts";
 import type { Stage } from "../engine/stage.ts";
-import { layout } from "../layout/layout.ts";
+import type { Layout } from "../layout/layout.ts";
 import { createTableCard, type TableCard } from "./card.ts";
 import { stackChips } from "./chips.ts";
 
@@ -22,12 +22,13 @@ export interface Seat {
   remove(): void;
 }
 
-export function createSeat(stage: Stage, player: PublicPlayer, opts: { onPick?: () => void }): Seat {
+export function createSeat(stage: Stage, player: PublicPlayer, deps: { layout: Layout; onPick?: () => void }): Seat {
+  const { layout, onPick } = deps;
   const avatar = createAvatar(player.look, { dealer: player.isDealer });
-  const card = createTableCard(stage.scene);
+  const card = createTableCard(stage.scene, layout);
   const stack = new THREE.Group();
   stage.scene.add(avatar.group, stack);
-  const unpick = opts.onPick ? stage.picking.register(avatar.hitbox, opts.onPick) : () => {};
+  const unpick = onPick ? stage.picking.register(avatar.hitbox, onPick) : () => {};
   const pos = new THREE.Vector3();
   let facing = 0;
   let placed = false;

@@ -31,7 +31,12 @@ const initial: AppState = {
   ui: { myVote: null, votesInFlight: 0, lookOpen: false },
 };
 
-export function createStore() {
+export function createStore(): Store {
+  return build();
+}
+
+/** The store with zustand's setState still on it; only this file sees that. */
+function build() {
   const store = createZustand<AppState>()(() => initial);
   const events: Events = createEvents();
   return Object.assign(store, {
@@ -52,10 +57,31 @@ export function createStore() {
     setUi(patch: Partial<AppState["ui"]>) {
       store.setState((s) => ({ ui: { ...s.ui, ...patch } }));
     },
+    /** The line to the table moved on (see connection.ts). */
+    connectionChanged(connection: Connection) {
+      store.setState({ connection });
+    },
+    /** The server welcomed you to the table as `playerId`. */
+    welcomed(playerId: string) {
+      store.setState({ me: { id: playerId } });
+    },
+    /** The start screen is showing. */
+    startShown() {
+      store.setState({ screen: "start" });
+    },
+    /** The look editor opened before you sat down. */
+    creatorOpened() {
+      store.setState({ screen: "creator" });
+    },
+    /** You sat down at the table. */
+    seated() {
+      store.setState({ screen: "table" });
+    },
   });
 }
 
-export type Store = ReturnType<typeof createStore>;
+/** The store without zustand's raw setState: every write goes through a named method above. */
+export type Store = Omit<ReturnType<typeof build>, "setState">;
 
 /** The UI state with the vote reducer applied, the same object if nothing changed. */
 function withVote(ui: AppState["ui"], a: Parameters<typeof vote>[1]): AppState["ui"] {

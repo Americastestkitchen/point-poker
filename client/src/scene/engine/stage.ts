@@ -1,6 +1,7 @@
 // The one WebGL renderer: scene, camera, the frame loop and picking.
 import * as THREE from "three";
 import type { Audio } from "../../audio/sfx.ts";
+import { createDelays } from "./delays.ts";
 import { createPicking, type Picking } from "./picking.ts";
 
 export interface Stage {
@@ -12,6 +13,8 @@ export interface Stage {
   readonly canvas: HTMLCanvasElement;
   /** Runs `fn` every frame, before rendering. Returns a function that stops it. */
   onFrame(fn: (dt: number, t: number) => void): () => void;
+  /** Runs `fn` once, after `seconds` of frame time. The world waits with this, never setTimeout. */
+  after(seconds: number, fn: () => void): void;
   start(): void;
 }
 
@@ -25,7 +28,8 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
   const camera = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
   scene.add(camera);
   const picking = createPicking(camera, () => ({ width: innerWidth, height: innerHeight }));
-  const frames = new Set<(dt: number, t: number) => void>();
+  const delays = createDelays();
+  const frames = new Set<(dt: number, t: number) => void>([delays.update]);
 
   const resize = () => {
     const w = innerWidth, h = innerHeight;
@@ -43,6 +47,7 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
       frames.add(fn);
       return () => frames.delete(fn);
     },
+    after: delays.after,
     start() {
       if (started) return;
       started = true;

@@ -28,7 +28,7 @@ const actions = createActions(session, store);
 const lobby = mountLobby({ store, storage, audio, actions, roomCode, onSit: startGame });
 
 async function startGame() {
-  store.setState({ screen: "table" });
+  store.seated();
   $("hud").hidden = false;
   $("wardrobe").style.setProperty("--me", lobby.profile().look.color);
   const stage = createStage($("scene") as HTMLCanvasElement, { audio });

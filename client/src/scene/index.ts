@@ -25,10 +25,10 @@ export async function mountScene(stage: Stage, deps: { store: Store; actions: Ac
   stage.picking.register(ticket.mesh, actions.openTicket);
   stage.scene.add(ticket.mesh);
   const flights = createFlights();
-  const pot = createPot(stage, { flights, audio });
+  const pot = createPot(stage, { layout, flights, audio });
 
-  const rig = createCameraRig(stage.camera, actions.gaze);
-  const table = mountTableView(stage, { store, actions, audio, flights, rig, ticket, pot, screen: env.props.statusScreen });
+  const rig = createCameraRig(stage.camera, layout, actions.gaze);
+  const table = mountTableView(stage, { store, actions, audio, layout, flights, rig, ticket, pot, screen: env.props.statusScreen });
   bindInput(stage, { store, actions, rig });
   audio.ambience(env.ambience);
 
