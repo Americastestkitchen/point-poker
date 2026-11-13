@@ -60,7 +60,7 @@ export function createSession(deps: SessionDeps): Session {
   /** Moves the connection on, then does what that step says. */
   function step(e: ConnectionEvent) {
     const [next, effect] = nextConnection(connection(), e, retryDelay);
-    if (next !== connection()) store.setState({ connection: next });
+    if (next !== connection()) store.connectionChanged(next);
     if (effect) run(effect);
   }
 
@@ -96,7 +96,7 @@ export function createSession(deps: SessionDeps): Session {
     switch (m.t) {
       case "welcome":
         storage.setToken(room(), m.token);
-        store.setState({ me: { id: m.playerId } });
+        store.welcomed(m.playerId);
         return;
       case "view":
         return store.receive(m.view);

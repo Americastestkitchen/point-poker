@@ -22,7 +22,7 @@ function setup(me = "ann", reply: (cmd: Command) => string | undefined = () => u
     fx: (fx: ClientFx) => void sent.push(fx),
   };
   const actions = createActions(session, store);
-  store.setState({ me: { id: me } });
+  store.welcomed(me);
   store.receive(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }));
   events.length = 0;
   return { sent, store, events, actions };

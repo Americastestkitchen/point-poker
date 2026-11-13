@@ -45,7 +45,7 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
   }
 
   function showStart(message?: string) {
-    store.setState({ screen: "start" });
+    store.startShown();
     $("start-view").hidden = false;
     $("creator-view").hidden = true;
     if (message) $("start-view").insertAdjacentHTML("afterbegin", `<div class="toast error">${esc(message)}</div>`);
@@ -92,7 +92,7 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
   function openCreator() {
     const playing = inGame();
     if (playing) store.setUi({ lookOpen: true });
-    else store.setState({ screen: "creator" });
+    else store.creatorOpened();
     $("lobby").hidden = false;
     $("start-view").hidden = true;
     $("creator-view").hidden = false;
