@@ -4,7 +4,7 @@ import { createActions } from "./app/actions.ts";
 import { createSession } from "./app/session.ts";
 import { createStorage } from "./app/storage.ts";
 import { createStore } from "./app/store.ts";
-import { Mic } from "./audio/mic.ts";
+import { createMic } from "./audio/mic.ts";
 import { createAudio } from "./audio/sfx.ts";
 import { Hud } from "./hud.ts";
 import { mountLobby } from "./lobby.ts";
@@ -32,7 +32,7 @@ async function startGame() {
   $("hud").hidden = false;
   $("wardrobe").style.setProperty("--me", lobby.me.look.color);
   const stage = createStage($("scene") as HTMLCanvasElement, { audio });
-  new Hud({ store, actions, audio, storage, mic: new Mic(), openLook: lobby.openCreator });
+  new Hud({ store, actions, audio, storage, mic: createMic(), openLook: lobby.openCreator });
   await mountScene(stage, { store, actions, audio });
   session.join(roomCode);
   stage.start();

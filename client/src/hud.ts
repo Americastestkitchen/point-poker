@@ -138,25 +138,20 @@ export class Hud {
     const { mic, storage } = this.deps;
     const btn = $("mic");
     const paint = () => {
-      btn.classList.toggle("on", mic.on);
-      btn.title = mic.on ? "Mic on: your mouth moves when you talk (no audio is sent). Click to turn off." : "Turn on mic: your character's mouth moves when you talk (no audio is sent)";
+      const on = mic.status === "on";
+      btn.classList.toggle("on", on);
+      btn.title = on ? "Mic on: your mouth moves when you talk (no audio is sent). Click to turn off." : "Turn on mic: your character's mouth moves when you talk (no audio is sent)";
     };
     mic.onLevel = (level) => this.actions.talk(level);
     mic.onMeter = (level) => btn.style.setProperty("--lvl", level.toFixed(2));
-    const start = async () => {
-      try {
-        await mic.start();
-        storage.setMic(true);
-      } catch {
-        this.toast("Couldn't use the mic. Check your browser's permission for this site.", "error");
-        storage.setMic(false);
-      }
+    mic.onStatus = (status) => {
+      // remember it for next time once it's settled either way
+      if (status !== "starting") storage.setMic(status === "on");
       paint();
     };
-    btn.onclick = () => {
-      if (mic.on) { mic.stop(); storage.setMic(false); paint(); }
-      else start();
-    };
+    const start = () => mic.start().catch(() => this.toast("Couldn't use the mic. Check your browser's permission for this site.", "error"));
+    // a click while the browser is still asking means "never mind"
+    btn.onclick = () => (mic.status === "on" || mic.status === "starting" ? mic.stop() : void start());
     paint();
     if (storage.mic()) start();
     else setTimeout(() => this.toast("🎙️ Tip: turn on your mic (top right) and your bean's mouth moves when you talk. No audio is sent."), 4000);
