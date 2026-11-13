@@ -1,0 +1,5 @@
+.bar { display: flex; align-items: center; gap: var(--pp-space-2); }
+.placeholder {
+  padding: var(--pp-space-1) var(--pp-space-3); font-size: var(--pp-size-sm); color: var(--pp-color-dim);
+  background: var(--pp-color-panel); border: 1px dashed var(--pp-color-edge); border-radius: var(--pp-radius-pill);
+}

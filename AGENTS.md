@@ -62,12 +62,16 @@ other consumers take injected `Layout` and use type-only imports (tests are exem
   `ui/gallery/Gallery.tsx`; keep game-specific content out of the kit. Kit CSS
   uses `--pp-*` tokens from `ui/tokens.ts` (see `ui/tokens.test.ts`).
 
-## Planned screen contract (#4 title/creator, #11 HUD)
+## Screen contract (#4 title/creator, #11 HUD)
 
-This is the target for those issues, not an implemented screen layer. Today
-`main.ts` mounts `mountLobby` and constructs `Hud`; #4 owns the lobby's separate
-`scene/turntable.ts` renderer/import exception, and #11 owns the legacy HUD.
-The generic kit's `mountUi` **already exists**; the game does not call it yet.
+The in-game screen layer is in place: `main.ts` makes one `mountUi` call with
+`screens/index.tsx`'s `createGameUi(...).ui`. `GameScreen.tsx` lays out the HUD
+regions (top, ticket, status, announce, dock, flash) and popups (`ui.popup`);
+each region's component lives in its slice folder (`screens/chrome/`, `round/`,
+`dealer/`). Use `useGame()`, `useAppState`, `usePopup`, `useViewChanges` /
+`useGameEvents` (`screens/moments.ts`) and the shared helpers there. `main.ts`
+still mounts the legacy `mountLobby`; #4 owns it and its `scene/turntable.ts`
+renderer/import exception.
 
 - Put app-aware React screens in **`client/src/screens/`**, outside `ui/` and
   `app/`. When introducing that folder, add it to `UI` and the app visual-import
@@ -87,7 +91,7 @@ The generic kit's `mountUi` **already exists**; the game does not call it yet.
   named store methods. Commands go through injected actions, not session/socket calls.
 - One adapter at the screen root subscribes to `store.events`, mapping `toast`
   to `toasts.show(text, { tone: level ?? "info" })`; unsubscribe on cleanup.
-  Remove the legacy HUD toast consumer during #11 migration. An awaited action's
+  `screens/GameRoot.tsx` is that adapter (it also shows joins, leaves and removal). An awaited action's
   error belongs to its form, or is emitted once as a toast, never both.
 - Use existing `Dialog` for focus capture/restore and Tab trapping, `useBack`
   for menus, and `useFocusable`/`useRoving` for controls. Dialogs register deeper
@@ -100,8 +104,8 @@ The generic kit's `mountUi` **already exists**; the game does not call it yet.
   buttons, selects and contenteditable); scene input should also respect consumed
   events. The kit owns popup Escape; focused forms consume Escape for their own
   cancel/back before the table menu. Do not add competing global Escape handlers.
-  **That gate does not exist yet**: current `scene/engine/input.ts` only filters
-  screen/look state and input/textarea targets. Existing kit hooks do not gate it.
+  The gate is `screens/keys.ts` (pure decisions, node-tested) and the table menu's
+  Esc is registered in `screens/GameRoot.tsx`.
 
 ## New code and validation
 

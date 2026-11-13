@@ -45,12 +45,50 @@ export const tokens = {
     paper: "#f6f1e6",
     paperLow: "#ddd2bb",
     paperInk: "#1d1a1a",
+    paperRed: "#a8242c",
+    /** A chosen card or a winning moment: brighter than gold. */
+    highlight: "#ffd23f",
+    successInk: "#052b12",
+    /** A fresh deal: cool blue, so it reads apart from gold wins. */
+    info: "#8fc3ff",
+    // the ticket sheet: a Jira-ish page of paper, cool ink on warm white
+    sheet: "#fbf8f1",
+    sheetRaised: "#ffffff",
+    sheetWell: "#f1f2f4",
+    sheetLine: "#dfe1e6",
+    sheetInk: "#172b4d",
+    sheetDim: "#44546f",
+    sheetFaint: "#8590a2",
+    sheetLink: "#0c66e4",
+    sheetAccent: "#6e5dc6",
+    // a ticket's workflow status lozenge
+    statusNew: "#dfe1e6",
+    statusNewInk: "#42526e",
+    statusProgress: "#cce0ff",
+    statusProgressInk: "#0055cc",
+    statusDone: "#baf3db",
+    statusDoneInk: "#216e4e",
+    // the ticket description's coloured panels
+    noteInfo: "#e9f2ff",
+    noteWarning: "#fff7d6",
+    noteError: "#ffeceb",
+    noteSuccess: "#dcfff1",
+    notePurple: "#f3f0ff",
+    // ticket type icons: white glyph on the type's colour
+    typeBug: "#e5493a",
+    typeStory: "#63ba3c",
+    typeEpic: "#904ee2",
+    typeTask: "#4bade8",
+    typeOther: "#8993a4",
+    typeGlyph: "#ffffff",
   },
   font: {
     display: `"Fredoka", "Trebuchet MS", system-ui, sans-serif`,
     body: `"Fredoka", "Trebuchet MS", system-ui, sans-serif`,
     card: `Georgia, "Times New Roman", serif`,
     mono: `ui-monospace, "SF Mono", monospace`,
+    /** The ticket sheet reads like a work tracker page, not like the game. */
+    sheet: `-apple-system, "Segoe UI", Roboto, system-ui, sans-serif`,
   },
   weight: { body: "400", strong: "600", display: "700" },
   size: { xs: "12px", sm: "13px", md: "15px", lg: "18px", xl: "22px", xxl: "32px", title: "54px" },
@@ -73,9 +111,11 @@ export const tokens = {
     button: "0 2px 0 rgba(0, 0, 0, 0.53), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
     buttonGold: "0 3px 0 #7a4d0c, 0 8px 22px rgba(230, 176, 60, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
     card: "0 6px 14px rgba(0, 0, 0, 0.7)",
+    sheet: "0 30px 80px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(0, 0, 0, 0.13)",
   },
   motion: { fast: "80ms", base: "160ms", slow: "320ms", spring: "cubic-bezier(.2, 1.4, .4, 1)" },
-  layer: { tooltip: "60", toast: "50", dialog: "40" },
+  /** Stacking order. The in-game HUD sits under popups; the coin burst flies over them. */
+  layer: { tooltip: "60", toast: "50", burst: "45", dialog: "40", flash: "30", hud: "10" },
 } as const;
 
 export type Tokens = typeof tokens;

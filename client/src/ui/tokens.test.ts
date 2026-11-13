@@ -6,8 +6,10 @@ import { createToasts } from "./toasts.ts";
 import { cssVars, tokensCss, varName } from "./tokens.ts";
 
 const here = import.meta.dirname;
+/** The kit, and the game screens built from it: both style themselves with tokens only. */
+const STYLED = [here, join(here, "..", "screens")];
 
-/** Every stylesheet in the kit. */
+/** Every stylesheet in the kit and the screens. */
 function kitCss(): { file: string; css: string }[] {
   const out: { file: string; css: string }[] = [];
   const walk = (dir: string) => {
@@ -17,7 +19,7 @@ function kitCss(): { file: string; css: string }[] {
       else if (e.name.endsWith(".css")) out.push({ file: p, css: readFileSync(p, "utf8") });
     }
   };
-  walk(here);
+  for (const dir of STYLED) walk(dir);
   return out;
 }
 
@@ -27,10 +29,10 @@ test("tokens become CSS variables", () => {
   assert.match(tokensCss(), /^:root \{\n  --pp-color-backdrop: #07050a;/);
 });
 
-test("the kit's stylesheets only use tokens that exist", () => {
+test("the kit's and screens' stylesheets only use tokens that exist", () => {
   const known = new Set(Object.keys(cssVars()));
   const sheets = kitCss();
-  assert.ok(sheets.length > 0);
+  assert.ok(sheets.some((s) => s.file.includes("screens")), "the screens' stylesheets are checked too");
   for (const { file, css } of sheets) {
     for (const [, name] of css.matchAll(/var\((--pp-[\w-]+)/g)) {
       assert.ok(known.has(name!), `${file} uses ${name}, which isn't a token`);
@@ -38,7 +40,7 @@ test("the kit's stylesheets only use tokens that exist", () => {
   }
 });
 
-test("the kit's stylesheets write no raw colours: they come from tokens", () => {
+test("the kit's and screens' stylesheets write no raw colours: they come from tokens", () => {
   for (const { file, css } of kitCss()) {
     const raw = css.replace(/\/\*[\s\S]*?\*\//g, "").match(/#[0-9a-f]{3,8}\b|rgba?\(/gi);
     assert.equal(raw, null, `${file} has raw colours: ${raw?.join(", ")}`);

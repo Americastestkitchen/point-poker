@@ -1,12 +1,19 @@
+/*
+ * A screen can place the stack around its own layout: --toast-lift raises it above a bar along
+ * the bottom, --toast-max-width keeps it to a side column. Long toasts wrap.
+ */
 .stack {
-  position: fixed; left: var(--pp-space-4); bottom: var(--pp-space-4); z-index: var(--pp-layer-toast);
+  position: fixed; z-index: var(--pp-layer-toast);
+  left: calc(var(--pp-space-4) + env(safe-area-inset-left, 0px));
+  bottom: calc(var(--pp-space-4) + env(safe-area-inset-bottom, 0px) + var(--toast-lift, 0px));
+  max-width: min(var(--toast-max-width, 100vw), calc(100vw - 2 * var(--pp-space-4)));
   display: grid; gap: var(--pp-space-2); justify-items: start; pointer-events: none;
 }
 .toast {
   display: inline-flex; align-items: center; gap: var(--pp-space-2);
   padding: var(--pp-space-2) var(--pp-space-4);
   font-size: var(--pp-size-md); color: var(--pp-color-ink);
-  background: var(--pp-color-panel); border: var(--pp-border-soft); border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel); border: var(--pp-border-soft); border-radius: var(--pp-radius-lg);
   box-shadow: var(--pp-shadow-panel); backdrop-filter: blur(8px);
   animation: slide var(--pp-motion-slow) var(--pp-motion-spring);
 }

@@ -1,7 +1,6 @@
 // Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote.
 import { EMOTES } from "../../../../shared/catalog/emotes.ts";
 import type { Actions } from "../../app/actions.ts";
-import type { Store } from "../../app/store.ts";
 import type { CameraRig } from "./camera.ts";
 import type { Stage } from "./stage.ts";
 
@@ -16,8 +15,18 @@ type Pointer =
 /** How far (CSS px) a press can wander and still be a click. */
 const CLICK_SLOP = 6;
 
-export function bindInput(stage: Stage, deps: { store: Store; actions: Actions; rig: CameraRig }) {
-  const { store, actions, rig } = deps;
+export interface InputDeps {
+  actions: Actions;
+  rig: CameraRig;
+  /**
+   * Whether the world may take a key press: the UI injects it, and says no while it has the
+   * keyboard (a popup, the look editor, a focused button or field).
+   */
+  allowsWorldKeys(): boolean;
+}
+
+export function bindInput(stage: Stage, deps: InputDeps) {
+  const { actions, rig, allowsWorldKeys } = deps;
   const canvas = stage.canvas;
   let pointer: Pointer = { state: "idle" };
 
@@ -51,8 +60,8 @@ export function bindInput(stage: Stage, deps: { store: Store; actions: Actions; 
   canvas.addEventListener("dblclick", () => rig.recenter());
 
   addEventListener("keydown", (e) => {
-    const { screen, ui } = store.getState();
-    if (screen !== "table" || ui.lookOpen || (e.target as HTMLElement).closest("input, textarea")) return;
+    // something else used this key already (Esc closing a popup), or the UI has the keyboard
+    if (e.defaultPrevented || !allowsWorldKeys()) return;
     const k = e.key.toLowerCase();
     const emote = EMOTES.find((x) => x.key === k);
     if (emote) { actions.emote(emote.id); return; }

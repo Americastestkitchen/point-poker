@@ -1,0 +1,2 @@
+/* round: the flash's styles go here. This region never takes the pointer. */
+.flash { display: contents; }

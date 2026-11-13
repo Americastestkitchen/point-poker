@@ -16,3 +16,30 @@ test("a view arrives together with what changed in it", () => {
   assert.deepEqual(seen, [[0, ["synced"]], [1, ["joined", "dealt"]]]);
   assert.deepEqual(streamed, [], "view changes don't go on the event stream");
 });
+
+test("one popup at a time: opening one replaces the other, and a stale close is ignored", () => {
+  const store = createStore();
+  let writes = 0;
+  store.subscribe(() => writes++);
+  assert.equal(store.getState().ui.popup, null);
+
+  store.popupOpened("menu");
+  store.popupOpened("menu");
+  assert.equal(store.getState().ui.popup, "menu");
+  assert.equal(writes, 1, "opening the open one again changes nothing");
+
+  store.popupOpened("help");
+  assert.equal(store.getState().ui.popup, "help", "the menu made way for how to play");
+  store.popupClosed("menu");
+  assert.equal(store.getState().ui.popup, "help", "the menu's late close doesn't shut how to play");
+  store.popupClosed("help");
+  assert.equal(store.getState().ui.popup, null);
+  assert.equal(writes, 3);
+});
+
+test("popups leave the rest of the UI state alone", () => {
+  const store = createStore();
+  store.setUi({ lookOpen: true });
+  store.popupOpened("leaderboard");
+  assert.deepEqual(store.getState().ui, { myVote: null, votesInFlight: 0, lookOpen: true, popup: "leaderboard" });
+});
