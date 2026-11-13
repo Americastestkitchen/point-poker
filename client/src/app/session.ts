@@ -80,17 +80,8 @@ export function createSession(deps: SessionDeps): Session {
         return;
       }
       case "toast":
+      case "fx":
         return store.events.emit(m);
-      case "fx": {
-        const { from, fx } = m;
-        switch (fx.kind) {
-          case "gaze": return store.events.emit({ t: "gaze", id: from, yaw: fx.yaw, pitch: fx.pitch });
-          case "talk": return store.events.emit({ t: "talk", id: from, level: fx.level });
-          case "emote": return store.events.emit({ t: "emote", id: from, emote: fx.emote });
-          case "flick": return store.events.emit({ t: "flick", from, to: fx.to });
-          case "adjust": return store.events.emit({ t: "adjust", id: from });
-        }
-      }
     }
   }
 

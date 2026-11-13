@@ -1,7 +1,6 @@
 // One stream of things that just happened, for the HUD, the scene and audio.
 // It merges what diff() works out from two views with the server's effects.
-import type { EmoteId } from "../../../shared/catalog/emotes.ts";
-import type { PublicPlayer, TableView } from "../../../shared/protocol.ts";
+import type { PublicPlayer, ServerMsg, TableView } from "../../../shared/protocol.ts";
 import { allIn } from "../../../shared/rules.ts";
 
 export type GameEvent =
@@ -21,14 +20,9 @@ export type GameEvent =
   | { t: "revealed" }
   /** The dealer called the final points; `resettled` when they changed their call. */
   | { t: "settled"; resettled: boolean }
-  // ---- effects from the server
-  | { t: "gaze"; id: string; yaw: number; pitch: number }
-  | { t: "talk"; id: string; level: number }
-  | { t: "emote"; id: string; emote: EmoteId }
-  | { t: "flick"; from: string; to: string }
-  /** Someone swapped their face-down card. */
-  | { t: "adjust"; id: string }
-  | { t: "toast"; text: string; level?: "info" | "error" }
+  // ---- straight from the server: effects (someone looked around, talked,
+  // emoted, flicked a chip or fiddled with their card) and toasts
+  | Extract<ServerMsg, { t: "fx" | "toast" }>
   // ---- local
   /** You put a card down (`changed` when you swapped one already there). */
   | { t: "played"; value: number; changed: boolean }

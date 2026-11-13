@@ -1,6 +1,7 @@
 // The game on the table: a seat per player, the pot, and the ticket. It
 // redraws from the store, and animates what the event stream says just happened.
 import * as THREE from "three";
+import type { Fx } from "../../../../shared/protocol.ts";
 import { cardValues, voters } from "../../../../shared/rules.ts";
 import type { Actions } from "../../app/actions.ts";
 import type { GameEvent } from "../../app/events.ts";
@@ -196,19 +197,26 @@ export function mountTableView(stage: Stage, deps: {
     });
   }
 
+  /** What someone's effect looks like at the table. */
+  function play(from: string, fx: Fx) {
+    const seat = seats.get(from);
+    switch (fx.kind) {
+      case "gaze": seat?.avatar.setGaze(fx.yaw, fx.pitch); return;
+      case "talk": seat?.avatar.setTalk(fx.level); return;
+      case "emote": seat?.avatar.play(fx.emote); audio.pop(); return;
+      case "flick": flick(from, fx.to); return;
+      case "adjust":
+        // someone swapped their card: they reach in and fiddle with it
+        if (seat && seat.card.group.visible) { seat.avatar.play("adjustCard"); seat.card.nudge(0.2); }
+        return;
+      default: fx satisfies never;
+    }
+  }
+
   /** Effects that don't wait for a redraw. */
   function react(e: GameEvent) {
     switch (e.t) {
-      case "gaze": seats.get(e.id)?.avatar.setGaze(e.yaw, e.pitch); return;
-      case "talk": seats.get(e.id)?.avatar.setTalk(e.level); return;
-      case "emote": seats.get(e.id)?.avatar.play(e.emote); audio.pop(); return;
-      case "flick": flick(e.from, e.to); return;
-      case "adjust": {
-        // someone swapped their card: they reach in and fiddle with it
-        const s = seats.get(e.id);
-        if (s && s.card.group.visible) { s.avatar.play("adjustCard"); s.card.nudge(0.2); }
-        return;
-      }
+      case "fx": play(e.from, e.fx); return;
       case "played": {
         // your card flies from your hand to the felt
         const seat = seats.get(meId());

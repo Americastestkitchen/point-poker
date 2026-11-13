@@ -202,7 +202,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   await deb.until((p) => p.events.some((e) => e.t === "allIn"), "everyone's in");
   ann.actions.vote(3);
   assert.equal(ann.store.getState().ui.myVote, 3);
-  await bob.until((p) => p.events.some((e) => e.t === "adjust" && e.id === ann.id), "adjust");
+  await bob.until((p) => p.events.some((e) => e.t === "fx" && e.fx.kind === "adjust" && e.from === ann.id), "adjust");
   assert.ok(!ann.wire.some((m) => m.t === "fx" && m.fx.kind === "adjust"), "the voter isn't told about their own adjust");
 
   await ann.untilState((s) => s.players.find((p) => p.id === ann.id)?.vote === 3, "ann sees her own card");
@@ -268,9 +268,9 @@ test("a whole session over real sockets, including a restart", async (t) => {
   // ---- chip flicks have a cooldown the server enforces
   await reloaded.session.request({ t: "flick", target: bob.id });
   await assert.rejects(reloaded.session.request({ t: "flick", target: bob.id }), { message: "Not so fast" });
-  await bob.until((p) => p.events.some((e) => e.t === "flick"), "bob gets bonked");
+  await bob.until((p) => p.events.some((e) => e.t === "fx" && e.fx.kind === "flick"), "bob gets bonked");
   await new Promise((r) => setTimeout(r, 100));
-  assert.equal(bob.events.filter((e) => e.t === "flick").length, 1, "only one chip flew");
+  assert.equal(bob.events.filter((e) => e.t === "fx" && e.fx.kind === "flick").length, 1, "only one chip flew");
 
   // ---- skip and cancel pay nobody
   await deb.actions.dealer.skip();

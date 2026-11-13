@@ -59,9 +59,9 @@ test("server effects go on the event stream; nonsense is ignored", () => {
   sockets[0].receive({ t: "fx", from: "bob", fx: { kind: "adjust" } });
   sockets[0].receive({ t: "toast", text: "hi" });
   assert.deepEqual(seen, [
-    { t: "emote", id: "bob", emote: "wave" },
-    { t: "flick", from: "bob", to: "ann" },
-    { t: "adjust", id: "bob" },
+    { t: "fx", from: "bob", fx: { kind: "emote", emote: "wave" } },
+    { t: "fx", from: "bob", fx: { kind: "flick", to: "ann" } },
+    { t: "fx", from: "bob", fx: { kind: "adjust" } },
     { t: "toast", text: "hi" },
   ]);
 });
