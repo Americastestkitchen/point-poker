@@ -89,7 +89,7 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
     `layout/`, `table/` (seats, cards, chips, the pot, the ticket) and `art/` (materials,
     canvas textures).
   - `test/session.test.ts` plays a whole game against the real server.
-  - `*.types.test.ts` files check what the types infer (`npm run typecheck` runs them), with
+  - `*.test-d.ts` files check what the types infer (only `npm run typecheck` runs them), with
     the helpers in `test/types.ts`.
 
 ## How to play

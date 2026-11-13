@@ -106,8 +106,8 @@ const EXCEPTIONS = [
 
 // ---------------------------------------------------------------- reading the code
 
-/** Tests and fixtures may reach anywhere they need to. */
-const exempt = (file: string) => /\.test\.tsx?$/.test(file) || posix.basename(file) === "fixtures.ts";
+/** Tests (runtime *.test.ts and type-only *.test-d.ts) and fixtures may reach anywhere they need to. */
+const exempt = (file: string) => /\.test(-d)?\.tsx?$/.test(file) || posix.basename(file) === "fixtures.ts";
 
 function sources(): string[] {
   const out: string[] = [];

@@ -52,7 +52,6 @@ export class Hud {
   private st: TableView | null = null;
   private myVote: number | null = null;
   private wallet = 0;
-  private loading = false;
   private loadSeq = 0;
   private sheetKey = "";
   private pickerForced = false;
@@ -494,7 +493,6 @@ export class Hud {
   /** Shows the picker's spinner until the server answers; a failure shows up in the picker. Latest one wins. */
   private whileLoading(work: Promise<void>, text: string) {
     const mine = ++this.loadSeq;
-    this.loading = true;
     $("picker").classList.add("loading");
     $("pk-status").textContent = text;
     work.then(
@@ -509,7 +507,6 @@ export class Hud {
   }
 
   private stopLoading() {
-    this.loading = false;
     $("picker").classList.remove("loading");
     $("pk-status").textContent = "";
   }
