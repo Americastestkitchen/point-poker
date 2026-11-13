@@ -239,6 +239,7 @@ test("a move the phase doesn't allow is refused with a reason, and changes nothi
       { t: "settle", finalPoints: 3 },
       { t: "cancelRound" },
       { t: "skip" },
+      { t: "refreshTicket" },
     ),
     [
       "Load a ticket first",
@@ -246,6 +247,7 @@ test("a move the phase doesn't allow is refused with a reason, and changes nothi
       "Reveal the cards first",
       "There's no round to cancel",
       "There's no ticket to skip",
+      "There's no ticket to refresh",
     ],
   );
   assert.deepEqual(await tries(ann, { t: "vote", value: 3 }), ["There's nothing to vote on yet"]);
@@ -362,6 +364,79 @@ test("failed loads tell the dealer why", async () => {
   });
   assert.equal(view().jiraEnabled, true);
   assert.equal(offline.view().jiraEnabled, false);
+});
+
+test("refresh updates the ticket for everyone and keeps the votes and the round", async () => {
+  const sd1 = ticket("SD-1");
+  const { table, deb, ann, run, view, player, notices } = setup(fakeTickets([sd1]));
+  await run(deb, { t: "loadTicket", ref: "SD-1" });
+  await run(ann, { t: "vote", value: 3 });
+
+  await run(deb, { t: "refreshTicket" });
+  assert.deepEqual(notices(), [{ t: "notice", text: "SD-1 is already up to date", to: deb.playerId }]);
+
+  sd1.summary = "Now with a better summary";
+  sd1.labels = ["backend"];
+  await run(deb, { t: "refreshTicket" });
+  assert.equal(view().ticket?.summary, "Now with a better summary");
+  assert.deepEqual(view().ticket?.labels, ["backend"]);
+  assert.equal(view().phase, "voting");
+  assert.equal(view().round, 1);
+  assert.equal(player(ann).hasVoted, true);
+  assert.equal(view(ann).players.find((p) => p.id === ann.playerId)?.vote, 3);
+  assert.deepEqual(notices().at(-1), { t: "notice", text: "🔄 SD-1 was updated" });
+
+  // it works after the reveal and the call too, and the player can't do it
+  await run(deb, { t: "reveal" });
+  await run(deb, { t: "settle", finalPoints: 3 });
+  sd1.status = "In Progress";
+  await run(deb, { t: "refreshTicket" });
+  assert.equal(view().ticket?.status, "In Progress");
+  assert.equal(view().phase, "settled");
+  assert.deepEqual(await table.run(ann.playerId, { t: "refreshTicket" }), { error: ROLE_ERROR });
+});
+
+test("a refresh that fails keeps the ticket, and a typed-in ticket can't be refreshed", async () => {
+  const jira = fakeTickets([ticket("SD-1")]);
+  let gone = false;
+  // the ticket was deleted in Jira (or we lost access)
+  const tickets: TicketSource = {
+    ...jira,
+    get: (ref) => (gone ? Promise.reject(new Error("Ticket not found (or no access)")) : jira.get(ref)),
+  };
+  const { table, deb, run, view, deal, notices } = setup(tickets);
+  await deal("Typed in");
+  assert.deepEqual(await table.run(deb.playerId, { t: "refreshTicket" }), {
+    error: "A ticket typed in by hand isn't in Jira",
+  });
+
+  await run(deb, { t: "loadTicket", ref: "SD-1" });
+  const before = view().ticket;
+  gone = true;
+  assert.deepEqual(await table.run(deb.playerId, { t: "refreshTicket" }), {
+    error: "Couldn't refresh SD-1: Ticket not found (or no access)",
+  });
+  assert.deepEqual(view().ticket, before);
+  assert.deepEqual(notices(), []);
+});
+
+test("a refresh finishing after the dealer moved on changes nothing", async () => {
+  let release = () => {};
+  let hold = false;
+  const sd1 = ticket("SD-1");
+  const tickets = fakeTickets([sd1, ticket("SD-2")], {
+    wait: (key) => (hold && key === "SD-1" ? new Promise((r) => (release = r)) : Promise.resolve()),
+  });
+  const { table, deb, run, view, notices } = setup(tickets);
+  await run(deb, { t: "loadTicket", ref: "SD-1" });
+  hold = true;
+  sd1.summary = "Changed";
+  const refreshing = table.run(deb.playerId, { t: "refreshTicket" });
+  await run(deb, { t: "loadTicket", ref: "SD-2" });
+  release();
+  assert.deepEqual(await refreshing, {});
+  assert.equal(view().ticket?.key, "SD-2");
+  assert.deepEqual(notices(), []);
 });
 
 test("the sprint list fills the queue", async () => {

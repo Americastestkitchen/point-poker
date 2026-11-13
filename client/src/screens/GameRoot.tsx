@@ -1,9 +1,10 @@
 // The game UI's root. Before you sit down it shows the title screens; at the table, the HUD
 // (GameScreen) and the look editor when it's open. It owns what happens once for the whole
 // screen: the one toast adapter (event-stream toasts, joins, leaves, being removed), opening
-// the ticket when the 3D paper is clicked, the window title, and Esc opening the game menu.
+// the ticket when the 3D paper is clicked, the window title (and the dealer's "all in" chime),
+// and Esc opening the game menu.
 // Options and How to play open from the title menu and the game menu alike.
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useBack } from "../ui/index.ts";
 import { HowToPlayDialog } from "./chrome/HowToPlayDialog.tsx";
 import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
@@ -12,6 +13,7 @@ import { focusOf, menuKeyAllowed } from "./keys.ts";
 import { useGameEvents, useViewChanges } from "./moments.ts";
 import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notices.ts";
 import { CopyFallback } from "./parts/CopyFallback.tsx";
+import { chimeFor, tabTitle } from "./tab.ts";
 import { GameScreen } from "./GameScreen.tsx";
 import { LookEditor } from "./character/LookEditor.tsx";
 import type { Title } from "./title/runner.ts";
@@ -21,6 +23,7 @@ export function GameRoot({ title }: { title: Title }) {
   useNotices();
   useOpenTicket();
   useWindowTitle();
+  useAllInChime();
   useMenuKey();
   const atTable = useAppState((st) => st.screen === "table");
   return (
@@ -64,10 +67,22 @@ function useOpenTicket() {
 }
 
 function useWindowTitle() {
-  const key = useAppState((s) => s.room?.ticket?.key);
+  const title = useAppState((s) => tabTitle(s.room, s.me?.id));
   useEffect(() => {
-    document.title = `${key ? `${key} · ` : ""}Point Poker`;
-  }, [key]);
+    document.title = title;
+  }, [title]);
+}
+
+/** The dealer hears when the last card goes down, even from another window (mute silences it). */
+function useAllInChime() {
+  const { audio } = useGame();
+  const chimed = useRef<string | null>(null);
+  useViewChanges((c, s) => {
+    const round = s.room && chimeFor(c, s.room, s.me?.id, chimed.current);
+    if (!round) return;
+    chimed.current = round;
+    audio.chime();
+  });
 }
 
 /** Where focus is, kept current for render (focus changes don't re-render on their own). */

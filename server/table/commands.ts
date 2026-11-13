@@ -1,8 +1,10 @@
 // Every command a player can send, as data: its name, who may send it, which
 // round move it is, what it carries, and what it does. A new command is one more
 // defineCommand() in the list; the Command type, the checks and the dispatch all come from it.
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { LookInput, validateLook } from "../../shared/look.ts";
+import type { Ticket } from "../../shared/protocol.ts";
 import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
 import { payOut, takeBack } from "./coins.ts";
 import { endRound, reveal, settleRound, startRound, type Move } from "./round.ts";
@@ -20,7 +22,8 @@ export interface PlayerCtx {
   now(): number;
   log(line: string): void;
   changed(): void;
-  notice(text: string, opts?: { level?: "error"; except?: string }): void;
+  /** A toast for everyone but `except`, or for `to` alone. */
+  notice(text: string, opts?: { level?: "error"; except?: string; to?: string }): void;
   fx(from: string, fx: TableFx, opts?: { except?: string }): void;
   /** True (and starts the clock) when `what` is off cooldown for this player. */
   ready(playerId: string, what: string, cooldownMs: number): boolean;
@@ -35,6 +38,8 @@ export interface DealerCtx extends PlayerCtx {
   /** Loads a ticket (or an epic's first child) and deals it; resolves to an error message on failure. */
   load(ref: string, label: string): Promise<string | void>;
   upcoming(project: string | undefined): Promise<{ label: string; tickets: TableState["queue"] }>;
+  /** Fetches one ticket from Jira without dealing it. */
+  fetchTicket(ref: string): Promise<Ticket>;
 }
 
 /** The context a command gets for its role. The table checks the role and the phase before it runs anything. */
@@ -278,6 +283,33 @@ export const COMMANDS = [
       ctx.notice(`⏭️ The dealer skipped ${skippedKey}`, { except: me.id });
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
+    },
+  }),
+  /** Fetch the ticket that's out again from Jira: its text updates for everyone, the votes and the round stay. */
+  defineCommand({
+    t: "refreshTicket",
+    role: "dealer",
+    move: "refresh",
+    input: {},
+    async run({ s, changed, notice, fetchTicket }, me) {
+      const before = s.ticket;
+      // outside waiting there's always a ticket out; this only tells the compiler
+      if (!before) return "There's no ticket to refresh";
+      if (!before.url) return "A ticket typed in by hand isn't in Jira";
+      let fresh: Ticket;
+      try {
+        fresh = await fetchTicket(before.key);
+      } catch (e) {
+        return `Couldn't refresh ${before.key}: ${e instanceof Error ? e.message : String(e)}`;
+      }
+      if (s.ticket?.key !== before.key) return; // the dealer moved on meanwhile
+      if (isDeepStrictEqual(s.ticket, fresh)) {
+        notice(`${before.key} is already up to date`, { to: me.id });
+        return;
+      }
+      s.ticket = fresh;
+      changed();
+      notice(`🔄 ${before.key} was updated`);
     },
   }),
   defineCommand({

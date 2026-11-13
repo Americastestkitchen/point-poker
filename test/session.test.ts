@@ -268,6 +268,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(ann.state.ticket?.key, "TICKET");
   assert.equal(ann.state.ticket?.summary, "Login page");
   assert.ok(ann.events.some((e) => e.t === "dealt"));
+  await assert.rejects(deb.actions.dealer.refresh(), { message: "A ticket typed in by hand isn't in Jira" });
 
   ann.actions.vote(2);
   bob.actions.vote(5);

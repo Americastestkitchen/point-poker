@@ -114,6 +114,11 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
     deal: () => {
       for (let i = 0; i < 5; i++) noise(0.06, 3000, 0.2, i * 0.07);
     },
+    /** The dealer's heads-up that every voter has a card down: a soft two-note ding. */
+    chime: () => {
+      tone(1319, 0.45, "sine", 0.16);
+      tone(1760, 0.7, "sine", 0.14, undefined, 0.12);
+    },
     win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.25, "triangle", 0.15, undefined, i * 0.09)),
   };
   return audio;

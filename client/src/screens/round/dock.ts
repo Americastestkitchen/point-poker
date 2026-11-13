@@ -47,6 +47,8 @@ export type DockAction =
   | { t: "reveal"; voted: number; of: number; everyone: boolean }
   /** Deal the same ticket again. */
   | { t: "restart"; label: "Restart vote" | "Vote again" }
+  /** Skip this ticket (no payout) and deal the next one in the queue, as the dealer panel's Skip does. */
+  | { t: "skip" }
   /** Deal the next ticket in the queue. */
   | { t: "next"; key: string }
   /** Open the ticket picker: `main` is the big "＋ Next ticket", otherwise the quiet "Choose a different one". */
@@ -115,10 +117,7 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
         ];
       }
       const actions: DockAction[] = dealer
-        ? [
-            { t: "reveal", voted, of: playing.length, everyone },
-            { t: "restart", label: "Restart vote" },
-          ]
+        ? [{ t: "reveal", voted, of: playing.length, everyone }, { t: "skip" }, { t: "restart", label: "Restart vote" }]
         : [];
       return { key, title, body, actions };
     }

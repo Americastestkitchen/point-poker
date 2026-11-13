@@ -117,8 +117,11 @@ class Hub {
           queueMicrotask(() => this.push());
         }
         return;
-      case "notice":
-        return this.broadcast({ t: "toast", text: e.text, level: e.level }, e.except);
+      case "notice": {
+        const toast: ServerMsg = { t: "toast", text: e.text, level: e.level };
+        if (e.to === undefined) return this.broadcast(toast, e.except);
+        return send(this.sockets.get(e.to), toast);
+      }
       case "fx":
         return this.broadcast({ t: "fx", from: e.from, fx: e.fx }, e.except);
       case "removed": {

@@ -3,6 +3,7 @@
 // It stays within the inherited --dock-max height, so the table stays clear.
 import { Button, ButtonLink, cx, Spinner } from "../../ui/index.ts";
 import { useAppState, useGame, usePopup, useRoom, useTicketLoad } from "../game.tsx";
+import { skipPlan } from "../dealer/panel.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
 import { dockModel, type DockAction, type DockBody, type HandCard, type Words } from "./dock.ts";
 import { Hand } from "./Hand.tsx";
@@ -104,6 +105,7 @@ function Action({ action }: { action: DockAction }) {
   const { actions, dealerDo, ticketLoad } = useGame();
   const picker = usePopup("picker");
   const load = useTicketLoad();
+  const room = useRoom();
   switch (action.t) {
     case "reveal":
       return (
@@ -122,6 +124,23 @@ function Action({ action }: { action: DockAction }) {
       return (
         <Button variant="link" size="sm" className={s.link} onPress={() => dealerDo(actions.dealer.deal())}>
           {action.label}
+        </Button>
+      );
+    case "skip":
+      return (
+        <Button
+          variant="link"
+          size="sm"
+          className={s.link}
+          disabled={load.status === "loading"}
+          onPress={() => {
+            if (!room) return;
+            const plan = skipPlan(room);
+            if (plan.t === "load") ticketLoad.run(actions.dealer.skip(), plan.text);
+            else dealerDo(actions.dealer.skip());
+          }}
+        >
+          Skip ticket
         </Button>
       );
     case "next": {

@@ -46,7 +46,8 @@ export function fakeTickets(tickets: Ticket[], opts: FakeTicketsOptions = {}): T
       await opts.wait?.(key);
       const t = byKey.get(key);
       if (!t) throw new Error("Ticket not found (or no access)");
-      return t;
+      // a copy, as from Jira: a test changes the ticket "in Jira" by editing its own object
+      return structuredClone(t);
     },
     async find(q: TicketQuery) {
       if (q.kind === "epic") {
