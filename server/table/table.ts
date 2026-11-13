@@ -28,7 +28,8 @@ export type TableFx = Extract<Fx, { kind: "flick" | "adjust" }>;
 export type TableEvent =
   /** The state changed: send everyone a fresh view. */
   | { t: "changed" }
-  | { t: "notice"; text: string; level?: "error"; except?: string }
+  /** A toast for everyone but `except`, or for `to` alone. */
+  | { t: "notice"; text: string; level?: "error"; except?: string; to?: string }
   /** An effect from `from`, for the transport to play to everyone at the table. */
   | { t: "fx"; from: string; fx: TableFx; except?: string }
   /** A player was removed (kicked); close their connection. */
@@ -91,6 +92,7 @@ export class Table {
         return () => seq === this.queueSeq;
       },
       load: (ref, label) => this.load(ref, label),
+      fetchTicket: (ref) => this.tickets().get(ref),
       upcoming: (project) => this.tickets().find({ kind: "upcoming", project }),
     };
   }

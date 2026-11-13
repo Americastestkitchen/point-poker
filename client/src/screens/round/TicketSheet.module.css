@@ -183,6 +183,18 @@
   font-family: var(--pp-font-body);
   min-height: 44px;
 }
+/* a quiet link on paper: the kit's link colours are for the dark HUD */
+.side .refresh {
+  font-family: var(--pp-font-body);
+  color: var(--pp-color-sheet-link);
+}
+.side .refresh:hover:not(:disabled),
+.side .refresh:focus {
+  color: var(--pp-color-sheet-ink);
+}
+.side .refresh:disabled {
+  color: var(--pp-color-sheet-dim);
+}
 
 /* a narrow dialog (phones, small windows): details under the description, as one column */
 @container (max-width: 620px) {

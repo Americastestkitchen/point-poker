@@ -61,9 +61,10 @@ test("voting: a dealer who sits out sees who we're waiting on, up to four names"
   assert.equal(title(dock(empty, "deb")), "Nobody's at the table yet");
 });
 
-test("voting: the dealer can reveal once someone's in (calling out when everyone is) or restart", () => {
+test("voting: the dealer can reveal once someone's in (calling out when everyone is), skip or restart", () => {
   assert.deepEqual(dock(voting(), "deb").actions, [
     { t: "reveal", voted: 0, of: 2, everyone: false },
+    { t: "skip" },
     { t: "restart", label: "Restart vote" },
   ]);
   const oneIn = withPlayers(voting(), (p) => (p.id === "ann" ? { hasVoted: true } : {}));
@@ -87,7 +88,7 @@ test("voting: a dealer who plays gets a hand and the dealer buttons", () => {
   assert.equal(cards(d.body).length, 5);
   assert.deepEqual(
     d.actions.map((a) => a.t),
-    ["reveal", "restart"],
+    ["reveal", "skip", "restart"],
   );
   assert.deepEqual(d.actions[0], { t: "reveal", voted: 0, of: 3, everyone: false });
 });

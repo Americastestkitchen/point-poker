@@ -8,6 +8,8 @@
 //    │                │ └──deal (restart)──┴──────────────────┘ replaces the call
 //    └──cancel/skip (voting or revealed), next round (any phase): endRound()
 //
+// Refreshing the ticket that's out (any phase but waiting) changes no phase.
+//
 // A table is waiting exactly when there's no ticket out.
 import type { Phase, Ticket } from "../../shared/protocol.ts";
 import { potOf } from "./coins.ts";
@@ -43,6 +45,8 @@ const RULES = {
     revealed: true,
     settled: "This round is already paid out",
   },
+  /** Fetches the ticket that's out again; the round carries on. */
+  refresh: { waiting: "There's no ticket to refresh", voting: true, revealed: true, settled: true },
 } as const satisfies Record<string, Record<Phase, true | string>>;
 
 export type Move = keyof typeof RULES;

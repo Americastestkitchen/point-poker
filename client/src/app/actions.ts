@@ -54,6 +54,8 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       next: () => run({ t: "nextRound" }),
       cancel: () => run({ t: "cancelRound" }),
       skip: () => run({ t: "skip" }),
+      /** Fetches the ticket that's out from Jira again; votes and the round stay. */
+      refresh: () => run({ t: "refreshTicket" }),
       kick: (id: string) => run({ t: "kick", id }),
     },
   };

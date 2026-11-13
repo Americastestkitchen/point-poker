@@ -1,12 +1,13 @@
 // The whole ticket, read like a Jira page (popup "ticket"): a paper Dialog with breadcrumbs,
-// the summary, the description, the status lozenge, the details and "Open in Jira ↗".
+// the summary, the description, the status lozenge, the details and "Open in Jira ↗" (and, for
+// the dealer, "Refresh from Jira", which updates it for everyone without touching the votes).
 // The screen root opens it when the 3D paper is clicked; this opens it when you arrive mid-vote
 // and ~0.9 s after a deal, and puts it away on the reveal (sheet.ts decides). It follows the
 // ticket if that changes while it's open, and closes if the ticket goes away.
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Epic, Ticket } from "../../../../shared/protocol.ts";
-import { ButtonLink, cx, Dialog } from "../../ui/index.ts";
-import { useGame, usePopup, useRoom } from "../game.tsx";
+import { Button, ButtonLink, cx, Dialog } from "../../ui/index.ts";
+import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
 import { TypeIcon } from "../parts/TypeIcon.tsx";
 import { Adf } from "./Adf.tsx";
@@ -64,7 +65,7 @@ export function TicketSheet() {
       width="xl"
       title={ticket ? <Heading ticket={ticket} epic={room?.epic ?? null} /> : ""}
     >
-      {ticket && <Sheet ticket={ticket} />}
+      {ticket && <Sheet ticket={ticket} canRefresh={!!room?.jiraEnabled} />}
     </Dialog>
   );
 }
@@ -98,9 +99,10 @@ function Heading({ ticket, epic }: { ticket: Ticket; epic: Epic | null }) {
   );
 }
 
-function Sheet({ ticket }: { ticket: Ticket }) {
+function Sheet({ ticket, canRefresh }: { ticket: Ticket; canRefresh: boolean }) {
   const url = safeUrl(ticket.url);
   const who = assignee(ticket);
+  const dealer = !!useMe()?.isDealer;
   return (
     // focus lands here, so the arrow keys and Page Down scroll the description straight away
     <div className={s.wrap} tabIndex={-1} data-autofocus>
@@ -148,9 +150,30 @@ function Sheet({ ticket }: { ticket: Ticket }) {
               Open in Jira ↗
             </ButtonLink>
           )}
+          {url && dealer && canRefresh && <Refresh />}
         </aside>
       </div>
     </div>
+  );
+}
+
+/** The dealer fetches the ticket again; the result (or why not) comes back as a toast. */
+function Refresh() {
+  const { actions, dealerDo } = useGame();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      className={s.refresh}
+      disabled={busy}
+      onPress={() => {
+        setBusy(true);
+        dealerDo(actions.dealer.refresh().finally(() => setBusy(false)));
+      }}
+    >
+      {busy ? "Refreshing…" : "↻ Refresh from Jira"}
+    </Button>
   );
 }
 
