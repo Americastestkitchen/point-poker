@@ -23,9 +23,9 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
   const dealer = !!room.players.find((p) => p.id === meId)?.isDealer;
   const amVoter = playing.some((p) => p.id === meId);
   const step = STEP_OF[room.phase];
-  const steps = STEPS.map((label, i) => ({
+  const steps = STEPS.map((label, i): Status["steps"][number] => ({
     label,
-    state: (i + 1 < step ? "done" : i + 1 === step ? "current" : "idle") as StepState,
+    state: i + 1 < step ? "done" : i + 1 === step ? "current" : "idle",
   }));
 
   let line: string;

@@ -31,7 +31,7 @@ export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: str
       return json(res, 200, { code: table.code, dealerKey: table.snapshot().dealerKey } satisfies OpenedTable);
     }
     if (url.pathname.startsWith("/api/rooms/") && req.method === "GET") {
-      const table = rooms.get(url.pathname.split("/").pop()!);
+      const table = rooms.get(url.pathname.split("/").pop() ?? "");
       return json(res, table ? 200 : 404, {
         exists: !!table,
         jiraEnabled: table?.viewFor(null).jiraEnabled ?? false,
@@ -45,11 +45,11 @@ export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: str
       res.writeHead(403);
       return res.end();
     }
-    try {
-      if (!(await stat(file)).isFile()) throw 0;
-    } catch {
-      file = join(distDir, "index.html");
-    }
+    const isFile = await stat(file).then(
+      (st) => st.isFile(),
+      () => false,
+    );
+    if (!isFile) file = join(distDir, "index.html");
     try {
       const body = await readFile(file);
       const cache = file.includes("/assets/") ? "public, max-age=31536000, immutable" : "no-cache";

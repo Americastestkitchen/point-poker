@@ -33,6 +33,7 @@ export function MenuList<Id extends string>({ items, onSelect, label, autoFocus,
   }, [autoFocus]);
 
   return (
+    // oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the items are the focus stops (roving tabindex); their arrow keys bubble here
     <div ref={list} role="menu" aria-label={label} className={s.menu} onKeyDown={roving.onKeyDown}>
       {items.map((item, i) => (
         <Item

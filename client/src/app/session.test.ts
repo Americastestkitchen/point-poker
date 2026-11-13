@@ -37,6 +37,7 @@ function setup() {
   const storage = createStorage(memoryStorage());
   storage.setProfile({ name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] } });
   const store = createStore();
+  const warnings: unknown[][] = [];
   const session = createSession({
     connect: (url) => {
       const s = new FakeSocket(url);
@@ -47,8 +48,9 @@ function setup() {
     store,
     url: "ws://x/ws",
     retryDelay: () => 0,
+    log: { warn: (...args) => warnings.push(args) },
   });
-  return { sockets, storage, store, session };
+  return { sockets, storage, store, session, warnings };
 }
 
 test("joins with your profile and seat token, and keeps the new token", () => {
@@ -71,7 +73,7 @@ test("joins with your profile and seat token, and keeps the new token", () => {
 });
 
 test("server effects go on the event stream; nonsense is ignored", () => {
-  const { sockets, store, session } = setup();
+  const { sockets, store, session, warnings } = setup();
   const seen: unknown[] = [];
   store.events.on((e) => seen.push(e));
   session.join("ABCD");
@@ -89,6 +91,7 @@ test("server effects go on the event stream; nonsense is ignored", () => {
     { t: "fx", from: "bob", fx: { kind: "adjust" } },
     { t: "toast", text: "hi" },
   ]);
+  assert.equal(warnings.length, 1, "the unknown emote is noted");
 });
 
 test("commands get an id and settle when their result comes back", async () => {

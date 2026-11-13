@@ -48,6 +48,7 @@ function PanelBody() {
   useEffect(() => {
     if (document.activeElement === document.body)
       box.current?.querySelector<HTMLElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the count is the trigger: a row leaving can take the focus with it
   }, [others.length]);
   if (!room) return null;
 

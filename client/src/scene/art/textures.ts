@@ -2,11 +2,18 @@
 import * as THREE from "three";
 import { CARD_SUIT } from "../../../../shared/catalog/decks.ts";
 
+/** The canvas's 2D context; a browser that can't give one can't draw the table. */
+export function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const g = canvas.getContext("2d");
+  if (!g) throw new Error("This browser can't draw on a 2D canvas");
+  return g;
+}
+
 export function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
-  draw(c.getContext("2d")!);
+  draw(context2d(c));
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;

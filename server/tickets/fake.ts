@@ -35,7 +35,8 @@ export function ticket(key: string, extra: Partial<Ticket> = {}): Ticket {
 export function fakeTickets(tickets: Ticket[], opts: FakeTicketsOptions = {}): TicketSource {
   const byKey = new Map(tickets.map((t) => [t.key, t]));
   const summary = (key: string): TicketSummary => {
-    const t = byKey.get(key)!;
+    const t = byKey.get(key);
+    if (!t) throw new Error(`fakeTickets: no ticket ${key} to list`);
     return { key, summary: t.summary, status: t.status, points: t.currentPoints };
   };
   return {

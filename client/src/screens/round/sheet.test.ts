@@ -43,6 +43,7 @@ test("initials, the status colour and the assignee", () => {
   assert.equal(initials("Ada Lovelace"), "AL");
   assert.equal(initials("  grace  brewster murray hopper "), "GB");
   assert.equal(initials("Ömer"), "Ö");
+  assert.equal(initials("🇺🇸 Sam Smith"), "🇺🇸S", "an emoji is one letter, kept whole");
   assert.equal(statusTone({ ...ticket("A-1"), statusCategory: "" }), "new");
   assert.equal(statusTone({ ...ticket("A-1"), statusCategory: "done" }), "done");
   assert.equal(assignee({ ...ticket("A-1"), assignee: "Unassigned" }), "");

@@ -75,6 +75,7 @@ function Heading({ ticket, epic }: { ticket: Ticket; epic: Epic | null }) {
     <span className={s.heading}>
       <span className={s.crumbs}>
         {path.map((c, i) => (
+          // oxlint-disable-next-line react/no-array-index-key -- a crumb is its position; a typed-in ticket's texts repeat ("")
           <span key={`${i}:${c.text}`} className={s.crumb}>
             {i > 0 && (
               <i className={s.slash} aria-hidden>

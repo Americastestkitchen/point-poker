@@ -20,10 +20,12 @@ save tables: they're wiped whenever those sites redeploy or go to sleep.
 git pull
 # ...make changes...
 npm run format           # oxfmt rewrites the files to the one house style
-npm run check            # format check + typecheck + tests + build (+ bundles the UI kit gallery)
+npm run check            # format check + lint + typecheck + tests + build (+ bundles the UI kit gallery)
 git commit -am "Describe the change"
 git push                 # -> dev site updates in about a minute
 ```
+
+`npm run lint` (oxlint) on its own takes about a second; every finding is an error, see [AGENTS.md](AGENTS.md) for how to fix one.
 
 If you move a seat, prop or body anchor on purpose, run `npm run test:update-snapshots` to re-pin the positions and commit the updated `.snapshot` files.
 

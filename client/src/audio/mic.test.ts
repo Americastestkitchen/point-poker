@@ -148,7 +148,7 @@ test("loudness goes out in steps, with one zero when you go quiet", async (t) =>
   t.mock.timers.tick(80 * 4);
   input.loudness = 0; // quiet
   t.mock.timers.tick(80 * 12);
-  assert.ok(levels.length >= 2 && levels.slice(0, -1).every((l) => l > 0), `levels: ${levels}`);
+  assert.ok(levels.length >= 2 && levels.slice(0, -1).every((l) => l > 0), `levels: ${levels.join(", ")}`);
   assert.equal(levels.at(-1), 0);
   mic.stop();
 });

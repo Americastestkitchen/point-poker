@@ -1,7 +1,7 @@
 // One playing card you can press: the value in the middle, its suit in the corners, a small
 // tilt so the hand looks dealt. Self-contained (it knows nothing about rounds or the store), so
 // the 3D hand (#7) can replace it without touching the dock.
-import { useId, type CSSProperties, type KeyboardEvent } from "react";
+import { useId, type KeyboardEvent } from "react";
 import type { PublicPlayer } from "../../../../shared/protocol.ts";
 import { cx, useFocusable } from "../../ui/index.ts";
 import { names } from "../text.ts";
@@ -62,7 +62,7 @@ export function PlayingCard({
       {...roving}
       onKeyDown={onKeyDown}
       className={cx(s.card, face.red && s.red, selected && s.selected, dimmed && s.dimmed, ribbon && s.suggested)}
-      style={{ "--tilt": `${face.tilt}deg`, "--i": index } as CSSProperties}
+      style={{ "--tilt": `${face.tilt}deg`, "--i": index }}
       aria-label={`${value} ${value === 1 ? "point" : "points"}`}
       aria-pressed={selected}
       aria-describedby={said ? about : undefined}

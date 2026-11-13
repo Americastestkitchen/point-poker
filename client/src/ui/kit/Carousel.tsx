@@ -6,7 +6,11 @@ import { step } from "../input/roving.ts";
 import { cx } from "./cx.ts";
 import s from "./Carousel.module.css";
 
-export interface CarouselProps<T> {
+/** An option is anything but `undefined`, which stands for "no option there". */
+// oxlint-disable-next-line typescript/no-empty-object-type -- {} is meant here: any value that isn't null or undefined
+type Option = {} | null;
+
+export interface CarouselProps<T extends Option> {
   label: string;
   options: readonly T[];
   value: T;
@@ -20,7 +24,7 @@ export interface CarouselProps<T> {
 }
 
 /** Pick one of a few options with ←/→, the arrow buttons, or a tap on either side. */
-export function Carousel<T>({
+export function Carousel<T extends Option>({
   label,
   options,
   value,
@@ -33,13 +37,16 @@ export function Carousel<T>({
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
   const index = Math.max(0, options.indexOf(value));
+  const current = options[index];
   const go = (dir: -1 | 1) => {
-    if (disabled || options.length < 2) return;
+    const next = options[step(index, options.length, dir)];
+    if (disabled || options.length < 2 || next === undefined) return;
     sounds.hover();
-    onChange(options[step(index, options.length, dir)]!);
+    onChange(next);
   };
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the carousel is itself the focus stop; ←/→ change it
     <div
       role="group"
       aria-label={label}
@@ -71,7 +78,7 @@ export function Carousel<T>({
         </button>
         <div className={s.value} aria-live="polite">
           <span key={index} className={s.option}>
-            {render(options[index] as T)}
+            {current !== undefined && render(current)}
           </span>
         </div>
         <button
@@ -88,6 +95,7 @@ export function Carousel<T>({
       {dots && options.length > 1 && (
         <div className={s.dots} aria-hidden>
           {options.map((_, i) => (
+            // oxlint-disable-next-line react/no-array-index-key -- a dot stands for a position, nothing else
             <span key={i} className={cx(s.dot, i === index && s.on)} />
           ))}
         </div>

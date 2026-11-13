@@ -54,11 +54,23 @@ const Search = z.object({
   issues: z.array(z.object({ key: z.string(), fields: z.looseObject({ summary: text, status: named }) })).default([]),
 });
 
+// One ADF node, read leniently: a field that's missing or odd reads as absent.
+const maybeText = z.string().optional().catch(undefined);
+const AdfNode = z.object({
+  type: maybeText,
+  text: maybeText,
+  attrs: z.object({ text: maybeText, shortName: maybeText, url: maybeText }).optional().catch(undefined),
+  content: z.array(z.unknown()).catch([]),
+});
+
 /** Flattens Atlassian Document Format into readable plain text. */
-export function adfToText(node: any): string {
-  if (!node) return "";
-  if (typeof node === "string") return node;
-  const kids = () => (node.content ?? []).map(adfToText).join("");
+export function adfToText(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  const parsed = AdfNode.safeParse(value);
+  if (!parsed.success) return "";
+  const node = parsed.data;
+  const kids = () => node.content.map(adfToText).join("");
   switch (node.type) {
     case "text":
       return node.text ?? "";
@@ -84,7 +96,7 @@ export function adfToText(node: any): string {
     case "rule":
       return "———\n";
     case "tableRow":
-      return (node.content ?? []).map((c: any) => adfToText(c).trim()).join(" | ") + "\n";
+      return node.content.map((c) => adfToText(c).trim()).join(" | ") + "\n";
     case "mediaSingle":
     case "mediaGroup":
     case "media":

@@ -39,7 +39,7 @@ export function HowToPlayDialog() {
     >
       <ol className={s.steps}>
         {STEPS.map((step, i) => (
-          <li key={i} className={s.step}>
+          <li key={step} className={s.step}>
             <span className={s.num} aria-hidden>
               {i + 1}
             </span>

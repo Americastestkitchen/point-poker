@@ -28,6 +28,12 @@ const FOCUSABLE = [
   "[tabindex='0']",
 ].join(", ");
 
+/** The focused element, if it's one that can be given focus back (or blurred). */
+const focusedElement = () => {
+  const el = document.activeElement;
+  return el instanceof HTMLElement || el instanceof SVGElement ? el : null;
+};
+
 /** How many dialogs this one is inside: one opened from inside another sits on top of it. */
 const Depth = createContext(0);
 
@@ -59,19 +65,23 @@ export function Dialog({
 
   // a layout effect: it notes where focus was before any field inside autofocuses (those use plain effects)
   useLayoutEffect(() => {
+    const node = box.current;
     if (!open) return;
-    const before = document.activeElement as HTMLElement | null;
+    const before = focusedElement();
     // focus goes back where it was, unless it was only there because the mouse was (see focus.ts):
     // then it goes back to the page, like the mouse moving off would have sent it
     // (inside another dialog it does go back: focus has to stay in the one still open)
     const restore = hoverFocused(before) && !before?.closest("[role='dialog']") ? null : before;
     // `data-autofocus` first, wherever it is; a field with autoFocus takes over after this
     const firstStop =
-      box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
-    (firstStop ?? box.current)?.focus({ preventScroll: true });
+      node?.querySelector<HTMLElement>("[data-autofocus]") ?? node?.querySelector<HTMLElement>(FOCUSABLE);
+    (firstStop ?? node)?.focus({ preventScroll: true });
     return () => {
-      if (restore) restore.focus?.({ preventScroll: true });
-      else if (box.current?.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+      if (restore) restore.focus({ preventScroll: true });
+      else {
+        const focused = focusedElement();
+        if (focused && node?.contains(focused)) focused.blur();
+      }
     };
   }, [open]);
 
@@ -83,14 +93,15 @@ export function Dialog({
     if (e.key !== "Tab" || e.defaultPrevented || !box.current) return;
     const stops = [...box.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
     if (stops.length === 0) return;
-    const i = stops.indexOf(document.activeElement as HTMLElement);
+    const i = stops.findIndex((el) => el === document.activeElement);
     const next = e.shiftKey ? (i <= 0 ? stops.length - 1 : i - 1) : i === stops.length - 1 ? 0 : i + 1;
     e.preventDefault();
-    stops[next]!.focus();
+    stops[next]?.focus();
   };
 
   return createPortal(
     <div
+      role="presentation"
       className={s.backdrop}
       style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }}
       // a press that starts and ends on the backdrop closes it; it closes on the click, once the
@@ -107,6 +118,7 @@ export function Dialog({
         if (dismissable && outside) close();
       }}
     >
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a modal dialog keeps Tab inside itself (the WAI-ARIA dialog pattern) */}
       <div
         ref={box}
         role="dialog"

@@ -1,6 +1,6 @@
 // The ticket, as a sheet of paper in the middle of the felt.
 import * as THREE from "three";
-import { FONT, drawTicket } from "../art/textures.ts";
+import { FONT, context2d, drawTicket } from "../art/textures.ts";
 import type { Layout } from "../layout/layout.ts";
 
 export interface TicketPaper {
@@ -13,7 +13,7 @@ export function createTicketPaper(layout: Layout): TicketPaper {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 380;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = context2d(canvas);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;

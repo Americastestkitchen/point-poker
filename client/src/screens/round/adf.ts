@@ -115,7 +115,8 @@ function kids(node: Node): AdfOut[] {
 /** Jira's levels 1–6 sit under the sheet's own title: h3 at the biggest (no level reads as 3). */
 const heading = (level: unknown): AdfTag => {
   const n = typeof level === "number" && Number.isFinite(level) ? level : 3;
-  return `h${Math.min(6, Math.max(3, Math.round(n) + 2))}` as AdfTag;
+  const h = Math.min(6, Math.max(3, Math.round(n) + 2));
+  return h === 3 ? "h3" : h === 4 ? "h4" : h === 5 ? "h5" : "h6";
 };
 
 function render(raw: unknown): AdfOut | null {

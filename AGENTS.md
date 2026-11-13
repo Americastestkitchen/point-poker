@@ -122,10 +122,18 @@ refusal reasons; preserve existing wire/result contracts unless the feature need
 an intentional protocol change. Legacy lobby/HUD migration belongs to #4/#11.
 
 Run `npm run format` (oxfmt; layout is the formatter's, never hand-tuned), then
-**`npm run check`**: the format check, TypeScript (including `*.test-d.ts`), runtime tests,
+**`npm run check`**: the format check, lint, TypeScript (including `*.test-d.ts`), runtime tests,
 game build to `dist`, then gallery build to `node_modules/.gallery`. Use the
 existing boundary, registry, snapshot and session checks rather than duplicating
 them here. `noUncheckedIndexedAccess` is enabled: narrow missing entries before use,
 iterate values instead of reindexing, and model fixed shapes as tuples. Preserve
 empty-input behavior and report broken invariants instead of hiding them with assertions.
 No browser check is required for documentation-only changes.
+
+`npm run lint` is oxlint with type-aware rules (`.oxlintrc.json`); every rule is an
+error or off, never a warning. Fix the cause: narrow with `instanceof`, a type guard or
+a Zod schema rather than `!`, `as` or `any`; give a switch over a union its missing cases,
+or a `default` saying the rest is ignored on purpose. Treat React findings (effect
+dependencies, refs read during render, index keys) as behaviour changes. Disable a rule
+only where it is wrong for that exact line, naming it and the reason:
+`// oxlint-disable-next-line <rule> -- <why>`; `test/boundaries.test.ts` enforces the form.

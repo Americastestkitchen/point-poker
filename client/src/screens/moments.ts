@@ -9,7 +9,7 @@
 // Nothing is replayed on mount: a component only hears what happens while it's mounted.
 // The screen root already turns toasts, joins, leaves, removal and openTicket into toasts and
 // popups (see GameRoot.tsx); don't handle those twice.
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 import type { GameEvent, ViewChange } from "../app/events.ts";
 import type { AppState } from "../app/store.ts";
 import { useGame } from "./game.tsx";
@@ -17,30 +17,24 @@ import { useGame } from "./game.tsx";
 /** Anything worth reacting to: a change in the view, or an event. Both are tagged by `t`. */
 export type Moment = ViewChange | GameEvent;
 
-/** Keeps the newest handler without resubscribing each render. */
-function useLatest<T>(value: T) {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
-}
-
+// The handler is an effect event: the newest one is called, without resubscribing each render.
 export function useViewChanges(handler: (change: ViewChange, state: AppState) => void) {
   const { store } = useGame();
-  const latest = useLatest(handler);
+  const onChange = useEffectEvent(handler);
   useEffect(
     () =>
       store.subscribe((s, prev) => {
         if (s.room === prev.room || !s.room) return;
-        for (const c of s.changes) latest.current(c, s);
+        for (const c of s.changes) onChange(c, s);
       }),
-    [store, latest],
+    [store],
   );
 }
 
 export function useGameEvents(handler: (event: GameEvent, state: AppState) => void) {
   const { store } = useGame();
-  const latest = useLatest(handler);
-  useEffect(() => store.events.on((e) => latest.current(e, store.getState())), [store, latest]);
+  const onEvent = useEffectEvent(handler);
+  useEffect(() => store.events.on((e) => onEvent(e, store.getState())), [store]);
 }
 
 export function useMoments(handler: (moment: Moment, state: AppState) => void) {

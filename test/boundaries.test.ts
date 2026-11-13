@@ -129,8 +129,23 @@ const RULES: Rule[] = [
   },
 ];
 
+interface TextRule {
+  name: string;
+  files: string[];
+  except?: string[];
+  pattern: RegExp;
+  /** Read comments too (the other rules see only code). */
+  comments?: boolean;
+  /** Tests and fixtures too (the other rules skip them). */
+  tests?: boolean;
+  why: string;
+}
+
+/** A lint disable that names one rule, for the next line only, and says why. */
+const LINT_DISABLE = /\b(?:eslint|oxlint)-(?:disable|enable)\b(?!-next-line [\w-]+(?:\/[\w-]+)? -- \S)[\w-]*/g;
+
 /** Source-text rules: things no import shows. */
-const TEXT_RULES = [
+const TEXT_RULES: TextRule[] = [
   {
     name: "the 3D world doesn't touch the page",
     files: WORLD,
@@ -142,6 +157,15 @@ const TEXT_RULES = [
     files: WORLD,
     pattern: /\bset(Timeout|Interval)\b/g,
     why: "wall-clock timers drift from the frame loop when the tab is hidden or a frame is slow; use stage.after(seconds, fn), or a per-frame dt timer.",
+  },
+  {
+    name: "a lint disable names its rule and says why",
+    files: ["shared/", "server/", "client/src/", "test/", "scripts/", "vite.config.ts"],
+    except: ["test/boundaries.test.ts"], // its examples of what's refused, below
+    pattern: LINT_DISABLE,
+    comments: true,
+    tests: true,
+    why: "fix the finding; where the rule is wrong for that one line, write `// oxlint-disable-next-line plugin/rule -- reason` (no file-wide, multi-rule or unexplained disables).",
   },
 ];
 
@@ -160,16 +184,16 @@ const EXCEPTIONS = [
 /** Tests (runtime *.test.ts and type-only *.test-d.ts) and fixtures may reach anywhere they need to. */
 const exempt = (file: string) => /\.test(-d)?\.tsx?$/.test(file) || posix.basename(file) === "fixtures.ts";
 
-function sources(): string[] {
+function sources(dirs = ["shared", "server", "client/src"], ext = /\.tsx?$/): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
     for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
       const p = posix.join(dir, e.name);
       if (e.isDirectory()) walk(p);
-      else if (/\.tsx?$/.test(e.name)) out.push(p);
+      else if (ext.test(e.name)) out.push(p);
     }
   };
-  for (const dir of ["shared", "server", "client/src"]) walk(dir);
+  for (const dir of dirs) walk(dir);
   return out;
 }
 
@@ -222,7 +246,9 @@ const stripComments = (src: string) =>
 // ---------------------------------------------------------------- checks
 
 const files = sources();
-const text = new Map(files.map((f) => [f, readFileSync(join(ROOT, f), "utf8")]));
+/** Everything oxlint reads, for the source-text rules: the app, plus test/, scripts/ and the Vite config. */
+const linted = [...sources(["shared", "server", "client/src", "test", "scripts"], /\.(tsx?|mjs)$/), "vite.config.ts"];
+const text = new Map(linted.map((f) => [f, readFileSync(join(ROOT, f), "utf8")]));
 
 test("the scanner reads every kind of import", () => {
   const src = [
@@ -259,6 +285,24 @@ test("the scanner reads every kind of import", () => {
   );
   assert.equal(resolve("client/src/app/session.ts", "../../../server/table/commands.ts"), "server/table/commands.ts");
   assert.equal(resolve("client/src/x.ts", "three/addons/controls/OrbitControls.js"), "three");
+});
+
+test("a lint disable needs one rule and a reason", () => {
+  const flagged = (line: string) => [...line.matchAll(LINT_DISABLE)].length > 0;
+  assert.equal(flagged("// oxlint-disable-next-line eslint/no-console -- the CLI prints"), false);
+  assert.equal(flagged("{/* oxlint-disable-next-line jsx-a11y/no-autofocus -- a menu */}"), false);
+  for (const bad of [
+    "// oxlint-disable-next-line eslint/no-console",
+    "// oxlint-disable-next-line eslint/no-console --",
+    "// oxlint-disable-next-line eslint/no-console, eslint/eqeqeq -- two",
+    "// oxlint-disable-next-line",
+    "// oxlint-disable-line eslint/no-console -- same line",
+    "/* oxlint-disable */",
+    "/* oxlint-disable eslint/no-console -- the whole file */",
+    "// eslint-disable-next-line no-console",
+    "// oxlint-enable eslint/no-console",
+  ])
+    assert.equal(flagged(bad), true, bad);
 });
 
 test("the scanner sees the real code", () => {
@@ -299,9 +343,10 @@ test("imports stay inside their boundaries", () => {
 test("source-text rules hold", () => {
   const broken: string[] = [];
   for (const rule of TEXT_RULES) {
-    for (const file of files) {
-      if (exempt(file) || !covers(file, rule.files)) continue;
-      for (const [i, line] of stripComments(text.get(file)!).split("\n").entries()) {
+    for (const file of linted) {
+      if ((exempt(file) && !rule.tests) || !covers(file, rule.files) || covers(file, rule.except ?? [])) continue;
+      const src = text.get(file)!;
+      for (const [i, line] of (rule.comments ? src : stripComments(src)).split("\n").entries()) {
         for (const m of line.matchAll(rule.pattern))
           broken.push(`${file}:${i + 1} uses "${m[0]}", breaking "${rule.name}": ${rule.why}`);
       }

@@ -1,7 +1,7 @@
 // WebSocket transport: parse → validate → role check (in the Table) → reply.
 // One hub per table keeps the sockets; the Table never sees them.
 import type { Server } from "node:http";
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { ClientMsg, type ClientFx, type ServerMsg } from "../../shared/protocol.ts";
 import type { Rooms } from "../rooms.ts";
 import type { Log, Table, TableEvent } from "../table/table.ts";
@@ -34,6 +34,13 @@ function rateLimiter(now: () => number) {
   };
 }
 
+/** A message's text, whichever buffer shape `ws` handed over. */
+function rawText(raw: RawData): string {
+  if (Array.isArray(raw)) return Buffer.concat(raw).toString();
+  if (raw instanceof ArrayBuffer) return Buffer.from(raw).toString();
+  return raw.toString();
+}
+
 class Hub {
   private readonly sockets = new Map<string, WebSocket>();
   private pushQueued = false;
@@ -53,7 +60,7 @@ class Hub {
     ws.on("message", (raw) => {
       let data: unknown;
       try {
-        data = JSON.parse(String(raw));
+        data = JSON.parse(rawText(raw));
       } catch {
         return;
       }
@@ -68,7 +75,7 @@ class Hub {
       if (msg.t !== "cmd") return;
       this.table.run(me, msg.cmd).then(
         (r) => send(ws, { t: "result", id: msg.id, ...(r.error ? { error: r.error } : {}) }),
-        (e) => this.log.error("command failed", msg.cmd.t, e),
+        (e: unknown) => this.log.error("command failed", msg.cmd.t, e),
       );
     });
     ws.on("close", () => {

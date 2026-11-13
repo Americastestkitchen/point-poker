@@ -6,6 +6,10 @@ import { TableState } from "../table/state.ts";
 import type { Log } from "../table/table.ts";
 import type { RoomStore } from "./store.ts";
 
+/** A saved table's code, if it has one, for the log. */
+const savedCode = (r: unknown) =>
+  typeof r === "object" && r !== null && "code" in r && typeof r.code === "string" ? r.code : "?";
+
 /** Parses saved tables, dropping any that don't match today's format. */
 export function parseSaved(text: string, log: Pick<Log, "error">): TableState[] {
   let raw: unknown;
@@ -20,7 +24,7 @@ export function parseSaved(text: string, log: Pick<Log, "error">): TableState[] 
   for (const r of raw) {
     const parsed = TableState.safeParse(r);
     if (parsed.success) tables.push(parsed.data);
-    else log.error(`dropping a saved table in an old format (${(r as { code?: string })?.code ?? "?"})`);
+    else log.error(`dropping a saved table in an old format (${savedCode(r)})`);
   }
   return tables;
 }
@@ -32,7 +36,7 @@ export function fileStore(dir: string, log: Log): RoomStore {
       try {
         return parseSaved(readFileSync(file, "utf8"), log);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") log.error("could not load saved rooms", e);
+        if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) log.error("could not load saved rooms", e);
         return [];
       }
     },

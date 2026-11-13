@@ -20,7 +20,15 @@ export const IDLE_MS = 6 * 3600_000;
 export function createApp(deps: AppDeps) {
   const { store, auth, distDir, ...tableDeps } = deps;
   const rooms = new Rooms(tableDeps, store.load());
-  const server = createServer(httpHandler({ rooms, auth, distDir }));
+  const handle = httpHandler({ rooms, auth, distDir });
+  // A request that throws (like a path that won't decode) gets a 500, not a crashed server.
+  const server = createServer((req, res) => {
+    handle(req, res).catch((e: unknown) => {
+      deps.log.error("request failed", req.url, e);
+      if (!res.headersSent) res.writeHead(500);
+      res.end();
+    });
+  });
   attachSockets(server, rooms, { log: deps.log, now: deps.now });
   return {
     server,

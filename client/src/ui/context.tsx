@@ -1,5 +1,5 @@
 // What every primitive shares: the sounds, the Esc stack and the toasts.
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { createBackStack, type BackStack } from "./input/back.ts";
 import { intentOf } from "./input/intent.ts";
 import { createToasts, type Toasts } from "./toasts.ts";
@@ -63,7 +63,6 @@ export function useUi(): Ui {
  */
 export function useBack(onBack: () => void, active = true, depth = 0) {
   const { backStack } = useUi();
-  const latest = useRef(onBack);
-  latest.current = onBack;
-  useEffect(() => (active ? backStack.push(() => latest.current(), depth) : undefined), [active, backStack, depth]);
+  const back = useEffectEvent(onBack);
+  useEffect(() => (active ? backStack.push(() => back(), depth) : undefined), [active, backStack, depth]);
 }

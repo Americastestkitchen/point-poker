@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import type { Anchor, Vec3 } from "../../scene/layout/layout.ts";
-import { FONT, canvasTex, woodTexture, wrapText } from "../../scene/art/textures.ts";
+import { FONT, canvasTex, context2d, woodTexture, wrapText } from "../../scene/art/textures.ts";
 import type { Environment, Sign, Squeaky, StatusScreen } from "../types.ts";
 import { feltTexture, wallpaperTexture } from "./textures.ts";
 
@@ -53,15 +53,19 @@ const basement: Environment = {
       },
       dispose() {
         root.traverse((o) => {
-          const m = o as THREE.Mesh;
-          m.geometry?.dispose();
-          for (const mat of [m.material].flat()) (mat as THREE.Material | undefined)?.dispose();
+          if (!hasGeometry(o)) return;
+          o.geometry.dispose();
+          for (const mat of [o.material].flat()) mat.dispose();
         });
       },
     };
   },
 };
 export default basement;
+
+/** Meshes and points own a geometry and materials to dispose. */
+const hasGeometry = (o: THREE.Object3D): o is THREE.Mesh | THREE.Points =>
+  o instanceof THREE.Mesh || o instanceof THREE.Points;
 
 /** A green-shaded lamp over the table, slowly swaying, now and then flickering. */
 function hangingLamp(anchor: Anchor) {
@@ -152,7 +156,7 @@ function telly(anchor: Anchor): StatusScreen & { update(): void } {
   canvas.height = 384;
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = context2d(canvas);
   let lines: [string, string, string] = ["NO TICKET", "waiting on the dealer", ""];
   const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.55), toon("#5a5048"));
   box.rotation.y = anchor.yaw;
@@ -232,7 +236,8 @@ function dustMotes() {
     pos.set([Math.cos(a) * r, 0.9 + Math.random() * 1.2, Math.sin(a) * r], i * 3);
   }
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.BufferAttribute(pos, 3);
+  geo.setAttribute("position", p);
   const points = new THREE.Points(
     geo,
     new THREE.PointsMaterial({
@@ -247,7 +252,6 @@ function dustMotes() {
   return {
     object: points,
     update(dt: number, t: number) {
-      const p = geo.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < p.count; i++) {
         let y = p.getY(i) + dt * 0.02;
         if (y > 2.2) y = 0.9;
@@ -493,7 +497,7 @@ function duckModel(): THREE.Group {
     g.add(eye);
   }
   g.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) o.castShadow = true;
+    if (o instanceof THREE.Mesh) o.castShadow = true;
   });
   return g;
 }

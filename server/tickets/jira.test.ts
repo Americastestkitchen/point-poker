@@ -30,7 +30,7 @@ function jira(reply: unknown, status = 200) {
     auth: { kind: "apiToken", email: "a@b.c", token: "t" },
     pointsField: "customfield_1",
     fetch: async (url) => {
-      asked.push(new URL(String(url)));
+      asked.push(new URL(url instanceof Request ? url.url : url));
       return new Response(JSON.stringify(reply), { status });
     },
   });

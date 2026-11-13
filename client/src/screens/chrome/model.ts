@@ -90,8 +90,8 @@ export interface BoardRow {
 
 /** Players by chips, most first (ties keep their seat order). */
 export function boardRows(players: readonly PublicPlayer[], meId: string | undefined, iAmDealer: boolean): BoardRow[] {
-  return [...players]
-    .sort((a, b) => b.chips - a.chips)
+  return players
+    .toSorted((a, b) => b.chips - a.chips)
     .map((p, i) => ({
       player: p,
       rank: i === 0 && p.chips > 0 ? "👑" : String(i + 1),
@@ -109,7 +109,7 @@ export function roundOutcome(h: Pick<RoundResult, "houseWon" | "winners" | "shar
 }
 
 /** Rounds played, newest first. */
-export const roundsNewestFirst = (history: readonly RoundResult[]) => history.slice().reverse();
+export const roundsNewestFirst = (history: readonly RoundResult[]) => history.toReversed();
 
 /**
  * For pasting into Jira: the latest result per ticket, oldest first, one "KEY\tN pts\tSummary"
