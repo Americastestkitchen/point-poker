@@ -17,9 +17,7 @@
 import { cx } from "../ui/index.ts";
 import { useAppState } from "./game.tsx";
 import { GameMenu } from "./chrome/GameMenu.tsx";
-import { HowToPlayDialog } from "./chrome/HowToPlayDialog.tsx";
 import { LeaderboardDialog } from "./chrome/LeaderboardDialog.tsx";
-import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
 import { TopBar } from "./chrome/TopBar.tsx";
 import { DealerPanel } from "./dealer/DealerPanel.tsx";
 import { TicketPicker } from "./dealer/TicketPicker.tsx";
@@ -33,9 +31,11 @@ import s from "./GameScreen.module.css";
 
 export function GameScreen() {
   const atTable = useAppState((st) => st.screen === "table");
+  // the look editor takes the whole screen; the HUD waits underneath, still mounted
+  const lookOpen = useAppState((st) => st.ui.lookOpen);
   if (!atTable) return null;
   return (
-    <div className={s.screen} data-screen="table">
+    <div className={s.screen} data-screen="table" hidden={lookOpen}>
       <div className={cx(s.region, s.ticket, s.interactive)} data-region="ticket">
         <TicketTab />
       </div>
@@ -56,9 +56,8 @@ export function GameScreen() {
       </div>
 
       {/* popups: kit Dialogs, one open at a time (store.ui.popup) */}
+      {/* Options and How to play live in GameRoot: the title menu opens them too */}
       <GameMenu />
-      <OptionsDialog />
-      <HowToPlayDialog />
       <LeaderboardDialog />
       <TicketSheet />
       <DealerPanel />

@@ -1,5 +1,5 @@
-// The main-stage WebGL renderer: scene, camera, frame loop and picking.
-// The legacy lobby turntable has a separate renderer until #4.
+// The main-stage WebGL renderer: scene, camera, frame loop and picking. Everything 3D draws
+// here, including extra passes over the room (the showcase's bean) through afterRender.
 import * as THREE from "three";
 import type { Audio } from "../../audio/sfx.ts";
 import { createDelays } from "./delays.ts";
@@ -14,6 +14,8 @@ export interface Stage {
   readonly canvas: HTMLCanvasElement;
   /** Runs `fn` every frame, before rendering. Returns a function that stops it. */
   onFrame(fn: (dt: number, t: number) => void): () => void;
+  /** Runs `fn` every frame, after the room is drawn: for passes drawn over it. Returns a function that stops it. */
+  afterRender(fn: () => void): () => void;
   /** Runs `fn` once, after `seconds` of frame time. The world waits with this, never setTimeout. */
   after(seconds: number, fn: () => void): void;
   start(): void;
@@ -31,6 +33,7 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
   const picking = createPicking(camera, () => ({ width: innerWidth, height: innerHeight }));
   const delays = createDelays();
   const frames = new Set<(dt: number, t: number) => void>([delays.update]);
+  const passes = new Set<() => void>();
 
   const resize = () => {
     const w = innerWidth,
@@ -54,6 +57,10 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
       frames.add(fn);
       return () => frames.delete(fn);
     },
+    afterRender(fn) {
+      passes.add(fn);
+      return () => passes.delete(fn);
+    },
     after: delays.after,
     start() {
       if (started) return;
@@ -65,6 +72,7 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
         const dt = Math.min(clock.getDelta(), 0.1);
         for (const fn of frames) fn(dt, clock.elapsedTime);
         renderer.render(scene, camera);
+        for (const pass of passes) pass();
         requestAnimationFrame(loop);
       };
       loop();

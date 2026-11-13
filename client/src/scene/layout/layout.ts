@@ -74,6 +74,12 @@ export const layout = {
     seat: (x: number, z: number, dealer: boolean) => vec(x * 1.06, dealer ? 1.6 : 1.5, z * 1.06),
     /** What a seated camera looks at before you drag it around. */
     lookAt: vec(0, TABLE.y + 0.1, 0),
+    /**
+     * The title screens' camera: from the sign's end of the room it drifts slowly to and fro
+     * on a circle round the table's middle, looking down the table at the dealer's end (so the
+     * sign itself stays behind it, out of the way of the logo on screen).
+     */
+    title: { radius: 3.3, height: 1.85, angle: 0.12, sway: 0.32, lookAt: vec(-1.6, 1.0, 0) },
   },
 };
 

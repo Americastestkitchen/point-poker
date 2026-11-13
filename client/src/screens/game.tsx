@@ -5,6 +5,7 @@
 import { createContext, useContext, useSyncExternalStore } from "react";
 import type { Actions } from "../app/actions.ts";
 import type { Storage } from "../app/storage.ts";
+import type { Tables } from "../app/tables.ts";
 import { myPlayer, type AppState, type Popup, type Store } from "../app/store.ts";
 import type { MicStatus } from "../audio/mic.ts";
 import type { Audio } from "../audio/sfx.ts";
@@ -12,6 +13,18 @@ import type { Toasts } from "../ui/index.ts";
 import type { Copy } from "./copy.ts";
 import type { MicControl } from "./mic.ts";
 import type { TicketLoad, TicketLoadState } from "./ticket-load.ts";
+
+/** What the title screens need from the page: the invite link, opening tables, sitting down. */
+export interface Title {
+  /** The table code from the invite link (`?room=`), or "" when the site was opened directly. */
+  invite: string;
+  /** Opening a table, and checking an invite's table is still open. */
+  tables: Pick<Tables, "open" | "check" | "savedPasscode">;
+  /** Sit down at table `code` with the saved profile: the game takes over from the title screens. */
+  sit(code: string): void;
+  /** Drop the invite from the address bar (its table is gone, or you went back to the menu). */
+  forgetInvite(): void;
+}
 
 /** The game UI's services. createGameUi() builds one; tests can build their own. */
 export interface Game {
@@ -28,6 +41,8 @@ export interface Game {
   ticketLoad: TicketLoad;
   /** Clipboard with an in-game fallback dialog. */
   copy: Copy;
+  /** Before you sit down: see Title. */
+  title: Title;
   /** Opens the look editor over the table. */
   openLook(): void;
   /** Leaves this table for the start screen. */

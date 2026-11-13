@@ -2,17 +2,40 @@
 // you are, the connection and local UI state, plus the event stream. Both the
 // screens and the 3D scene read it. Values that change every frame never go in here.
 import { createStore as createZustand } from "zustand/vanilla";
+import type { Look } from "../../../shared/look.ts";
 import type { TableView } from "../../../shared/protocol.ts";
 import type { Connection } from "./connection.ts";
 import { createEvents, diff, type Events, type ViewChange } from "./events.ts";
 import { vote, type VoteState } from "./vote.ts";
 
+/** A box on the screen in CSS pixels, from the top-left of the window. */
+export interface ScreenRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Your bean on show (the title screens and the look editor): the 3D world draws it, spotlit on
+ * its turntable, into `rect`, a space the screen leaves for it. `look` is the draft as you edit it.
+ */
+export interface Showcase {
+  look: Look;
+  /** In the dealer's gear: you opened this table. */
+  dealer: boolean;
+  rect: ScreenRect;
+}
+
 export interface AppState {
+  /** The title screens, character select before you sit down, or the table. */
   screen: "start" | "creator" | "table";
   connection: Connection;
   /** Who you are at this table (from the welcome); your seat and role come from the view. */
   me: { id: string } | null;
   room: TableView | null;
+  /** Your bean on show, or null when no screen shows it. */
+  showcase: Showcase | null;
   /** What changed with the latest view. It arrives in the same update, so whoever redraws sees both at once. */
   changes: ViewChange[];
   /** Your card (see vote.ts), plus local UI state. */
@@ -36,6 +59,7 @@ const initial: AppState = {
   connection: { status: "idle" },
   me: null,
   room: null,
+  showcase: null,
   changes: [],
   ui: { myVote: null, votesInFlight: 0, lookOpen: false, popup: null },
 };
@@ -92,6 +116,13 @@ function build() {
     creatorOpened() {
       store.setState({ screen: "creator" });
     },
+    /** The screen showing your bean moved it, changed its look, or (null) stopped showing it. */
+    showcased(showcase: Showcase | null) {
+      const prev = store.getState().showcase;
+      if (prev === showcase) return;
+      if (prev && showcase && sameShowcase(prev, showcase)) return;
+      store.setState({ showcase });
+    },
     /** You sat down at the table. */
     seated() {
       store.setState({ screen: "table" });
@@ -107,6 +138,14 @@ function withVote(ui: AppState["ui"], a: Parameters<typeof vote>[1]): AppState["
   const next = vote(ui, a);
   return next === ui ? ui : { ...ui, ...next };
 }
+
+const sameShowcase = (a: Showcase, b: Showcase) =>
+  a.look === b.look &&
+  a.dealer === b.dealer &&
+  a.rect.x === b.rect.x &&
+  a.rect.y === b.rect.y &&
+  a.rect.width === b.rect.width &&
+  a.rect.height === b.rect.height;
 
 /** Your own seat in the current view. */
 export const myPlayer = (s: Pick<AppState, "me" | "room">) => s.room?.players.find((p) => p.id === s.me?.id);

@@ -29,49 +29,7 @@
     <canvas id="scene"></canvas>
     <div id="vignette"></div>
 
-    <!-- landing / character creator -->
-    <div id="lobby" class="modal">
-      <div class="panel lobby-panel">
-        <div class="logo">POINT<span>POKER</span></div>
-        <div class="tagline">the backlog basement · est. sprint 1</div>
-
-        <div id="start-view">
-          <button id="new-table" class="big">🎩 Open a table <small>you'll be the dealer</small></button>
-          <div class="or">or join one</div>
-          <form id="join-code" class="row">
-            <input id="code-input" placeholder="TABLE CODE" maxlength="4" autocomplete="off" />
-            <button>Join</button>
-          </form>
-        </div>
-
-        <div id="creator-view" hidden>
-          <div class="creator">
-            <div class="preview-wrap">
-              <canvas id="preview"></canvas>
-              <div id="dealer-badge" hidden>🎩 You're the dealer</div>
-            </div>
-            <form id="sit-form" class="creator-form">
-              <label
-                >What should we call you?
-                <input id="name-input" maxlength="18" placeholder="Your name" autocomplete="off" enterkeyhint="go" />
-              </label>
-              <button id="sit" class="big">Join the table →</button>
-              <details id="look-more">
-                <summary>Pick your body, color &amp; hat</summary>
-                <label>Body</label>
-                <div id="bodies" class="hats"></div>
-                <label>Color</label>
-                <div id="colors" class="swatches"></div>
-                <label>Hat</label>
-                <div id="hats" class="hats"></div>
-              </details>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- the game UI (screens/, drawn by React with the UI kit) -->
+    <!-- the game UI: title screens and HUD (screens/, drawn by React with the UI kit) -->
     <div id="ui"></div>
 
     <script type="module" src="/src/main.ts"></script>

@@ -1,27 +1,61 @@
-// The game UI's root. It owns what happens once for the whole screen: the one toast adapter
-// (event-stream toasts, joins, leaves, being removed), opening the ticket when the 3D paper is
-// clicked, the window title, and Esc opening the game menu. Everything else lives in the
-// components GameScreen lays out.
+// The game UI's root. Before you sit down it shows the title screens; at the table, the HUD
+// (GameScreen) and the look editor when it's open. It owns what happens once for the whole
+// screen: the one toast adapter (event-stream toasts, joins, leaves, being removed), opening
+// the ticket when the 3D paper is clicked, the window title, and Esc opening the game menu.
+// Options and How to play open from the title menu and the game menu alike.
 import { useEffect, useSyncExternalStore } from "react";
 import { useBack } from "../ui/index.ts";
-import { useAppState, useGame } from "./game.tsx";
+import { HowToPlayDialog } from "./chrome/HowToPlayDialog.tsx";
+import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
+import { useAppState, useGame, useMe } from "./game.tsx";
 import { focusOf, menuKeyAllowed } from "./keys.ts";
 import { useGameEvents, useViewChanges } from "./moments.ts";
 import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notices.ts";
 import { CopyFallback } from "./parts/CopyFallback.tsx";
 import { GameScreen } from "./GameScreen.tsx";
+import { CharacterEditor } from "./title/CharacterEditor.tsx";
+import { TitleScreen } from "./title/TitleScreen.tsx";
 
 export function GameRoot() {
   useNotices();
   useOpenTicket();
   useWindowTitle();
   useMenuKey();
+  const atTable = useAppState((st) => st.screen === "table");
   return (
     <>
-      <GameScreen />
+      {atTable ? <GameScreen /> : <TitleScreen />}
+      <LookEditor />
+      <OptionsDialog />
+      <HowToPlayDialog />
       {/* after the popups, so it opens over whichever one asked to copy */}
       <CopyFallback />
     </>
+  );
+}
+
+/** "Change look" from the game menu: character select over the table, without the name. */
+function LookEditor() {
+  const { store, storage, actions } = useGame();
+  const open = useAppState((st) => st.screen === "table" && st.ui.lookOpen);
+  const me = useMe();
+  if (!open || !me) return null;
+  const close = () => store.setUi({ lookOpen: false });
+  return (
+    <div data-screen="look">
+      <CharacterEditor
+        initial={{ name: me.name, look: me.look }}
+        withName={false}
+        dealer={me.isDealer}
+        doneLabel="Done"
+        onDone={(profile) => {
+          storage.setProfile(profile);
+          actions.setLook(profile.look);
+          close();
+        }}
+        onBack={close}
+      />
+    </div>
   );
 }
 

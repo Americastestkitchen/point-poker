@@ -48,3 +48,26 @@ test("popups leave the rest of the UI state alone", () => {
   store.popupOpened("leaderboard");
   assert.deepEqual(store.getState().ui, { myVote: null, votesInFlight: 0, lookOpen: true, popup: "leaderboard" });
 });
+
+test("the showcase only changes when where or how the bean shows changes", () => {
+  const store = createStore();
+  let writes = 0;
+  store.subscribe(() => writes++);
+  const look = { color: "#ffd23f", body: "bean", cosmetics: ["tophat"] } as const;
+  const shown = {
+    look: { ...look, cosmetics: [...look.cosmetics] },
+    dealer: false,
+    rect: { x: 10, y: 20, width: 300, height: 400 },
+  };
+
+  store.showcased(shown);
+  store.showcased({ ...shown, rect: { ...shown.rect } });
+  assert.equal(writes, 1, "the same box and look again is not a change");
+
+  store.showcased({ ...shown, rect: { ...shown.rect, width: 320 } });
+  assert.equal(store.getState().showcase?.rect.width, 320);
+  store.showcased(null);
+  assert.equal(store.getState().showcase, null);
+  store.showcased(null);
+  assert.equal(writes, 3);
+});

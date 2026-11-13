@@ -1,0 +1,116 @@
+/* Character select. The stage is an empty box: the 3D world draws the bean into it, so
+   nothing here may paint over it (the room is darkened only behind the panel). */
+.screen {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: linear-gradient(
+    90deg,
+    transparent 35%,
+    color-mix(in srgb, var(--pp-color-backdrop) 78%, transparent) 62%
+  );
+}
+.title {
+  position: absolute;
+  top: var(--pp-space-6);
+  left: 7vw;
+  margin: 0;
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-display);
+  font-size: var(--pp-size-xxl);
+  text-shadow: 0 2px 12px var(--pp-color-backdrop);
+}
+.stage {
+  position: absolute;
+  left: 10vw;
+  top: 12vh;
+  width: min(38vw, 520px);
+  height: 74vh;
+}
+.panel {
+  position: absolute;
+  right: 7vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  max-height: calc(100% - 180px);
+  overflow: auto;
+}
+.fields {
+  display: grid;
+  gap: var(--pp-space-4);
+}
+.colour {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pp-space-2);
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--pp-color-shade);
+}
+.actions {
+  position: absolute;
+  right: 7vw;
+  bottom: var(--pp-space-6);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--pp-space-3);
+}
+.hints {
+  display: flex;
+  gap: var(--pp-space-4);
+  color: var(--pp-color-dim);
+  font-size: var(--pp-size-sm);
+}
+
+/* phones: the bean up top, the choices under it, Back and Done in thumb reach */
+@media (max-width: 600px) {
+  .screen {
+    background: linear-gradient(
+      180deg,
+      transparent 25%,
+      color-mix(in srgb, var(--pp-color-backdrop) 85%, transparent) 42%
+    );
+  }
+  .title {
+    top: var(--pp-space-4);
+    left: var(--pp-space-4);
+    font-size: var(--pp-size-xl);
+  }
+  .stage {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 44px;
+    width: 220px;
+    height: 26vh;
+  }
+  .panel {
+    left: var(--pp-space-4);
+    right: var(--pp-space-4);
+    width: auto;
+    top: calc(44px + 26vh);
+    bottom: 84px;
+    transform: none;
+    max-height: none;
+  }
+  .fields {
+    gap: var(--pp-space-2);
+  }
+  .actions {
+    left: var(--pp-space-4);
+    right: var(--pp-space-4);
+    bottom: var(--pp-space-4);
+    flex-wrap: nowrap;
+  }
+  .actions > button {
+    flex: 1;
+  }
+  .hints {
+    display: none;
+  }
+}

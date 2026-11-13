@@ -8,7 +8,7 @@ import type { Mic } from "../audio/mic.ts";
 import type { Audio } from "../audio/sfx.ts";
 import type { Toasts } from "../ui/index.ts";
 import { createCopy, type ClipboardLike } from "./copy.ts";
-import { GameProvider, type Game } from "./game.tsx";
+import { GameProvider, type Game, type Title } from "./game.tsx";
 import { GameRoot } from "./GameRoot.tsx";
 import { focusOf, worldKeysAllowed } from "./keys.ts";
 import { createMicControl } from "./mic.ts";
@@ -22,9 +22,9 @@ export interface GameUiDeps {
   mic: Mic;
   /** The same instance mountUi() gets as `toasts`, so <Toaster> draws what screens show. */
   toasts: Toasts;
-  /** Opens the look editor over the table. */
-  openLook(): void;
-  /** Leaves the table for the start screen. */
+  /** The title screens' links to the page: the invite, opening tables, sitting down. */
+  title: Title;
+  /** Leaves the table for the title screens. */
   leaveTable(): void;
   /** This table's invite link. */
   inviteUrl(): string;
@@ -49,6 +49,10 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     return () => clearTimeout(timer);
   };
   const mic = createMicControl({ mic: deps.mic, storage, actions, toasts, after });
+  // the mic (or its tip) waits until you sit down, not the title screens
+  const stopWatching = store.subscribe((s) => {
+    if (s.screen === "table") mic.seated();
+  });
   const ticketLoad = createTicketLoad({ openPicker: () => store.popupOpened("picker"), bonk: () => audio.bonk() });
   const copy = createCopy({ clipboard: deps.clipboard ?? (() => navigator.clipboard), toasts });
 
@@ -61,7 +65,8 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     mic,
     ticketLoad,
     copy,
-    openLook: deps.openLook,
+    title: deps.title,
+    openLook: () => store.setUi({ lookOpen: true }),
     leaveTable: deps.leaveTable,
     invite: () =>
       void copy.copy(deps.inviteUrl(), {
@@ -91,6 +96,9 @@ export function createGameUi(deps: GameUiDeps): GameUi {
         focus: focusOf(document.activeElement),
       });
     },
-    dispose: () => mic.dispose(),
+    dispose() {
+      stopWatching();
+      mic.dispose();
+    },
   };
 }

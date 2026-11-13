@@ -36,7 +36,7 @@ closes. Previews have no Jira, so type tickets in by hand.
 ## UI kit
 
 The React UI kit in `client/src/ui/` supplies the primitives the game screens in
-`client/src/screens/` are built from; the start screen is still the plain DOM lobby until #4.
+`client/src/screens/` (title screens and HUD) are built from.
 The 3D world stays plain Three.js.
 See [AGENTS.md](AGENTS.md) for the screen integration contract. Colours, fonts, spacing
 and glows live in `client/src/ui/tokens.ts` only: the kit's and the screens' stylesheets use the
