@@ -1,4 +1,4 @@
-.section { display: grid; gap: var(--pp-space-2); min-width: 0; }
+.section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-2); min-width: 0; }
 .head { display: flex; align-items: center; gap: var(--pp-space-2); min-width: 0; }
 /* a little gold rule after the title, like the edge of a felt table */
 .head::after {
@@ -6,7 +6,7 @@
   background: linear-gradient(90deg, var(--pp-color-edge), transparent);
 }
 .title {
-  margin: 0; flex: none;
+  margin: 0; flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere;
   font-family: var(--pp-font-display); font-weight: var(--pp-weight-display);
   font-size: var(--pp-size-xs); letter-spacing: 2px; text-transform: uppercase;
   color: var(--pp-color-dim);

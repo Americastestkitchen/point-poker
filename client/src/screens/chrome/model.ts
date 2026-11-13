@@ -59,7 +59,7 @@ export function coinFlight(i: number, from: Point, to: Point, angle: number, rad
       { transform: `translate(${bx}px, ${by - 10}px) scale(1)`, opacity: 1, offset: 0.5 },
       { transform: `translate(${to.x}px, ${to.y}px) scale(.55)`, opacity: 0.9 },
     ],
-    timing: { duration: 1150 + i * 35, delay: i * 18, easing: "cubic-bezier(.3,.1,.3,1)", fill: "forwards" as const },
+    timing: { duration: 1150 + i * 35, delay: i * 18, easing: "cubic-bezier(.3,.1,.3,1)", fill: "both" as const },
   };
 }
 

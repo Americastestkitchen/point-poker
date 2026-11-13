@@ -53,7 +53,8 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
     const before = document.activeElement as HTMLElement | null;
     // focus goes back where it was, unless it was only there because the mouse was (see focus.ts):
     // then it goes back to the page, like the mouse moving off would have sent it
-    const restore = hoverFocused(before) ? null : before;
+    // (inside another dialog it does go back: focus has to stay in the one still open)
+    const restore = hoverFocused(before) && !before?.closest("[role='dialog']") ? null : before;
     // `data-autofocus` first, wherever it is; a field with autoFocus takes over after this
     const firstStop = box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
     (firstStop ?? box.current)?.focus({ preventScroll: true });

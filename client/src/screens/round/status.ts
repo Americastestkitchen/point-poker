@@ -2,6 +2,7 @@
 // happening, and while voting who has picked. Pure; StatusLine.tsx draws it.
 import type { PublicPlayer, TableView } from "../../../../shared/protocol.ts";
 import { voters } from "../../../../shared/rules.ts";
+import { pointsWord } from "../text.ts";
 
 export type StepState = "done" | "current" | "idle";
 
@@ -39,7 +40,7 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
       line = dealer ? "Choose the final points below" : "The dealer is choosing the final points…";
       break;
     case "settled":
-      line = `Final: ${room.finalPoints} points`;
+      line = `Final: ${room.finalPoints} ${pointsWord(room.finalPoints)}`;
       break;
   }
 

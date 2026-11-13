@@ -2,7 +2,7 @@
  * The dialog's scrolling body clips to the panel's rounded corners: a little room keeps the
  * first heading's corner and the focus glows at the edges from being cut off.
  */
-.body { display: grid; gap: var(--pp-space-5); min-width: 0; padding: var(--pp-space-2) var(--pp-space-1) var(--pp-space-1); }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-5); min-width: 0; padding: var(--pp-space-2) var(--pp-space-1) var(--pp-space-1); }
 
 /* this round: four chunky buttons, two by two */
 .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--pp-space-2); }
@@ -13,7 +13,7 @@
 /* a long list scrolls on its own; on a short screen the whole panel scrolls instead (no scroll in a scroll) */
 .players { border-radius: var(--pp-radius-md); max-height: min(320px, 38dvh); }
 @media (max-height: 520px) { .players { max-height: none; } }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--pp-space-1); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-1); }
 .player {
   display: flex; align-items: center; gap: var(--pp-space-3); min-width: 0;
   padding: var(--pp-space-1) var(--pp-space-1) var(--pp-space-1) var(--pp-space-3);
@@ -23,8 +23,8 @@
 .player:hover, .player:focus-within { border-color: var(--pp-color-edge); }
 .player[data-away] .name { color: var(--pp-color-faint); }
 .name {
-  flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* the whole name, on two lines if it must: you need to know who you'd kick */
+  flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.2;
   font-weight: var(--pp-weight-strong);
 }
 .state { flex: none; font-size: var(--pp-size-sm); color: var(--pp-color-dim); }

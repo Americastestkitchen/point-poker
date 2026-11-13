@@ -42,7 +42,7 @@ export function PlayingCard({ value, selected = false, dimmed = false, ribbon, v
       onKeyDown={onKeyDown}
       className={cx(s.card, face.red && s.red, selected && s.selected, dimmed && s.dimmed, ribbon && s.suggested)}
       style={{ "--tilt": `${face.tilt}deg`, "--i": index } as CSSProperties}
-      aria-label={`${value} points`}
+      aria-label={`${value} ${value === 1 ? "point" : "points"}`}
       aria-pressed={selected}
       aria-describedby={said ? about : undefined}
       onClick={onPress}

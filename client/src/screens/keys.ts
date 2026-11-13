@@ -30,6 +30,9 @@ export function menuKeyAllowed(k: Omit<KeyState, "dialogOpen">): boolean {
   return k.screen === "table" && k.popup === null && !k.lookOpen && k.focus !== "field";
 }
 
+/** The kit's mark for focus that only followed the mouse (ui/focus.ts); read here without loading the kit. */
+const HOVER_FOCUS = "data-hover-focus";
+
 const FIELD = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
 const CONTROL = "button, a[href], summary, [tabindex], [role='button'], [role='switch'], [role='slider'], [role='menuitem'], [role='tab'], [role='option']";
 
@@ -37,6 +40,9 @@ const CONTROL = "button, a[href], summary, [tabindex], [role='button'], [role='s
 export function focusOf(el: Element | null): Focus {
   if (!el || el === el.ownerDocument.body || el === el.ownerDocument.documentElement) return "page";
   if (el.closest("[role='dialog']")) return "dialog";
+  // the mouse is only resting on it (the kit focuses what you hover): nobody chose it with a
+  // key or a press, so the keyboard still belongs to the page
+  if (el.hasAttribute(HOVER_FOCUS)) return "page";
   if (el.closest(FIELD)) return "field";
   if (el.closest(CONTROL)) return "control";
   return "page";

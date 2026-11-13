@@ -2,10 +2,10 @@
  * The dialog's scrolling body clips to the panel's rounded corners: a little room keeps the
  * first heading's corner and the focus glows at the edges from being cut off.
  */
-.body { display: grid; gap: var(--pp-space-4); min-width: 0; padding: var(--pp-space-2) var(--pp-space-1) var(--pp-space-1); }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-4); min-width: 0; padding: var(--pp-space-2) var(--pp-space-1) var(--pp-space-1); }
 
 /* the Jira field, its tip, the spinner and "Or pick from this sprint" */
-.jira { display: grid; gap: var(--pp-space-3); justify-items: stretch; min-width: 0; }
+.jira { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-3); justify-items: stretch; min-width: 0; }
 .em { color: var(--pp-color-gold); font-weight: var(--pp-weight-strong); }
 .sprint { justify-self: center; min-height: 40px; }
 .busy {
@@ -23,7 +23,7 @@
 /* a long queue scrolls on its own; on a short screen the whole picker scrolls instead */
 .queue { border-radius: var(--pp-radius-md); max-height: min(260px, 34dvh); }
 @media (max-height: 520px) { .queue { max-height: none; } }
-.rows { display: grid; gap: var(--pp-space-1); padding-right: var(--pp-space-1); }
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-1); padding-right: var(--pp-space-1); }
 .rowWrap { display: flex; min-width: 0; }
 .row {
   flex: 1; min-width: 0; min-height: 44px;
@@ -50,7 +50,7 @@
 .current .note { color: var(--pp-color-gold); }
 
 /* typing a ticket in */
-.manual { display: grid; gap: var(--pp-space-2); min-width: 0; }
+.manual { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-2); min-width: 0; }
 .manualTitle { margin: 0; text-align: center; font-size: var(--pp-size-sm); color: var(--pp-color-dim); }
 .disclosure {
   justify-self: center; display: inline-flex; align-items: center; gap: var(--pp-space-2);

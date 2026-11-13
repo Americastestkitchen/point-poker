@@ -2,7 +2,7 @@
 // Pure: the words for a change in the view, from your seat. Announcements.tsx shows them.
 import type { TableView } from "../../../../shared/protocol.ts";
 import type { ViewChange } from "../../app/events.ts";
-import { names } from "../text.ts";
+import { names, pointsWord } from "../text.ts";
 
 export interface Announcement {
   /** `deal` is cool blue, `reveal` the plain card, `settle` the payout. */
@@ -51,7 +51,7 @@ function revealed(room: TableView): Announcement {
 function settled(room: TableView, meId: string | undefined): Announcement {
   const winners = room.players.filter((p) => room.winners.includes(p.id));
   const iWon = meId !== undefined && room.winners.includes(meId);
-  const kicker = `Final call · ${room.finalPoints} points`;
+  const kicker = `Final call · ${room.finalPoints} ${pointsWord(room.finalPoints)}`;
   const share = room.share;
 
   if (room.houseWon) {

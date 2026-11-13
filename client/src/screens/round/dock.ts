@@ -2,7 +2,7 @@
 // played (your optimistic vote). ActionDock.tsx only draws it and wires the presses.
 import type { PublicPlayer, TableView } from "../../../../shared/protocol.ts";
 import { cardValues, favourite, nextInQueue, tally, voters } from "../../../../shared/rules.ts";
-import { names, safeUrl } from "../text.ts";
+import { names, pointsWord, safeUrl } from "../text.ts";
 
 /** A line of words, with the part worth shouting about (a number) called out. */
 export type Words = readonly (string | { strong: string })[];
@@ -119,7 +119,7 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
           .map((value) => ({ value, voters: counts.get(value) ?? [], final: settled && value === final }));
         return {
           key,
-          title: settled ? ["Final: ", { strong: String(final) }, " points"] : ["Here's how everyone voted"],
+          title: settled ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)}`] : ["Here's how everyone voted"],
           body: { t: "spread", cards },
           actions: [],
         };
@@ -145,7 +145,7 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
       }
       return {
         key,
-        title: settled ? ["Final: ", { strong: String(final) }, " points · tap a card to change it"] : ["Tap the final points"],
+        title: settled ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)} · tap a card to change it`] : ["Tap the final points"],
         body: { t: "settle", cards },
         actions,
       };

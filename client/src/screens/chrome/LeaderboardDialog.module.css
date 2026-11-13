@@ -1,5 +1,5 @@
 /* players, most coins first: a stack of felt rows, yours lit in gold */
-.board { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--pp-space-1); }
+.board { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-1); }
 .row {
   display: flex; align-items: center; gap: var(--pp-space-3);
   min-height: 44px; padding: var(--pp-space-1) var(--pp-space-3);
