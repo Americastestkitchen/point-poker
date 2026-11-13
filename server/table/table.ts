@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { validateLook } from "../../shared/look.ts";
 import type { JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
-import { findCommand, type Ctx } from "./commands.ts";
+import { findCommand, type DealerCtx } from "./commands.ts";
 import { clean, findPlayer, freeSeat, startRound } from "./rules.ts";
 import type { TableState } from "./state.ts";
 import { viewFor } from "./view.ts";
@@ -52,7 +52,8 @@ export class Table {
   private readonly lastUsed = new Map<string, number>();
   private ticketSeq = 0;
   private queueSeq = 0;
-  private readonly ctx: Ctx;
+  /** Everything commands can do; each one only sees the part its role allows. */
+  private readonly ctx: DealerCtx;
 
   constructor(state: TableState, deps: TableDeps) {
     this.s = state;

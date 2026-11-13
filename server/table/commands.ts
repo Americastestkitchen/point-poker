@@ -11,17 +11,21 @@ import type { TableFx } from "./table.ts";
 
 export type Role = "player" | "dealer";
 
-/** What a command can do to the table it runs on. */
-export interface Ctx {
+/** What any command can do to the table it runs on. */
+export interface PlayerCtx {
   readonly s: TableState;
   now(): number;
   log(line: string): void;
   changed(): void;
   notice(text: string, opts?: { level?: "error"; except?: string }): void;
   fx(fx: TableFx, except?: string): void;
-  remove(player: PlayerState, reason: string): void;
   /** True (and starts the clock) when `what` is off cooldown for this player. */
   ready(playerId: string, what: string, cooldownMs: number): boolean;
+}
+
+/** What only the dealer's commands can do on top of that. */
+export interface DealerCtx extends PlayerCtx {
+  remove(player: PlayerState, reason: string): void;
   /** Starts a ticket change and returns a check that turns false once a newer one starts. */
   claimTicket(): () => boolean;
   claimQueue(): () => boolean;
@@ -30,18 +34,22 @@ export interface Ctx {
   upcoming(project: string | undefined): Promise<{ label: string; tickets: TableState["queue"] }>;
 }
 
+/** The context a command gets for its role. The table checks the role before it runs anything. */
+export type CtxFor<R extends Role> = R extends "dealer" ? DealerCtx : PlayerCtx;
+
 /** Nothing means it worked; a string is the reason it didn't. */
 type Reply = void | string | Promise<void | string>;
 
 /**
  * One command. `t` is its name on the wire and `input` its fields; the schema
- * (with `t`) is built from them, and `run` gets the parsed command, typed.
+ * (with `t`) is built from them, and `run` gets the parsed command, typed,
+ * plus the context for its role: player commands can't touch dealer abilities.
  */
 export function defineCommand<const T extends string, R extends Role, S extends z.ZodRawShape>(def: {
   t: T;
   role: R;
   input: S;
-  run: (ctx: Ctx, me: PlayerState, cmd: z.infer<z.ZodObject<{ t: z.ZodLiteral<T> } & S>>) => Reply;
+  run: (ctx: CtxFor<R>, me: PlayerState, cmd: z.infer<z.ZodObject<{ t: z.ZodLiteral<T> } & S>>) => Reply;
 }) {
   return { ...def, schema: z.object({ t: z.literal(def.t), ...def.input }) };
 }
@@ -242,9 +250,9 @@ export interface CommandDef {
   readonly t: string;
   readonly role: Role;
   readonly schema: z.ZodType;
-  // A method, so each command's own `run` fits here; findCommand() only ever
-  // hands it what that command's schema parsed.
-  run(ctx: Ctx, me: PlayerState, cmd: unknown): Reply;
+  // A method, so each command's own `run` fits here. The table only ever
+  // hands it what that command's schema parsed, after checking the role.
+  run(ctx: DealerCtx, me: PlayerState, cmd: unknown): Reply;
 }
 
 const BY_NAME = new Map<string, CommandDef>();
