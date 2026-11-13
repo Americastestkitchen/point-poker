@@ -75,8 +75,9 @@
 .box:focus-within,
 .field[data-demo="focus"] .box,
 .field[data-demo="pressed"] .box {
+  /* the border itself turns gold: a second ring round it would leave a seam in the corners */
   border-color: var(--pp-color-gold);
-  box-shadow: var(--pp-glow-focus);
+  box-shadow: var(--pp-glow-gold);
 }
 
 .hint {
