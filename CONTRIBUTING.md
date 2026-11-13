@@ -19,7 +19,7 @@ save tables: they're wiped whenever those sites redeploy or go to sleep.
 ```sh
 git pull
 # ...make changes...
-npm run check            # typecheck + tests + build
+npm run check            # typecheck + tests + build (+ bundles the UI kit gallery)
 git commit -am "Describe the change"
 git push                 # -> dev site updates in about a minute
 ```
