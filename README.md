@@ -75,8 +75,10 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
     (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
   - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
     store, the event stream (`diff`), `actions`, the session (socket + reconnect) and storage.
-    The 3D scene (`scene/`) and the UI (`hud.ts`, `lobby.ts`) only read the store and call
-    `actions`; they never import each other.
+    The 3D world (`scene/`, `avatar/`, `environments/`) and the UI (`hud.ts`, `lobby.ts`,
+    `ui/`) only read the store, call `actions` and talk over the event stream; neither imports
+    the other (bar the lobby's preview, until #4). `test/boundaries.test.ts` checks that and
+    the other import rules.
   - `client/src/scene/layout.ts` says where everything goes (seats, cards, the ticket, the pot,
     props). `client/src/environments/` says how it looks: the Backlog Basement lives in
     `environments/basement/`, and a new place is a new folder there.

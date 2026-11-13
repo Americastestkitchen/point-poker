@@ -24,6 +24,8 @@ git commit -am "Describe the change"
 git push                 # -> dev site updates in about a minute
 ```
 
+If you move a seat, prop or body anchor on purpose, run `npm run test:update-snapshots` to re-pin the positions and commit the updated `.snapshot` files.
+
 For a bigger or riskier change, use a branch and open a pull request instead. It gets its own
 preview site, linked in a PR comment, which redeploys on every push and is deleted when the PR
 closes. Previews have no Jira, so type tickets in by hand.

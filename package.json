@@ -11,6 +11,7 @@
     "build:gallery": "vite build --mode gallery",
     "start": "node --env-file-if-exists=.env.local server/main.ts",
     "test": "node --test \"shared/**/*.test.ts\" \"server/**/*.test.ts\" \"client/**/*.test.ts\" \"test/*.test.ts\"",
+    "test:update-snapshots": "node --test --test-update-snapshots \"shared/**/*.test.ts\" \"server/**/*.test.ts\" \"client/**/*.test.ts\" \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run build && npm run build:gallery",
     "release": "node scripts/release.mjs"

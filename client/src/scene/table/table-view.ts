@@ -12,7 +12,6 @@ import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
 import { layout } from "../layout/layout.ts";
 import { makeChip } from "./chips.ts";
-import { bonkMe } from "./effects.ts";
 import type { Flights } from "./flights.ts";
 import { potMove, type Pot } from "./pot.ts";
 import { createSeat, type Seat } from "./seat.ts";
@@ -177,7 +176,7 @@ export function mountTableView(stage: Stage, deps: {
       obj: chip, from: start, to: () => headOf(to), t: 0, dur: 0.55, arc: 0.35, spin: 25,
       done: () => {
         audio.bonk();
-        if (to === meId()) bonkMe();
+        if (to === meId()) store.events.emit({ t: "bonked" });
         else seats.get(to)?.avatar.play("bonked");
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
