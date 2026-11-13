@@ -11,7 +11,7 @@ export const box: BodyShape = {
     return m;
   },
   eye: { x: 0.13, y: 1.12, z: 0.19, s: 1 },
-  mouth: { y: 0.96, z: 0.242, s: 1.2 },
+  mouth: { y: 0.96, z: 0.242, s: 1.2, tilt: 0 },
   chin: { y: 0.8, z: 0.24 },
   belly: null,
   shoulder: { x: 0.31, y: 0.92 },

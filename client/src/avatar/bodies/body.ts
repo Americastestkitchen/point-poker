@@ -9,7 +9,8 @@ export interface BodyShape {
   /** The body mesh; the rig gives it the bean's material. */
   torso(): THREE.Mesh;
   readonly eye: { x: number; y: number; z: number; s: number };
-  readonly mouth: { y: number; z: number; s: number };
+  /** `tilt` leans the mouth back (radians) to lie flush where the face slopes outwards below it. */
+  readonly mouth: { y: number; z: number; s: number; tilt: number };
   /** The front of the body a little below the mouth, where a beard hangs. */
   readonly chin: { y: number; z: number };
   /** The pale tummy patch, if this shape has one. */
