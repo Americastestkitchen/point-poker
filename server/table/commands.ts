@@ -4,8 +4,9 @@
 import { z } from "zod";
 import { LookInput, validateLook } from "../../shared/look.ts";
 import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
-import { payOut, potOf, takeBack } from "./coins.ts";
-import { clean, isVoter, manualTicket, pickVote, resetTable, startRound } from "./rules.ts";
+import { payOut, takeBack } from "./coins.ts";
+import { endRound, refusal, reveal, settleRound, startRound } from "./round.ts";
+import { clean, isVoter, manualTicket, pickVote } from "./rules.ts";
 import type { PlayerState, TableState } from "./state.ts";
 import type { TableFx } from "./table.ts";
 
@@ -58,7 +59,9 @@ export const COMMANDS = [
   defineCommand({
     t: "vote", role: "player", input: { value: z.number().nullable() },
     run({ s, changed, fx }, me, { value }) {
-      if (s.phase !== "voting" || !isVoter(s, me)) return;
+      const no = refusal(s, "vote");
+      if (no) return no;
+      if (!isVoter(s, me)) return;
       const before = me.vote;
       me.vote = pickVote(s, value);
       if (before !== null && me.vote !== null && before !== me.vote) fx(me.id, { kind: "adjust" }, { except: me.id });
@@ -98,8 +101,7 @@ export const COMMANDS = [
       const summary = clean(cmd.summary, 300);
       if (!summary) return;
       claimTicket();
-      s.ticket = manualTicket(clean(cmd.key, 30), summary, clean(cmd.description, 6000));
-      startRound(s);
+      startRound(s, manualTicket(clean(cmd.key, 30), summary, clean(cmd.description, 6000)));
       changed();
     },
   }),
@@ -141,7 +143,8 @@ export const COMMANDS = [
   defineCommand({
     t: "deal", role: "dealer", input: {},
     run({ s, changed }) {
-      if (!s.ticket) return "Load a ticket first";
+      const no = refusal(s, "deal");
+      if (no) return no;
       startRound(s);
       changed();
     },
@@ -149,17 +152,18 @@ export const COMMANDS = [
   defineCommand({
     t: "reveal", role: "dealer", input: {},
     run({ s, changed }) {
-      if (s.phase !== "voting") return;
-      s.phase = "revealed";
-      s.pot = potOf(s.players);
+      const no = refusal(s, "reveal");
+      if (no) return no;
+      reveal(s);
       changed();
     },
   }),
   defineCommand({
     t: "settle", role: "dealer", input: { finalPoints: z.number() },
     run({ s, changed, now, log }, _me, { finalPoints }) {
-      if (s.phase !== "revealed" && s.phase !== "settled") return;
-      if (!s.settings.deck.some((c) => c.points === finalPoints)) return;
+      const no = refusal(s, "settle");
+      if (no) return no;
+      if (!s.settings.deck.some((c) => c.points === finalPoints)) return "That card isn't in the deck";
       if (s.phase === "settled") {
         // the dealer changed their mind: take back the last payout first
         takeBack(s.players);
@@ -168,12 +172,7 @@ export const COMMANDS = [
       const votes = new Map<string, number>();
       for (const p of s.players) if (p.vote !== null && isVoter(s, p)) votes.set(p.id, p.vote);
       const result = payOut(s, votes, finalPoints);
-      s.phase = "settled";
-      s.finalPoints = finalPoints;
-      s.pot = result.pot;
-      s.winners = result.winners;
-      s.share = result.share;
-      s.houseWon = result.houseWon;
+      settleRound(s, finalPoints, result);
       const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? id;
       s.history.push({
         key: s.ticket?.key ?? "?", summary: s.ticket?.summary ?? "", finalPoints,
@@ -192,8 +191,7 @@ export const COMMANDS = [
     run(ctx) {
       const { s } = ctx;
       ctx.claimTicket();
-      resetTable(s);
-      s.ticket = null;
+      endRound(s);
       const next = nextInQueue(s);
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
@@ -203,11 +201,10 @@ export const COMMANDS = [
   defineCommand({
     t: "cancelRound", role: "dealer", input: {},
     run({ s, changed, notice, claimTicket }, me) {
-      if (s.phase === "waiting" && !s.ticket) return;
-      if (s.phase === "settled") return; // already paid out; just pick the next ticket
+      const no = refusal(s, "cancel");
+      if (no) return no;
       claimTicket();
-      resetTable(s);
-      s.ticket = null;
+      endRound(s);
       notice("🎩 The dealer cancelled this round", { except: me.id });
       changed();
     },
@@ -217,13 +214,13 @@ export const COMMANDS = [
     t: "skip", role: "dealer", input: {},
     run(ctx, me) {
       const { s } = ctx;
-      if (!s.ticket || s.phase === "settled") return;
+      const no = refusal(s, "skip");
+      if (no || !s.ticket) return no; // outside waiting there's always a ticket out
       const skippedKey = s.ticket.key;
       s.skipped.push(skippedKey);
       const next = nextInQueue(s);
       ctx.claimTicket();
-      resetTable(s);
-      s.ticket = null;
+      endRound(s);
       ctx.notice(`⏭️ The dealer skipped ${skippedKey}`, { except: me.id });
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);

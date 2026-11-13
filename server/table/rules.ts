@@ -20,26 +20,6 @@ export function freeSeat(s: TableState): number {
   return -2;
 }
 
-function clearRound(s: TableState) {
-  s.finalPoints = null;
-  s.winners = [];
-  s.share = 0;
-  s.houseWon = false;
-  s.pot = 0;
-  for (const p of s.players) { p.vote = null; p.lastWin = 0; }
-}
-
-export function startRound(s: TableState) {
-  s.phase = "voting";
-  s.round += 1;
-  clearRound(s);
-}
-
-export function resetTable(s: TableState) {
-  s.phase = "waiting";
-  clearRound(s);
-}
-
 export function manualTicket(key: string, summary: string, description: string): Ticket {
   return {
     key: key || "TICKET", summary, description,

@@ -5,7 +5,8 @@ import { validateLook } from "../../shared/look.ts";
 import type { Fx, JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { findCommand, type DealerCtx } from "./commands.ts";
-import { clean, findPlayer, freeSeat, startRound } from "./rules.ts";
+import { startRound } from "./round.ts";
+import { clean, findPlayer, freeSeat } from "./rules.ts";
 import type { TableState } from "./state.ts";
 import { viewFor } from "./view.ts";
 
@@ -186,8 +187,7 @@ export class Table {
         ticket = await tickets.get(first.key);
         if (!current()) return;
       }
-      s.ticket = ticket;
-      startRound(s);
+      startRound(s, ticket);
       this.ctx.changed();
     } catch (e) {
       if (current()) return `${label}: ${(e as Error).message}`;
