@@ -44,6 +44,14 @@ and glows live in `client/src/ui/tokens.ts` only: the kit's and the screens' sty
 `/gallery.html`. `npm run check` also builds it to `node_modules/.gallery`; the game
 build in `dist` excludes it.
 
+## Logo
+
+The neon logo and the poker-chip mark are drawn once, as tube shapes in `shared/brand.ts`. The room's
+sign draws those shapes in 3D, and `npm run brand` writes every file made from them: `assets/logo.svg`,
+`assets/mark.svg`, the favicons, `apple-touch-icon.png` and the `og.png` link preview in `client/public/`.
+After changing a shape, run it and commit the files; a test fails while the SVGs are out of date. The PNGs
+need `rsvg-convert` (`brew install librsvg` or `apt install librsvg2-bin`).
+
 ## Releasing
 
 When the dev site looks good, run this from `main`:

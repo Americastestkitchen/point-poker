@@ -5,6 +5,7 @@ import { toon } from "../../scene/art/materials.ts";
 import type { Anchor, Vec3 } from "../../scene/layout/layout.ts";
 import { FONT, canvasTex, context2d, woodTexture, wrapText } from "../../scene/art/textures.ts";
 import type { Environment, Sign, Squeaky, StatusScreen } from "../types.ts";
+import { GLASS, GLOW_BLUR, LAYERS, LOGO, NEON, type Tube } from "../../../../shared/brand.ts";
 import { feltTexture, wallpaperTexture } from "./textures.ts";
 
 interface Led {
@@ -106,25 +107,70 @@ function hangingLamp(anchor: Anchor) {
   };
 }
 
-/** The neon "POINT POKER" sign, buzzing and dropping out now and then. */
+/** The Point Poker neon sign, buzzing, its R dropping out now and then. */
 function neonSign(anchor: Anchor): Sign & { update(t: number): void } {
   const g = new THREE.Group();
   at(g, anchor.position);
-  const tex = canvasTex(1024, 256, (c) => {
-    c.textAlign = "center";
-    c.textBaseline = "middle";
-    c.font = `bold 120px ${FONT}`;
-    c.shadowColor = "#ff3fa4";
-    c.shadowBlur = 40;
-    c.strokeStyle = "#ff8fd0";
-    c.lineWidth = 10;
-    c.strokeText("POINT POKER", 512, 110);
-    c.fillStyle = "#ffe6f5";
-    c.fillText("POINT POKER", 512, 110);
-    c.font = `bold 44px ${FONT}`;
-    c.shadowColor = "#3fd8ff";
-    c.fillStyle = "#c8f6ff";
-    c.fillText("✦ open 'til the sprint ends ✦", 512, 210);
+  const face = new THREE.Group();
+  face.rotation.y = anchor.yaw;
+  // The steady tubes (the R as unlit glass), and the R lit on a layer of its own.
+  const steady = neonPlane((t) => (t.flickers ? "glass" : "lit"));
+  const flicker = neonPlane((t) => (t.flickers ? "lit" : "none"));
+  flicker.mesh.position.z = 0.002;
+  face.add(steady.mesh, flicker.mesh);
+  const light = new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5);
+  light.position.set(-0.45, 0, 0); // just out from the wall
+  g.add(face, light);
+  return {
+    object: g,
+    update(t) {
+      const on = Math.sin(t * 0.37) > -0.97 || Math.random() < 0.5;
+      flicker.mat.opacity = on ? 1 : 0;
+      light.intensity = on ? 3 : 2.4;
+    },
+  };
+}
+
+const SIGN_WIDTH = 2.2; // metres
+const SIGN_PIXELS = 1024; // canvas width
+
+/** The logo's tubes on a glowing plane; `how` says which tubes to draw, lit or as dark glass. */
+function neonPlane(how: (t: Tube) => "lit" | "glass" | "none") {
+  const { box, tubes } = LOGO;
+  const px = SIGN_PIXELS / box.width;
+  const tex = canvasTex(SIGN_PIXELS, Math.round(box.height * px), (c) => {
+    for (const t of tubes) {
+      const mode = how(t);
+      if (mode === "none") continue;
+      const path = new Path2D(t.d);
+      const k = t.scale * px;
+      const place = (dx = 0) => c.setTransform(k, 0, 0, k, (t.x - box.x) * px + dx, (t.y - box.y) * px);
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      if (mode === "glass") {
+        place();
+        c.lineWidth = t.weight;
+        c.strokeStyle = GLASS;
+        c.stroke(path);
+        continue;
+      }
+      for (const layer of LAYERS) {
+        c.save();
+        c.lineWidth = t.weight * layer.width;
+        c.globalAlpha = layer.opacity;
+        c.strokeStyle = layer.part === "core" ? NEON[t.tone].core : NEON[t.tone].tube;
+        if (layer.part === "glow") {
+          // Draw the glow off the canvas and keep only its blurred shadow: a soft halo with no hard edge.
+          const away = SIGN_PIXELS * 2;
+          place(-away);
+          c.shadowOffsetX = away;
+          c.shadowColor = NEON[t.tone].tube;
+          c.shadowBlur = GLOW_BLUR * k * 2; // shadowBlur is about twice a Gaussian's deviation
+        } else place();
+        c.stroke(path);
+        c.restore();
+      }
+    }
   });
   const mat = new THREE.MeshBasicMaterial({
     map: tex,
@@ -132,19 +178,8 @@ function neonSign(anchor: Anchor): Sign & { update(t: number): void } {
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), mat);
-  sign.rotation.y = anchor.yaw;
-  const light = new THREE.PointLight("#ff3fa4", 3, 6, 1.5);
-  light.position.set(-0.45, 0, 0); // just out from the wall
-  g.add(sign, light);
-  return {
-    object: g,
-    update(t) {
-      const on = Math.sin(t * 0.37) > -0.97 || Math.random() < 0.5;
-      mat.opacity = on ? 1 : 0.15;
-      light.intensity = on ? 3 : 0.3;
-    },
-  };
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(SIGN_WIDTH, (SIGN_WIDTH * box.height) / box.width), mat);
+  return { mesh, mat };
 }
 
 /** A CRT telly on a shelf behind the dealer, with scanlines and a bit of flicker. */
