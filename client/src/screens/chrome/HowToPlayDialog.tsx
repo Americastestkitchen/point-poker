@@ -39,10 +39,12 @@ export function HowToPlayDialog() {
         <li><span className={s.icon} aria-hidden>🪙</span>Click or tap someone to flick a chip at them</li>
         <li><span className={s.icon} aria-hidden>🦆</span>Click the duck</li>
         <li className={s.keys}>
-          <KeyHint keys={EMOTES.map((e) => e.key)}>{EMOTES.map((e) => EMOTE_WORDS[e.id]).join(", ")}</KeyHint>
+          <KeyHint keys={EMOTES.map((e) => e.key)} />
+          <span>{EMOTES.map((e) => EMOTE_WORDS[e.id]).join(", ")}</span>
         </li>
         <li className={s.keys}>
-          <KeyHint keys={["r"]}>or double-click the room to look back at the table</KeyHint>
+          <KeyHint keys={["r"]} />
+          <span>or double-click the room to look back at the table</span>
         </li>
       </ul>
     </Dialog>

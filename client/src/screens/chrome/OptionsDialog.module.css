@@ -1,4 +1,5 @@
-.list { display: grid; gap: var(--pp-space-3); }
+/* a hair of room at the bottom, so the scrolling body never clips the last box's edge */
+.list { display: grid; gap: var(--pp-space-3); padding-bottom: 2px; }
 .option {
   padding: var(--pp-space-1);
   background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md);

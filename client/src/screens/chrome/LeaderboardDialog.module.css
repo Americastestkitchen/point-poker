@@ -43,7 +43,7 @@
 .remove.remove { flex: none; min-height: 40px; }
 
 /* rounds played, newest first */
-.rounds { margin-top: var(--pp-space-5); padding-top: var(--pp-space-4); border-top: var(--pp-border-soft); }
+.rounds { margin-top: var(--pp-space-5); padding: var(--pp-space-4) 0 2px; border-top: var(--pp-border-soft); }
 .heading {
   display: flex; align-items: center; gap: var(--pp-space-2); margin: 0 0 var(--pp-space-2);
   font-family: var(--pp-font-display); font-size: var(--pp-size-md); font-weight: var(--pp-weight-strong);
@@ -53,7 +53,12 @@
   padding: 0 var(--pp-space-2); font-size: var(--pp-size-xs); letter-spacing: 0;
   color: var(--pp-color-ink); background: var(--pp-color-panel-raised); border-radius: var(--pp-radius-pill);
 }
-.scroll { background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md); }
+.scroll {
+  max-height: min(36dvh, 260px);
+  background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md);
+}
+/* a short screen (a phone on its side): one scroll for the whole board, not a sliver inside it */
+@media (max-height: 520px) { .scroll { max-height: none; } }
 .history { list-style: none; margin: 0; padding: var(--pp-space-1) var(--pp-space-3); }
 .round {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--pp-space-2);

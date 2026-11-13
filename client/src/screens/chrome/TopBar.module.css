@@ -16,10 +16,11 @@
 .row > * { pointer-events: auto; flex: none; }
 
 /* every chip is the same height, a comfortable thumb */
-.dealer, .menu { min-height: 44px; }
+.dealer.dealer, .menu.menu { min-height: 44px; }
 .dealer { font-family: var(--pp-font-display); letter-spacing: .5px; }
 .menu { gap: var(--pp-space-2); padding-right: var(--pp-space-2); }
-.burger { font-size: var(--pp-size-lg); line-height: 1; }
+.burger { font-size: var(--pp-size-lg); line-height: 1; margin-right: var(--pp-space-2); vertical-align: -1px; }
+.keycap { margin-left: var(--pp-space-2); }
 .menu kbd { min-width: 30px; }
 
 /* the coins are the chip: the button around them adds only the focus ring and the press */

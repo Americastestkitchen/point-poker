@@ -1,8 +1,9 @@
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--pp-space-3); }
 .step { display: flex; align-items: flex-start; gap: var(--pp-space-3); line-height: 1.45; }
+.step > span:last-child { padding-top: 4px; }
 /* the step's number on a gold chip */
 .num {
-  flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; margin-top: -2px;
+  flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px;
   font-family: var(--pp-font-display); font-weight: var(--pp-weight-display); font-size: var(--pp-size-md);
   color: var(--pp-color-gold-ink);
   background: radial-gradient(circle at 35% 30%, var(--pp-color-gold-hi), var(--pp-color-gold-mid) 50%, var(--pp-color-gold-low));

@@ -30,7 +30,8 @@ export function LeaderboardDialog() {
     <Dialog open={popup.open} onClose={popup.close} title="Leaderboard" width="md"
       actions={<>
         {history.length > 0 && <Button onPress={copyForJira}>📋 Copy for Jira</Button>}
-        <Button variant="primary" onPress={popup.close}>Done</Button>
+        {/* focus starts here, not on a "remove" */}
+        <Button variant="primary" data-autofocus onPress={popup.close}>Done</Button>
       </>}>
       <ol className={s.board} aria-label="Players by coins">
         {rows.map((row) => (
@@ -41,7 +42,7 @@ export function LeaderboardDialog() {
       {history.length > 0 && (
         <section className={s.rounds} aria-label="Rounds played">
           <h3 className={s.heading}>Rounds played <span className={s.count}>{history.length}</span></h3>
-          <ScrollArea maxHeight="min(36dvh, 260px)" label="Rounds played, newest first" className={s.scroll}>
+          <ScrollArea label="Rounds played, newest first" className={s.scroll}>
             <ul className={s.history}>
               {roundsNewestFirst(history).map((h, i) => <Round key={`${history.length - i}`} round={h} />)}
             </ul>
