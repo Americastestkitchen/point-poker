@@ -4,7 +4,7 @@
 // drawing behind it and the bean's look follows the editor's draft as you change it.
 import * as THREE from "three";
 import type { Look } from "../../../shared/look.ts";
-import type { Showcase, Store } from "../app/store.ts";
+import type { ScreenRect, Showcase, Store } from "../app/store.ts";
 import { createAvatar, type Avatar } from "../avatar/avatar.ts";
 import { mesh, toon } from "./art/materials.ts";
 import type { Stage } from "./engine/stage.ts";
@@ -13,7 +13,8 @@ import type { Stage } from "./engine/stage.ts";
 const FRAME = { width: 1.9, height: 2.25, centerY: 1.02 } as const;
 const FOV = 30;
 
-export function mountShowcase(stage: Stage, store: Store) {
+/** Mounts the showcase; the function it returns takes it off the stage again. */
+export function mountShowcase(stage: Stage, store: Store): () => void {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 40);
   scene.add(new THREE.HemisphereLight("#ffd9c0", "#301020", 1.3));
@@ -40,14 +41,14 @@ export function mountShowcase(stage: Stage, store: Store) {
       }
       return shown.avatar;
     }
-    if (shown) stand.remove(shown.avatar.group);
+    if (shown) release(stand, shown.avatar.group);
     const avatar = createAvatar(s.look, { dealer: s.dealer });
     stand.add(avatar.group);
     shown = { avatar, look: s.look, dealer: s.dealer };
     return avatar;
   }
 
-  stage.onFrame((dt, t) => {
+  const stopFrames = stage.onFrame((dt, t) => {
     const s = store.getState().showcase;
     if (!s) return;
     const avatar = follow(s);
@@ -58,18 +59,16 @@ export function mountShowcase(stage: Stage, store: Store) {
   });
 
   const size = new THREE.Vector2();
-  stage.afterRender(() => {
+  const stopPass = stage.afterRender(() => {
     const s = store.getState().showcase;
     if (!s || s.rect.width < 1 || s.rect.height < 1) return;
     const { renderer } = stage;
     renderer.getSize(size);
-    const { x, y, width, height } = s.rect;
-    frame(camera, width / height);
-    // GL counts from the bottom-left; the rect from the top-left
-    const bottom = size.y - (y + height);
+    const box = viewportOf(s.rect, size.y);
+    aim(camera, s.rect.width / s.rect.height);
     renderer.setScissorTest(true);
-    renderer.setScissor(x, bottom, width, height);
-    renderer.setViewport(x, bottom, width, height);
+    renderer.setScissor(box.x, box.y, box.width, box.height);
+    renderer.setViewport(box.x, box.y, box.width, box.height);
     renderer.autoClear = false;
     renderer.clearDepth();
     renderer.render(scene, camera);
@@ -77,14 +76,44 @@ export function mountShowcase(stage: Stage, store: Store) {
     renderer.setScissorTest(false);
     renderer.setViewport(0, 0, size.x, size.y);
   });
+
+  return () => {
+    stopFrames();
+    stopPass();
+    if (shown) release(stand, shown.avatar.group);
+    shown = null;
+  };
 }
 
-/** Back the camera off until the whole bean and its turntable fit a box of this shape. */
-function frame(camera: THREE.PerspectiveCamera, aspect: number) {
+/** How far back the camera stands for the bean and turntable to fill a box of this shape. */
+export function fitDistance(aspect: number): number {
   const tan = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
-  const distance = Math.max(FRAME.height / 2 / tan, FRAME.width / 2 / (tan * aspect));
+  return Math.max(FRAME.height / 2 / tan, FRAME.width / 2 / (tan * aspect));
+}
+
+/** A box from the top-left of the window as WebGL's viewport, which counts from the bottom-left. */
+export function viewportOf(rect: ScreenRect, canvasHeight: number): ScreenRect {
+  return { x: rect.x, y: canvasHeight - (rect.y + rect.height), width: rect.width, height: rect.height };
+}
+
+/** Meshes and sprites (the name tag, the bubbles) own a geometry and materials to free. */
+const ownsGpuData = (o: THREE.Object3D): o is THREE.Mesh | THREE.Sprite =>
+  o instanceof THREE.Mesh || o instanceof THREE.Sprite;
+
+/** Takes `object` off the stage and frees what it held on the GPU. */
+function release(parent: THREE.Object3D, object: THREE.Object3D) {
+  parent.remove(object);
+  object.traverse((o) => {
+    if (!ownsGpuData(o)) return;
+    o.geometry.dispose();
+    for (const material of [o.material].flat()) material.dispose();
+  });
+}
+
+/** Backs the camera off until the whole bean and its turntable fit a box of this shape. */
+function aim(camera: THREE.PerspectiveCamera, aspect: number) {
   camera.aspect = aspect;
-  camera.position.set(0, FRAME.centerY + 0.35, distance);
+  camera.position.set(0, FRAME.centerY + 0.35, fitDistance(aspect));
   camera.lookAt(0, FRAME.centerY, 0);
   camera.updateProjectionMatrix();
 }

@@ -79,7 +79,19 @@ export const layout = {
      * on a circle round the table's middle, looking down the table at the dealer's end (so the
      * sign itself stays behind it, out of the way of the logo on screen).
      */
-    title: { radius: 3.3, height: 1.85, angle: 0.12, sway: 0.32, lookAt: vec(-1.6, 1.0, 0) },
+    title: {
+      radius: 3.3,
+      height: 1.85,
+      /** Where on the circle it sways about, and how far either way (radians). */
+      angle: 0.12,
+      sway: 0.32,
+      /** How fast it sways (radians of the sway's cycle per second): one round trip in about two minutes. */
+      swaySpeed: 0.05,
+      /** A slow rise and fall, like someone breathing behind the camera. */
+      bob: 0.06,
+      bobSpeed: 0.08,
+      lookAt: vec(-1.6, 1.0, 0),
+    },
   },
 };
 

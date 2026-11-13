@@ -42,12 +42,9 @@ export function createCameraRig(
     update(dt: number) {
       if (drifting) {
         driftTime += dt;
-        const a = title.angle + Math.sin(driftTime * 0.05) * title.sway;
-        pos.set(
-          Math.cos(a) * title.radius,
-          title.height + Math.sin(driftTime * 0.08) * 0.06,
-          Math.sin(a) * title.radius,
-        );
+        const a = title.angle + Math.sin(driftTime * title.swaySpeed) * title.sway;
+        const y = title.height + Math.sin(driftTime * title.bobSpeed) * title.bob;
+        pos.set(Math.cos(a) * title.radius, y, Math.sin(a) * title.radius);
         camera.position.copy(pos);
         camera.lookAt(titleLookAt);
         return;

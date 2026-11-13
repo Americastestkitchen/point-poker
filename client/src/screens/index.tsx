@@ -51,7 +51,9 @@ export function createGameUi(deps: GameUiDeps): GameUi {
   const mic = createMicControl({ mic: deps.mic, storage, actions, toasts, after });
   // the mic (or its tip) waits until you sit down, not the title screens
   const stopWatching = store.subscribe((s) => {
-    if (s.screen === "table") mic.seated();
+    if (s.screen !== "table") return;
+    mic.seated();
+    stopWatching();
   });
   const ticketLoad = createTicketLoad({ openPicker: () => store.popupOpened("picker"), bonk: () => audio.bonk() });
   const copy = createCopy({ clipboard: deps.clipboard ?? (() => navigator.clipboard), toasts });
@@ -66,7 +68,7 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     ticketLoad,
     copy,
     title: deps.title,
-    openLook: () => store.setUi({ lookOpen: true }),
+    openLook: () => store.lookOpened(),
     leaveTable: deps.leaveTable,
     invite: () =>
       void copy.copy(deps.inviteUrl(), {

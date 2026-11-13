@@ -7,13 +7,13 @@ import { useEffect, useSyncExternalStore } from "react";
 import { useBack } from "../ui/index.ts";
 import { HowToPlayDialog } from "./chrome/HowToPlayDialog.tsx";
 import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
-import { useAppState, useGame, useMe } from "./game.tsx";
+import { useAppState, useGame } from "./game.tsx";
 import { focusOf, menuKeyAllowed } from "./keys.ts";
 import { useGameEvents, useViewChanges } from "./moments.ts";
 import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notices.ts";
 import { CopyFallback } from "./parts/CopyFallback.tsx";
 import { GameScreen } from "./GameScreen.tsx";
-import { CharacterEditor } from "./title/CharacterEditor.tsx";
+import { LookEditor } from "./character/LookEditor.tsx";
 import { TitleScreen } from "./title/TitleScreen.tsx";
 
 export function GameRoot() {
@@ -31,31 +31,6 @@ export function GameRoot() {
       {/* after the popups, so it opens over whichever one asked to copy */}
       <CopyFallback />
     </>
-  );
-}
-
-/** "Change look" from the game menu: character select over the table, without the name. */
-function LookEditor() {
-  const { store, storage, actions } = useGame();
-  const open = useAppState((st) => st.screen === "table" && st.ui.lookOpen);
-  const me = useMe();
-  if (!open || !me) return null;
-  const close = () => store.setUi({ lookOpen: false });
-  return (
-    <div data-screen="look">
-      <CharacterEditor
-        initial={{ name: me.name, look: me.look }}
-        withName={false}
-        dealer={me.isDealer}
-        doneLabel="Done"
-        onDone={(profile) => {
-          storage.setProfile(profile);
-          actions.setLook(profile.look);
-          close();
-        }}
-        onBack={close}
-      />
-    </div>
   );
 }
 

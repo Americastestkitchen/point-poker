@@ -34,7 +34,15 @@ test("the table, its props and the camera target stay put", (t) => {
     table: [table.y, table.rx, table.rz],
     ...Object.fromEntries(Object.entries(anchors).map(([name, a]) => [name, spot(a)])),
     cameraTarget: xyz(cameras.lookAt),
-    titleCamera: [cameras.title.radius, cameras.title.height, cameras.title.angle, cameras.title.sway],
+    titleCamera: [
+      cameras.title.radius,
+      cameras.title.height,
+      cameras.title.angle,
+      cameras.title.sway,
+      cameras.title.swaySpeed,
+      cameras.title.bob,
+      cameras.title.bobSpeed,
+    ],
     titleTarget: xyz(cameras.title.lookAt),
   });
 });

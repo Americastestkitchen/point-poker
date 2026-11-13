@@ -28,8 +28,8 @@ export interface Showcase {
 }
 
 export interface AppState {
-  /** The title screens, character select before you sit down, or the table. */
-  screen: "start" | "creator" | "table";
+  /** The title screens (menu, character select, invite) until you sit down, then the table. */
+  screen: "title" | "table";
   connection: Connection;
   /** Who you are at this table (from the welcome); your seat and role come from the view. */
   me: { id: string } | null;
@@ -55,7 +55,7 @@ export const POPUPS = ["menu", "options", "help", "leaderboard", "dealer", "pick
 export type Popup = (typeof POPUPS)[number];
 
 const initial: AppState = {
-  screen: "start",
+  screen: "title",
   connection: { status: "idle" },
   me: null,
   room: null,
@@ -108,20 +108,27 @@ function build() {
     welcomed(playerId: string) {
       store.setState({ me: { id: playerId } });
     },
-    /** The start screen is showing. */
-    startShown() {
-      store.setState({ screen: "start" });
+    /** "Change look" opened the look editor over the table. */
+    lookOpened() {
+      store.setState((s) => ({ ui: { ...s.ui, lookOpen: true } }));
     },
-    /** The look editor opened before you sat down. */
-    creatorOpened() {
-      store.setState({ screen: "creator" });
+    /** The look editor closed (Done or Back). */
+    lookClosed() {
+      store.setState((s) => ({ ui: { ...s.ui, lookOpen: false } }));
     },
-    /** The screen showing your bean moved it, changed its look, or (null) stopped showing it. */
-    showcased(showcase: Showcase | null) {
+    /**
+     * A screen shows your bean: here, like this. One screen at a time shows it; the newest wins.
+     * Nothing changes if it's the same box and look as now.
+     */
+    showcased(showcase: Showcase) {
       const prev = store.getState().showcase;
-      if (prev === showcase) return;
-      if (prev && showcase && sameShowcase(prev, showcase)) return;
+      if (prev && sameShowcase(prev, showcase)) return;
       store.setState({ showcase });
+    },
+    /** The screen that showed `showcase` stopped. Left alone if another screen's showcase replaced it. */
+    showcaseEnded(showcase: Showcase) {
+      const now = store.getState().showcase;
+      if (now && sameShowcase(now, showcase)) store.setState({ showcase: null });
     },
     /** You sat down at the table. */
     seated() {

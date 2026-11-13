@@ -1,15 +1,16 @@
 // The title screens, over the drifting 3D room: the main menu with your bean, joining by code,
-// character select, an invite link's "Join table ABCD", and an invite to a table that's gone.
-// Where you are and where each choice leads is flow.ts; this draws it and runs the two things
-// that leave the title screens (opening a table, sitting down) through the injected `title`.
-import { useEffect, useState } from "react";
+// opening a table, character select, an invite link's "Join table ABCD", and an invite to a
+// table that's gone. flow.ts decides where each choice leads; this draws the view and runs the
+// effects it asks for (asking the server, sitting down) through the injected `title`.
+import { useEffect, useRef, useState } from "react";
 import { randomLook } from "../../../../shared/look.ts";
+import { TABLE_CODE } from "../../../../shared/rules.ts";
 import type { Profile, Storage } from "../../app/storage.ts";
 import { Button, CodeSlots, Dialog, KeyHint, MenuList, Panel, Spinner, TextField, useBack } from "../../ui/index.ts";
+import { CharacterEditor } from "../character/CharacterEditor.tsx";
+import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
-import { CharacterEditor } from "./CharacterEditor.tsx";
-import { CODE_LENGTH, start, step, type Event, type View } from "./flow.ts";
-import { useShowcase } from "./showcase.ts";
+import { start, step, type Step, type TitleEffect, type TitleEvent, type TitleState, type TitleView } from "./flow.ts";
 import logo from "../../../../assets/logo.svg";
 import s from "./TitleScreen.module.css";
 
@@ -29,57 +30,71 @@ const MENU = [
 ] as const;
 type MenuId = (typeof MENU)[number]["id"];
 
+/**
+ * flow.ts's state and a dispatch that runs its effects. The current state also lives in a ref,
+ * so an answer that arrives later steps from where you are by then, not from where you asked;
+ * effects run here, in event handlers, never inside a state update React may repeat.
+ */
+function useTitleFlow(saved: boolean) {
+  const { store, title } = useGame();
+  const [first] = useState(() => start(title.inviteCode, saved));
+  const [state, setState] = useState<TitleState>(first.state);
+  const current = useRef(first.state);
+
+  const dispatch = (e: TitleEvent) => apply(step(current.current, e));
+  function apply({ state: next, effects }: Step) {
+    current.current = next;
+    setState(next);
+    for (const effect of effects) run(effect);
+  }
+  function run(effect: TitleEffect) {
+    switch (effect.t) {
+      case "check":
+        // the same question for an invite link and a typed code: the flow takes the one it asked
+        return void title.tables.check(effect.code).then((r) => {
+          const open = r.t !== "gone"; // if the server can't say, try the table anyway
+          dispatch({ t: "checked", code: effect.code, open });
+          dispatch({ t: "codeChecked", code: effect.code, open });
+        });
+      case "open":
+        return void title.tables
+          .open(effect.passcode ?? title.tables.savedPasscode())
+          .then((r) =>
+            dispatch(
+              r.t === "opened"
+                ? { t: "opened", code: r.code }
+                : r.t === "passcode"
+                  ? { t: "passcodeNeeded", tried: r.tried }
+                  : { t: "openFailed", reason: r.reason },
+            ),
+          );
+      case "sit":
+        return title.sit(effect.code);
+      case "forgetInvite":
+        return title.forgetInvite();
+      case "error":
+        return store.events.emit({ t: "toast", text: effect.text, level: "error" });
+      default:
+        return effect satisfies never;
+    }
+  }
+
+  // the first view's effects (checking an invite link), once
+  const begun = useRef(false);
+  useEffect(() => {
+    if (begun.current) return;
+    begun.current = true;
+    for (const effect of first.effects) run(effect);
+  });
+
+  return { state, dispatch };
+}
+
 export function TitleScreen() {
-  const { store, storage, title, toasts, audio } = useGame();
-  const [view, setView] = useState<View>(() => start(title.invite));
+  const { store, storage } = useGame();
   const [me, setMe] = useState(() => loadProfile(storage));
-  const [opening, setOpening] = useState(false);
-  /** The host passcode form is open; `wrong` once a passcode was turned down. */
-  const [passcode, setPasscode] = useState<{ wrong: boolean } | null>(null);
-
-  // the store knows when character select is up (the game and keys read `screen`)
-  const inCharacter = view.t === "character";
-  useEffect(() => {
-    if (inCharacter) store.creatorOpened();
-    else store.startShown();
-  }, [inCharacter, store]);
-
-  // an invite link is only in the address bar while it's the invite you're looking at
-  const leftInvite = view.t === "menu" || view.t === "join" || view.t === "gone";
-  useEffect(() => {
-    if (leftInvite) title.forgetInvite();
-  }, [leftInvite, title]);
-
-  async function open(pass: string) {
-    setOpening(true);
-    const r = await title.tables.open(pass);
-    setOpening(false);
-    if (r.t === "opened") return title.sit(r.code);
-    if (r.t === "passcode") return setPasscode({ wrong: r.tried });
-    setPasscode(null);
-    toasts.show(r.reason, { tone: "error" });
-    audio.bonk();
-  }
-
-  function dispatch(e: Event, saved = me.saved) {
-    const next = step(view, e, saved);
-    setView(next.view);
-    if (next.go?.t === "sit") title.sit(next.go.code);
-    if (next.go?.t === "open") void open(title.tables.savedPasscode());
-  }
-
-  // an invite link: is its table still open? (if the server can't say, try it anyway)
-  const checking = view.t === "checking" ? view.code : null;
-  useEffect(() => {
-    if (!checking) return;
-    let live = true;
-    void title.tables.check(checking).then((r) => {
-      if (live) setView((v) => step(v, { t: "checked", code: checking, open: r.t !== "gone" }, me.saved).view);
-    });
-    return () => {
-      live = false;
-    };
-  }, [checking, title, me.saved]);
+  const { state, dispatch } = useTitleFlow(me.saved);
+  const { view } = state;
 
   const pick = (id: MenuId) => {
     if (id === "options" || id === "help") return store.popupOpened(id);
@@ -88,93 +103,117 @@ export function TitleScreen() {
 
   return (
     <div className={s.root} data-screen="title">
-      {view.t === "character" ? (
+      <Body
+        view={view}
+        me={me}
+        dispatch={dispatch}
+        onPick={pick}
+        onSaved={(profile) => {
+          storage.setProfile(profile);
+          setMe({ profile, saved: true });
+          dispatch({ t: "done" });
+        }}
+      />
+      <PasscodeDialog
+        open={view.t === "opening" && view.passcode !== null}
+        wrong={view.t === "opening" && !!view.passcode?.wrong}
+        sending={view.t === "opening" && view.sending}
+        onSubmit={(passcode) => dispatch({ t: "passcodeEntered", passcode })}
+        onClose={() => dispatch({ t: "back" })}
+      />
+    </div>
+  );
+}
+
+function Body(props: {
+  view: TitleView;
+  me: { profile: Profile; saved: boolean };
+  dispatch(e: TitleEvent): void;
+  onPick(id: MenuId): void;
+  onSaved(profile: Profile): void;
+}) {
+  const { view, me, dispatch } = props;
+  switch (view.t) {
+    case "checking":
+    case "sitting":
+      return (
+        <div className={s.center}>
+          <img className={s.logoLarge} src={logo} alt="Point Poker" />
+          <Spinner label={view.t === "checking" ? `Finding table ${view.code}…` : `Sitting down at ${view.code}…`} />
+        </div>
+      );
+    case "character":
+      return (
         <CharacterEditor
           initial={me.profile}
           withName
           dealer={false}
-          doneLabel={
-            view.next.t === "open" ? "Open the table" : view.next.t === "sit" ? `Join table ${view.next.code}` : "Done"
-          }
-          onDone={(profile) => {
-            storage.setProfile(profile);
-            setMe({ profile, saved: true });
-            dispatch({ t: "done" }, true);
-          }}
+          doneLabel={doneLabel(view.next)}
+          onDone={props.onSaved}
           onBack={() => dispatch({ t: "back" })}
         />
-      ) : view.t === "invite" ? (
+      );
+    case "invite":
+      return (
         <Invite
           code={view.code}
           profile={me.profile}
           onJoin={() => dispatch({ t: "joinInvite" })}
           onChange={() => dispatch({ t: "changeLook" })}
         />
-      ) : view.t === "gone" ? (
-        <Gone code={view.code} onBack={() => dispatch({ t: "back" })} />
-      ) : view.t === "checking" ? (
-        <div className={s.center}>
-          <img className={s.logoLarge} src={logo} alt="Point Poker" />
-          <Spinner label={`Finding table ${view.code}…`} />
-        </div>
-      ) : (
+      );
+    case "gone":
+      return <Gone code={view.code} onBack={() => dispatch({ t: "back" })} />;
+    case "menu":
+    case "join":
+    case "opening":
+      return (
         <Menu
           profile={me.profile}
           saved={me.saved}
           joining={view.t === "join" ? view : null}
-          busy={opening}
-          onPick={pick}
-          onJoin={(code) =>
-            void title.tables.check(code).then((r) => dispatch({ t: "joinTyped", code, open: r.t !== "gone" }))
-          }
+          opening={view.t === "opening"}
+          onPick={props.onPick}
+          onCode={(code) => dispatch({ t: "codeEntered", code })}
           onBack={() => dispatch({ t: "back" })}
         />
-      )}
-      <PasscodeDialog
-        open={passcode !== null}
-        wrong={passcode?.wrong ?? false}
-        busy={opening}
-        onSubmit={(pass) => void open(pass)}
-        onClose={() => setPasscode(null)}
-      />
-    </div>
-  );
+      );
+    default:
+      return view satisfies never;
+  }
 }
+
+const doneLabel = (next: Extract<TitleView, { t: "character" }>["next"]) =>
+  next.t === "open" ? "Open the table" : next.t === "sit" ? `Join table ${next.code}` : "Done";
 
 function Menu(props: {
   profile: Profile;
   saved: boolean;
-  joining: Extract<View, { t: "join" }> | null;
-  busy: boolean;
+  joining: Extract<TitleView, { t: "join" }> | null;
+  opening: boolean;
   onPick(id: MenuId): void;
-  onJoin(code: string): void;
+  onCode(code: string): void;
   onBack(): void;
 }) {
   const { profile, saved, joining, onPick } = props;
+  const items = MENU.map((item) => {
+    if (item.id === "character") return { ...item, hint: saved ? profile.name : "Make your bean" };
+    if (item.id === "open" && props.opening) return { ...item, hint: "Opening…", disabled: true };
+    return item;
+  });
   return (
     <section className={s.menu} aria-label="Main menu">
       <div className={s.menuShade} />
       <div className={s.menuColumn}>
         <img className={s.logo} src={logo} alt="Point Poker" />
-        <MenuList
-          label="Main menu"
-          autoFocus={!joining}
-          items={MENU.map((item) =>
-            item.id === "character"
-              ? { ...item, hint: saved ? profile.name : "Make your bean" }
-              : item.id === "open" && props.busy
-                ? { ...item, hint: "Opening…", disabled: true }
-                : item,
-          )}
-          onSelect={onPick}
-        />
+        <MenuList label="Main menu" autoFocus={!joining} items={items} onSelect={onPick} />
         <div className={s.hints}>
           <KeyHint keys={["ArrowUp", "ArrowDown"]}>move</KeyHint>
           <KeyHint keys={["Enter"]}>pick</KeyHint>
         </div>
       </div>
       {joining ? (
-        <JoinPanel error={joining.error} onJoin={props.onJoin} onBack={props.onBack} />
+        <JoinPanel checking={joining.checking} error={joining.error} onCode={props.onCode} onBack={props.onBack} />
       ) : (
         <Me profile={profile} saved={saved} onChange={() => onPick("character")} />
       )}
@@ -198,26 +237,40 @@ function Me({ profile, saved, onChange }: { profile: Profile; saved: boolean; on
   );
 }
 
-function JoinPanel({ error, onJoin, onBack }: { error: string | null; onJoin(code: string): void; onBack(): void }) {
+function JoinPanel(props: {
+  checking: string | null;
+  error: string | null;
+  onCode(code: string): void;
+  onBack(): void;
+}) {
   const [code, setCode] = useState("");
-  useBack(onBack, true, 1);
-  const full = code.length === CODE_LENGTH;
+  useBack(props.onBack, true, 1);
+  const full = code.length === TABLE_CODE.length;
   return (
     <div className={s.side}>
       <Panel title="Join a table">
         <p className={s.muted}>Type the code from the dealer's screen or invite link.</p>
-        <CodeSlots label="Table code" value={code} onChange={setCode} onComplete={onJoin} error={!!error} autoFocus />
-        {error && (
+        <CodeSlots
+          label="Table code"
+          value={code}
+          onChange={setCode}
+          onComplete={props.onCode}
+          length={TABLE_CODE.length}
+          alphabet={TABLE_CODE.letters}
+          error={!!props.error}
+          autoFocus
+        />
+        {props.error && (
           <p className={s.error} role="alert">
-            {error}
+            {props.error}
           </p>
         )}
         <div className={s.row}>
-          <Button variant="ghost" onPress={onBack}>
+          <Button variant="ghost" onPress={props.onBack}>
             Back
           </Button>
-          <Button variant="primary" size="lg" disabled={!full} onPress={() => onJoin(code)}>
-            Join
+          <Button variant="primary" size="lg" disabled={!full || !!props.checking} onPress={() => props.onCode(code)}>
+            {props.checking ? "Checking…" : "Join"}
           </Button>
         </div>
       </Panel>
@@ -225,33 +278,23 @@ function JoinPanel({ error, onJoin, onBack }: { error: string | null; onJoin(cod
   );
 }
 
-function Invite({
-  code,
-  profile,
-  onJoin,
-  onChange,
-}: {
-  code: string;
-  profile: Profile;
-  onJoin(): void;
-  onChange(): void;
-}) {
-  const stage = useShowcase(profile.look, false);
+function Invite(props: { code: string; profile: Profile; onJoin(): void; onChange(): void }) {
+  const stage = useShowcase(props.profile.look, false);
   return (
-    <section className={s.invite} aria-label={`Invite to table ${code}`}>
+    <section className={s.invite} aria-label={`Invite to table ${props.code}`}>
       <img className={s.logoSmall} src={logo} alt="Point Poker" />
       <div className={s.inviteCard}>
         <div className={s.inviteTop}>
           <p className={s.eyebrow}>You're invited to table</p>
-          <p className={s.code}>{code}</p>
+          <p className={s.code}>{props.code}</p>
         </div>
         <div ref={stage} className={s.inviteStage} aria-hidden />
         <div className={s.inviteBottom}>
-          <p className={s.inviteName}>{profile.name}</p>
-          <Button variant="primary" size="lg" onPress={onJoin} autoFocus>
-            Join table {code}
+          <p className={s.inviteName}>{props.profile.name}</p>
+          <Button variant="primary" size="lg" onPress={props.onJoin} autoFocus>
+            Join table {props.code}
           </Button>
-          <Button variant="link" onPress={onChange}>
+          <Button variant="link" onPress={props.onChange}>
             change look
           </Button>
           <div className={s.hints}>
@@ -283,14 +326,12 @@ function Gone({ code, onBack }: { code: string; onBack(): void }) {
 function PasscodeDialog(props: {
   open: boolean;
   wrong: boolean;
-  busy: boolean;
-  onSubmit(pass: string): void;
+  sending: boolean;
+  onSubmit(passcode: string): void;
   onClose(): void;
 }) {
-  const [pass, setPass] = useState("");
-  const submit = () => {
-    if (pass.trim()) props.onSubmit(pass.trim());
-  };
+  const [passcode, setPasscode] = useState("");
+  const submit = () => props.onSubmit(passcode);
   return (
     <Dialog
       open={props.open}
@@ -302,16 +343,16 @@ function PasscodeDialog(props: {
           <Button variant="ghost" onPress={props.onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onPress={submit} disabled={props.busy || !pass.trim()}>
-            {props.busy ? "Opening…" : "Open the table"}
+          <Button variant="primary" onPress={submit} disabled={props.sending || !passcode.trim()}>
+            {props.sending ? "Opening…" : "Open the table"}
           </Button>
         </>
       }
     >
       <TextField
         label="Passcode"
-        value={pass}
-        onChange={setPass}
+        value={passcode}
+        onChange={setPasscode}
         onSubmit={submit}
         autoFocus
         autoCapitalize="off"

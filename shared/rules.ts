@@ -2,6 +2,8 @@
 import type { Card } from "./protocol.ts";
 
 export const MAX_PLAYERS = 8; // not counting the dealer
+/** A table's code: four letters, no vowels (so codes never spell words) and no Y. */
+export const TABLE_CODE = { length: 4, letters: "BCDFGHJKLMNPQRSTVWXZ" } as const;
 /** How long you wait between chip flicks. The server enforces it. */
 export const FLICK_COOLDOWN_MS = 600;
 

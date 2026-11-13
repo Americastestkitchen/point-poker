@@ -1,12 +1,6 @@
 :root {
-  --ink: #f3e7cf;
-  --dim: #b9a98f;
-  --gold: #e6be5a;
-  --red: #c0392b;
-  --panel: rgba(18, 11, 16, 0.82);
-  --edge: rgba(230, 190, 90, 0.28);
   font-family: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
-  color: var(--ink);
+  color: var(--pp-color-ink);
 }
 * {
   box-sizing: border-box;

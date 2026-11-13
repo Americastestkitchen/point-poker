@@ -288,6 +288,9 @@ export function mountTableView(
     }
   }
 
+  // a view that arrived while the room was still loading: draw it now, as the first one
+  if (store.getState().room) redraw([{ t: "synced" }]);
+
   return {
     update(dt, t) {
       const voting = store.getState().room?.phase === "voting";

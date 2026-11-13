@@ -9,7 +9,7 @@ test("world shortcuts work at the table with nothing over it", () => {
 });
 
 test("anything open or focused in the UI keeps world shortcuts off", () => {
-  assert.equal(worldKeysAllowed({ ...atTable, screen: "creator" }), false, "not seated yet");
+  assert.equal(worldKeysAllowed({ ...atTable, screen: "title" }), false, "not seated yet");
   assert.equal(worldKeysAllowed({ ...atTable, popup: "menu" }), false, "the game menu is open");
   assert.equal(worldKeysAllowed({ ...atTable, lookOpen: true }), false, "the look editor is open");
   assert.equal(worldKeysAllowed({ ...atTable, dialogOpen: true }), false, "a confirm or the copy fallback is open");
@@ -24,5 +24,5 @@ test("Esc opens the game menu unless a popup, the look editor or a text field ha
   assert.equal(menuKeyAllowed({ ...atTable, focus: "field" }), false, "a field cancels with Esc itself");
   assert.equal(menuKeyAllowed({ ...atTable, popup: "leaderboard" }), false, "Esc closes the popup instead");
   assert.equal(menuKeyAllowed({ ...atTable, lookOpen: true }), false);
-  assert.equal(menuKeyAllowed({ ...atTable, screen: "start" }), false);
+  assert.equal(menuKeyAllowed({ ...atTable, screen: "title" }), false);
 });

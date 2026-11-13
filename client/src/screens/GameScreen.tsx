@@ -30,10 +30,8 @@ import { TicketTab } from "./round/TicketTab.tsx";
 import s from "./GameScreen.module.css";
 
 export function GameScreen() {
-  const atTable = useAppState((st) => st.screen === "table");
   // the look editor takes the whole screen; the HUD waits underneath, still mounted
   const lookOpen = useAppState((st) => st.ui.lookOpen);
-  if (!atTable) return null;
   return (
     <div className={s.screen} data-screen="table" hidden={lookOpen}>
       <div className={cx(s.region, s.ticket, s.interactive)} data-region="ticket">

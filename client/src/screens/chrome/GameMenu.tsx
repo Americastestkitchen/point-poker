@@ -91,7 +91,7 @@ function MenuBody({ close }: { close: () => void }) {
           leaveTable();
         }}
       >
-        <p className={s.confirm}>You'll go back to the start screen.</p>
+        <p className={s.confirm}>You'll go back to the title screen.</p>
       </ConfirmDialog>
     </>
   );

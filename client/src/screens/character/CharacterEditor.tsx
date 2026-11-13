@@ -4,7 +4,7 @@
 // the table already knows you by). The draft is local until Done.
 import { useState, type KeyboardEvent } from "react";
 import { BODIES } from "../../../../shared/catalog/bodies.ts";
-import { COLORS, type Color } from "../../../../shared/catalog/colors.ts";
+import { COLOR_NAMES, COLORS } from "../../../../shared/catalog/colors.ts";
 import { COSMETICS, type CosmeticId } from "../../../../shared/catalog/cosmetics.ts";
 import { randomLook, wornIn } from "../../../../shared/look.ts";
 import { editProfile, readyToSit, type ProfileAction } from "../../app/profile.ts";
@@ -25,18 +25,6 @@ const HAT_LABEL = new Map<CosmeticId | null, string>([
   [null, "no hat"],
   ...COSMETICS.map((c) => [c.id, c.label] as const),
 ]);
-const COLOR_NAMES: Record<Color, string> = {
-  "#ff6b4a": "tomato",
-  "#ffd23f": "mustard",
-  "#3bceac": "mint",
-  "#5b8cff": "blueberry",
-  "#c56bff": "grape",
-  "#ff5fa2": "bubblegum",
-  "#8ce05a": "lime",
-  "#ff9f1c": "tangerine",
-  "#4ad6ff": "sky",
-  "#e8e1d0": "oat",
-};
 
 export interface CharacterEditorProps {
   initial: Profile;

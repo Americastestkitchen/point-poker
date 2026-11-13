@@ -17,7 +17,7 @@ import type { TicketLoad, TicketLoadState } from "./ticket-load.ts";
 /** What the title screens need from the page: the invite link, opening tables, sitting down. */
 export interface Title {
   /** The table code from the invite link (`?room=`), or "" when the site was opened directly. */
-  invite: string;
+  inviteCode: string;
   /** Opening a table, and checking an invite's table is still open. */
   tables: Pick<Tables, "open" | "check" | "savedPasscode">;
   /** Sit down at table `code` with the saved profile: the game takes over from the title screens. */
@@ -45,7 +45,7 @@ export interface Game {
   title: Title;
   /** Opens the look editor over the table. */
   openLook(): void;
-  /** Leaves this table for the start screen. */
+  /** Leaves this table for the title screens. */
   leaveTable(): void;
   /** Copies the invite link ("🔗 Invite link copied…"), or shows it to copy by hand. */
   invite(): void;

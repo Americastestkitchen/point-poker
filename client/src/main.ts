@@ -23,6 +23,15 @@ function $<T extends HTMLElement>(id: string, kind: new () => T): T {
 }
 
 const invite = (new URLSearchParams(location.search).get("room") ?? "").toUpperCase();
+
+/** Puts `?room=CODE` in the address bar, or takes it out (null), leaving any other parameters. */
+function setRoomParam(code: string | null) {
+  const url = new URL(location.href);
+  if (code) url.searchParams.set("room", code);
+  else if (url.searchParams.has("room")) url.searchParams.delete("room");
+  else return;
+  history.replaceState(null, "", url);
+}
 const storage = createStorage(localStorage);
 const audio = createAudio(storage);
 const store = createStore();
@@ -46,17 +55,16 @@ const game = createGameUi({
   toasts,
   mic: createMic(),
   title: {
-    invite,
+    inviteCode: invite,
     tables,
     sit(code) {
-      // the address becomes this table's invite link, so a reload puts you back in your seat
-      history.replaceState(null, "", `${location.pathname}?room=${code}`);
+      if (store.getState().screen === "table") return; // already sat down: one table, one socket
+      // the address becomes this table's invite link: a reload brings you back to it, one click away
+      setRoomParam(code);
       store.seated();
       session.join(code);
     },
-    forgetInvite() {
-      if (location.search) history.replaceState(null, "", location.pathname);
-    },
+    forgetInvite: () => setRoomParam(null),
   },
   leaveTable: () => location.assign(location.pathname),
   inviteUrl: () => {
@@ -73,4 +81,7 @@ addEventListener("pagehide", (e) => {
 });
 
 stage.start();
-void mountScene(stage, { store, actions, audio, allowsWorldKeys: game.allowsWorldKeys });
+mountScene(stage, { store, actions, audio, allowsWorldKeys: game.allowsWorldKeys }).catch((e: unknown) => {
+  reportError(e); // the browser's console and error reporting see it, as if it were uncaught
+  toasts.show("The room didn't load. Reload the page to try again.", { tone: "error" });
+});
