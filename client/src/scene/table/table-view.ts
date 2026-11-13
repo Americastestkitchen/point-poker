@@ -14,7 +14,7 @@ import { layout } from "../layout/layout.ts";
 import { makeChip } from "./chips.ts";
 import { bonkMe } from "./effects.ts";
 import type { Flights } from "./flights.ts";
-import type { Pot } from "./pot.ts";
+import { potMove, type Pot } from "./pot.ts";
 import { createSeat, type Seat } from "./seat.ts";
 import type { TicketPaper } from "./ticket.ts";
 
@@ -49,7 +49,11 @@ export function mountTableView(stage: Stage, deps: {
     const happened = (t: ViewChange["t"]) => changes.some((c) => c.t === t);
     const me = meId();
     const settled = changes.find((c) => c.t === "settled");
-    const payingOut = settled?.t === "settled" && !settled.resettled;
+    const potDoes = potMove(pot.state, {
+      phase: st.phase, revealedNow: happened("revealed"),
+      settledNow: !!settled, resettled: settled?.t === "settled" && settled.resettled,
+    });
+    const payingOut = potDoes === "payOut";
 
     const players = st.players.filter((p) => !p.isDealer).sort((a, b) => a.seat - b.seat);
     const count = players.length;
@@ -124,18 +128,15 @@ export function mountTableView(stage: Stage, deps: {
     if (happened("dealt")) audio.deal();
 
     // the pot
-    if (st.phase === "revealed") {
-      if (happened("revealed") || pot.isEmpty) pot.fill(st.pot);
-    } else if (payingOut) {
+    if (potDoes === "fill") pot.fill(st.pot);
+    else if (potDoes === "clear") pot.clear();
+    else if (potDoes === "payOut") {
       const winners = st.winners.map((id) => seats.get(id)).filter((s): s is Seat => !!s);
       pot.payOut(winners, () => {
         const now = store.getState().room;
         for (const p of now?.players ?? []) seats.get(p.id)?.showChips(p.chips, p.seat + 7);
       });
-    } else if (st.phase !== "settled") {
-      pot.clear();
     }
-    if (settled?.t === "settled" && settled.resettled) pot.clear();
     if (settled) {
       for (const id of st.winners) seats.get(id)?.avatar.play("celebrate");
       if (st.winners.includes(me)) audio.win(); else audio.chip();
