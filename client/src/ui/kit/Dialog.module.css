@@ -105,10 +105,14 @@
   background: var(--pp-color-panel-raised);
 }
 
-/* square, so the scrolling body does not clip its first heading or focus glows with the panel's corners */
+/* square, so the scrolling body does not clip its first heading or focus glows with the panel's corners;
+   and a few pixels of room past its edges (given back by the margin), so a field or button
+   touching the side keeps its whole focus ring instead of losing it to the scroll edge */
 .body {
   flex: 0 1 auto;
   border-radius: 0;
+  padding: var(--pp-space-1);
+  margin: calc(-1 * var(--pp-space-1));
 }
 /* a finger needs a bigger ✕ */
 @media (pointer: coarse) {
