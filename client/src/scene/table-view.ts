@@ -2,14 +2,13 @@
 // and the ticket. It redraws from the store, and animates what the event
 // stream says just happened.
 import * as THREE from "three";
-import { wornIn } from "../../../shared/look.ts";
 import type { PublicPlayer, TableView } from "../../../shared/protocol.ts";
 import { cardValues, voters } from "../../../shared/rules.ts";
 import type { Actions } from "../app/actions.ts";
 import type { GameEvent } from "../app/events.ts";
 import type { Store } from "../app/store.ts";
 import type { Audio } from "../audio/sfx.ts";
-import { Avatar } from "../avatar.ts";
+import { Avatar } from "../avatar/avatar.ts";
 import type { CameraRig } from "./camera.ts";
 import { TableCard } from "./cards.ts";
 import { makeChip, stackChips } from "./chips.ts";
@@ -61,10 +60,8 @@ export function mountTableView(stage: Stage, deps: {
     react(e);
   });
 
-  const hatOf = (p: PublicPlayer) => wornIn(p.look, "head") ?? "none";
-
   function newAvatar(p: PublicPlayer) {
-    const avatar = new Avatar(p.id, p.look.color, hatOf(p), p.isDealer, p.look.body);
+    const avatar = new Avatar(p.look, { dealer: p.isDealer });
     const unpick = p.id === meId() ? () => {} : picking.register(avatar.hitbox, () => actions.flick(p.id));
     return { avatar, unpick };
   }
@@ -107,25 +104,13 @@ export function mountTableView(stage: Stage, deps: {
         seat = { avatar, unpick, card: new TableCard(scene), stack, pos: new THREE.Vector3(info.x, 0, info.z), facing: info.facing, slot, chipsShown: -1 };
         seats.set(p.id, seat);
       }
-      if (seat.avatar.shape !== p.look.body) {
-        // new body shape: swap the model in place
-        const old = seat.avatar;
-        seat.unpick();
-        const { avatar, unpick } = newAvatar(p);
-        avatar.group.position.copy(old.group.position);
-        avatar.group.rotation.y = old.group.rotation.y;
-        scene.remove(old.group);
-        scene.add(avatar.group);
-        seat.avatar = avatar;
-        seat.unpick = unpick;
-      }
       seat.slot = slot;
       seat.pos.set(info.x, 0, info.z);
       seat.facing = info.facing;
       seat.card.placeAt(slot, count, p.id === me);
       const stack = layout.stack(slot, count);
       seat.stack.position.set(stack.x, stack.y, stack.z);
-      seat.avatar.setStyle(p.look.color, hatOf(p));
+      seat.avatar.setLook(p.look);
       seat.avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.look.color, p.connected);
       seat.avatar.group.visible = p.id !== me;
       seat.card.noFloat = p.id === me;
@@ -147,7 +132,7 @@ export function mountTableView(stage: Stage, deps: {
             } else {
               // they lean in, set it down from their hand, then square it up
               const av = seat.avatar;
-              av.placeCard();
+              av.play("placeCard");
               seat.card.show(mine, () => av.handWorldPos(), { delay: 0.3, gentle: true });
               seat.card.nudge(0.75);
               setTimeout(audio.slide, 300);
@@ -193,14 +178,14 @@ export function mountTableView(stage: Stage, deps: {
     }
     if (settled?.t === "settled" && settled.resettled) pot.clear();
     if (settled) {
-      for (const id of st.winners) seats.get(id)?.avatar.celebrate();
+      for (const id of st.winners) seats.get(id)?.avatar.play("celebrate");
       if (st.winners.includes(me)) audio.win(); else audio.chip();
     }
 
     // people arriving wave; people who changed shape gasp
     for (const e of evs) {
       if ((e.t === "joined" || e.t === "reshaped") && e.player.id !== me) {
-        seats.get(e.player.id)?.avatar.playEmote(e.t === "joined" ? "wave" : "shock");
+        seats.get(e.player.id)?.avatar.play(e.t === "joined" ? "wave" : "shock");
         audio.pop();
       }
     }
@@ -261,7 +246,7 @@ export function mountTableView(stage: Stage, deps: {
       done: () => {
         audio.bonk();
         if (to === meId()) bonkMe();
-        else seats.get(to)?.avatar.bonk();
+        else seats.get(to)?.avatar.play("bonked");
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
         const away = bounce.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)).setY(TABLE_Y + 0.01);
@@ -273,14 +258,14 @@ export function mountTableView(stage: Stage, deps: {
   /** Effects that don't wait for a redraw. */
   function react(e: GameEvent) {
     switch (e.t) {
-      case "gaze": seats.get(e.id)?.avatar.setLook(e.yaw, e.pitch); return;
+      case "gaze": seats.get(e.id)?.avatar.setGaze(e.yaw, e.pitch); return;
       case "talk": seats.get(e.id)?.avatar.setTalk(e.level); return;
-      case "emote": seats.get(e.id)?.avatar.playEmote(e.emote); audio.pop(); return;
+      case "emote": seats.get(e.id)?.avatar.play(e.emote); audio.pop(); return;
       case "flick": flick(e.from, e.to); return;
       case "adjust": {
         // someone swapped their card: they reach in and fiddle with it
         const s = seats.get(e.id);
-        if (s && s.card.group.visible) { s.avatar.adjustCard(); s.card.nudge(0.2); }
+        if (s && s.card.group.visible) { s.avatar.play("adjustCard"); s.card.nudge(0.2); }
         return;
       }
       case "played": {
@@ -311,7 +296,7 @@ export function mountTableView(stage: Stage, deps: {
         s.avatar.update(dt, t);
         // idle fidget: now and then someone straightens their face-down card
         if (voting && s.card.group.visible && !s.card.isFaceUp && s.avatar.group.visible && !s.avatar.busyWithCard && Math.random() < dt / 11) {
-          s.avatar.adjustCard();
+          s.avatar.play("adjustCard");
           s.card.nudge(0.2);
         }
         s.card.update(dt);

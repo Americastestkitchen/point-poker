@@ -1,8 +1,8 @@
 // The spinning character preview in the look editor. It keeps its own small
 // renderer for now; the title screen (#4) moves it onto the main stage.
 import * as THREE from "three";
-import { wornIn, type Look } from "../../../shared/look.ts";
-import { Avatar } from "../avatar.ts";
+import type { Look } from "../../../shared/look.ts";
+import { Avatar } from "../avatar/avatar.ts";
 
 export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { dealer: boolean; visible(): boolean }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -15,8 +15,7 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
   const key = new THREE.DirectionalLight("#fff0d8", 2.2);
   key.position.set(1.5, 3, 2);
   scene.add(key);
-  const hat = (l: Look) => wornIn(l, "head") ?? "none";
-  let avatar = new Avatar("preview", look.color, hat(look), opts.dealer, look.body);
+  const avatar = new Avatar(look, { dealer: opts.dealer });
   scene.add(avatar.group);
 
   const clock = new THREE.Clock();
@@ -31,7 +30,7 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
     }
     const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
     avatar.group.rotation.y = Math.sin(t * 0.6) * 0.7;
-    avatar.setLook(Math.sin(t * 1.3) * 0.6, Math.sin(t * 0.9) * 0.3);
+    avatar.setGaze(Math.sin(t * 1.3) * 0.6, Math.sin(t * 0.9) * 0.3);
     avatar.update(dt, t);
     renderer.render(scene, camera);
     requestAnimationFrame(loop);
@@ -39,14 +38,7 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
   loop();
 
   return {
-    setLook(next: Look) {
-      if (avatar.shape !== next.body) {
-        scene.remove(avatar.group);
-        avatar = new Avatar("preview", next.color, hat(next), opts.dealer, next.body);
-        scene.add(avatar.group);
-      }
-      avatar.setStyle(next.color, hat(next));
-    },
-    wave() { avatar.playEmote("wave"); },
+    setLook(next: Look) { avatar.setLook(next); },
+    wave() { avatar.play("wave"); },
   };
 }

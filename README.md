@@ -78,6 +78,8 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
   - `client/src/scene/layout.ts` says where everything goes (seats, cards, the ticket, the pot,
     props). `client/src/environments/` says how it looks: the Backlog Basement lives in
     `environments/basement/`, and a new place is a new folder there.
+  - `client/src/avatar/` is the bean: body shapes as data with anchor points (`shapes.ts`),
+    one file per hat in `cosmetics/`, and an `animator` that works out every pose.
   - `test/session.test.ts` plays a whole game against the real server.
 
 ## How to play
