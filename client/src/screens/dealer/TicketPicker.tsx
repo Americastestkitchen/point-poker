@@ -209,20 +209,19 @@ function PickerBody() {
       />
 
       <div className={s.manual} data-open={manualShown || undefined}>
-        {sections.manual === "collapsible" ? (
+        {sections.manual === "collapsible" && (
           <Disclosure open={manualOpen} onToggle={() => setManualOpen(!manualOpen)}>
             No Jira ticket? Type it in
           </Disclosure>
-        ) : (
-          <p className={s.manualTitle}>Type in what you're estimating</p>
         )}
         {manualShown && (
           <TextField
             ref={manualField}
-            label="What are we estimating?"
+            label="Ticket"
             hideLabel
             autoFocus
-            placeholder="What are we estimating?"
+            // the dialog's title already asks the question; without Jira this is the only field
+            placeholder={sections.jira ? "Describe the ticket" : "Jira link, or something else"}
             value={manualDraft}
             disabled={loading}
             maxLength={300}

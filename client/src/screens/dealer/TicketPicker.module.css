@@ -146,12 +146,6 @@
   gap: var(--pp-space-2);
   min-width: 0;
 }
-.manualTitle {
-  margin: 0;
-  text-align: center;
-  font-size: var(--pp-size-sm);
-  color: var(--pp-color-dim);
-}
 .disclosure {
   justify-self: center;
   display: inline-flex;
