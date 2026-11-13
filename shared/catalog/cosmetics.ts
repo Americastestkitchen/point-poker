@@ -1,6 +1,8 @@
 // Things a bean can wear. Each one fills one or more slots, and a bean wears
 // at most one thing per slot. A new item is a new entry here plus a builder
 // in client/src/avatar/cosmetics/.
+import { byId, idsOf } from "./registry.ts";
+
 export type Slot = "head";
 
 export interface Cosmetic {
@@ -22,5 +24,5 @@ export const COSMETICS = [
 ] as const satisfies readonly Cosmetic[];
 
 export type CosmeticId = (typeof COSMETICS)[number]["id"];
-export const COSMETIC_IDS = COSMETICS.map((c) => c.id) as [CosmeticId, ...CosmeticId[]];
-export const cosmetic = (id: string): Cosmetic | undefined => COSMETICS.find((c) => c.id === id);
+export const COSMETIC_IDS = idsOf(COSMETICS);
+export const COSMETIC = byId(COSMETICS);

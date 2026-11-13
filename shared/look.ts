@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { BODY_IDS } from "./catalog/bodies.ts";
 import { COLORS } from "./catalog/colors.ts";
-import { COSMETIC_IDS, COSMETICS, cosmetic, type CosmeticId, type Slot } from "./catalog/cosmetics.ts";
+import { COSMETIC, COSMETIC_IDS, COSMETICS, type CosmeticId, type Slot } from "./catalog/cosmetics.ts";
 
 export const Look = z.object({
   color: z.enum(COLORS),
@@ -34,7 +34,7 @@ export function validateLook(input: LookInput | undefined): Look {
   for (const raw of input?.cosmetics ?? []) {
     const id = item.safeParse(raw);
     if (!id.success) continue;
-    const { slots } = cosmetic(id.data)!;
+    const { slots } = COSMETIC[id.data];
     if (slots.some((s) => taken.has(s))) continue;
     slots.forEach((s) => taken.add(s));
     cosmetics.push(id.data);
@@ -44,12 +44,12 @@ export function validateLook(input: LookInput | undefined): Look {
 
 /** The item in a slot, if any. */
 export const wornIn = (look: Look, slot: Slot): CosmeticId | null =>
-  look.cosmetics.find((id) => cosmetic(id)?.slots.includes(slot)) ?? null;
+  look.cosmetics.find((id) => COSMETIC[id].slots.includes(slot)) ?? null;
 
 /** Puts `id` on (or clears the slot when null), taking off whatever was in its slots. */
 export function wear(look: Look, slot: Slot, id: CosmeticId | null): Look {
-  const slots = id ? cosmetic(id)!.slots : [slot];
-  const kept = look.cosmetics.filter((c) => !cosmetic(c)!.slots.some((s) => slots.includes(s)));
+  const slots: readonly Slot[] = id ? COSMETIC[id].slots : [slot];
+  const kept = look.cosmetics.filter((c) => !COSMETIC[c].slots.some((s) => slots.includes(s)));
   return { ...look, cosmetics: id ? [...kept, id] : kept };
 }
 

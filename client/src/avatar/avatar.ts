@@ -2,8 +2,8 @@
 // puts together a body shape, its parts (face, arms, labels, chair) and what
 // it's wearing, and applies the animator's pose every frame.
 import * as THREE from "three";
-import { cosmetic } from "../../../shared/catalog/cosmetics.ts";
-import { EMOTES, type EmoteId } from "../../../shared/catalog/emotes.ts";
+import { COSMETIC } from "../../../shared/catalog/cosmetics.ts";
+import { EMOTE, isEmote } from "../../../shared/catalog/emotes.ts";
 import type { Look } from "../../../shared/look.ts";
 import { mesh, toon } from "../scene/art/materials.ts";
 import { createAnimator, type ClipId, type HandPose } from "./animator.ts";
@@ -40,8 +40,6 @@ export interface Avatar {
   handWorldPos(out?: THREE.Vector3): THREE.Vector3;
   update(dt: number, t: number): void;
 }
-
-const EMOJI = Object.fromEntries(EMOTES.map((e) => [e.id, e.emoji])) as Record<EmoteId, string>;
 
 const marker = (spot: Spot) => {
   const o = new THREE.Object3D();
@@ -102,7 +100,7 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     for (const w of worn) w.removeFromParent();
     worn = look.cosmetics.map((id) => {
       const item = BUILDERS[id]();
-      const { slots } = cosmetic(id)!;
+      const { slots } = COSMETIC[id];
       // hats sit a little higher on a dealer, over the visor
       if (dealer && slots.includes("head")) item.position.y += 0.04;
       item.rotation.z = (Math.random() - 0.5) * 0.25;
@@ -128,7 +126,7 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
 
     play(clip) {
       animator.play(clip);
-      if (clip in EMOJI) labels.showEmoji(EMOJI[clip as EmoteId]);
+      if (isEmote(clip)) labels.showEmoji(EMOTE[clip].emoji);
     },
 
     setHandPose(pose) { animator.handPose = pose; },
