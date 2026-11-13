@@ -79,6 +79,11 @@ const RULES: Rule[] = [
     why: "the gallery shows the kit with real storage and sound; it doesn't mount the game.",
   },
   {
+    name: "layout is passed in",
+    files: ["client/src/"], except: ["client/src/scene/index.ts"], forbid: ["client/src/scene/layout/layout.ts"], types: true,
+    why: "only scene/index.ts imports the `layout` value; take it as an argument (like buildTable and createTicketPaper) and use `import type { Layout }`.",
+  },
+  {
     name: "no three.js where the header says so",
     files: ["client/src/avatar/animator.ts", "client/src/scene/layout/layout.ts"], forbid: ["three"],
     why: "these files are plain numbers so they run in node tests; keep three.js in the files that build meshes.",

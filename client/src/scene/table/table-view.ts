@@ -10,7 +10,7 @@ import type { Audio } from "../../audio/sfx.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
-import { layout } from "../layout/layout.ts";
+import type { Layout } from "../layout/layout.ts";
 import { makeChip } from "./chips.ts";
 import type { Flights } from "./flights.ts";
 import { potMove, type Pot } from "./pot.ts";
@@ -24,10 +24,10 @@ export interface TableView {
 const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
 
 export function mountTableView(stage: Stage, deps: {
-  store: Store; actions: Actions; audio: Audio; flights: Flights; rig: CameraRig;
+  store: Store; actions: Actions; audio: Audio; layout: Layout; flights: Flights; rig: CameraRig;
   ticket: TicketPaper; pot: Pot; screen: StatusScreen;
 }): TableView {
-  const { store, actions, audio, flights, rig, ticket, pot, screen } = deps;
+  const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;
   const { scene, camera } = stage;
   const seats = new Map<string, Seat>();
 
@@ -73,7 +73,7 @@ export function mountTableView(stage: Stage, deps: {
       const mine = p.id === me;
       let seat = seats.get(p.id);
       if (!seat) {
-        seat = createSeat(stage, p, { onPick: mine ? undefined : () => actions.flick(p.id) });
+        seat = createSeat(stage, p, { layout, onPick: mine ? undefined : () => actions.flick(p.id) });
         seats.set(p.id, seat);
       }
       seat.place(slot, count, mine);

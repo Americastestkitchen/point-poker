@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { Phase } from "../../../../shared/protocol.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import type { Stage } from "../engine/stage.ts";
-import { layout } from "../layout/layout.ts";
+import type { Layout } from "../layout/layout.ts";
 import { stackChips } from "./chips.ts";
 import type { Flights } from "./flights.ts";
 
@@ -38,8 +38,8 @@ export interface Pot {
   clear(): void;
 }
 
-export function createPot(stage: Stage, deps: { flights: Flights; audio: Audio }): Pot {
-  const { flights, audio } = deps;
+export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights; audio: Audio }): Pot {
+  const { layout, flights, audio } = deps;
   const group = new THREE.Group();
   const p = layout.anchors.pot.position;
   group.position.set(p.x, p.y, p.z);
