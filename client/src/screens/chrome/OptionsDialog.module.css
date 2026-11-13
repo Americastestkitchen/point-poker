@@ -1,1 +1,11 @@
-.placeholder { margin: 0; color: var(--pp-color-dim); font-size: var(--pp-size-sm); }
+.list { display: grid; gap: var(--pp-space-3); }
+.option {
+  padding: var(--pp-space-1);
+  background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md);
+}
+/* the switch's row is the thumb target: keep it chunky */
+.option > button { min-height: 48px; font-family: var(--pp-font-display); font-weight: var(--pp-weight-strong); }
+.note {
+  margin: 0; padding: 0 var(--pp-space-3) var(--pp-space-2);
+  font-size: var(--pp-size-sm); color: var(--pp-color-dim); line-height: 1.4;
+}

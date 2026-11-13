@@ -1,1 +1,68 @@
-.placeholder { margin: 0; color: var(--pp-color-dim); font-size: var(--pp-size-sm); }
+/* players, most coins first: a stack of felt rows, yours lit in gold */
+.board { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--pp-space-1); }
+.row {
+  display: flex; align-items: center; gap: var(--pp-space-3);
+  min-height: 44px; padding: var(--pp-space-1) var(--pp-space-3);
+  background: var(--pp-color-well); border: 1px solid transparent; border-radius: var(--pp-radius-md);
+}
+.me {
+  background: color-mix(in srgb, var(--pp-color-gold) 14%, var(--pp-color-well));
+  border-color: var(--pp-color-edge);
+}
+/* away players fade, but the dealer's remove stays bright */
+.away .dim { opacity: .5; }
+
+.rank {
+  flex: none; width: 26px; text-align: center;
+  font-family: var(--pp-font-display); font-weight: var(--pp-weight-strong); color: var(--pp-color-dim);
+  font-variant-numeric: tabular-nums;
+}
+.crown { font-size: var(--pp-size-lg); }
+.dim { display: inline-flex; align-items: center; }
+.name {
+  flex: 1; min-width: 0; display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: var(--pp-weight-strong);
+}
+.tag { color: var(--pp-color-dim); font-weight: var(--pp-weight-body); }
+.you {
+  flex: none; padding: 1px var(--pp-space-2);
+  font-size: var(--pp-size-xs); font-weight: var(--pp-weight-strong); letter-spacing: 1px; text-transform: uppercase;
+  color: var(--pp-color-gold-ink); background: var(--pp-color-gold); border-radius: var(--pp-radius-pill);
+}
+.chips {
+  flex: none; gap: var(--pp-space-1);
+  font-family: var(--pp-font-display); font-weight: var(--pp-weight-strong); font-size: var(--pp-size-lg);
+  color: var(--pp-color-gold-hi); font-variant-numeric: tabular-nums;
+}
+.coin {
+  width: 18px; height: 18px; border-radius: var(--pp-radius-pill); flex: none;
+  background: radial-gradient(circle at 35% 30%, var(--pp-color-gold-hi), var(--pp-color-gold-mid) 45%, var(--pp-color-gold-low));
+  box-shadow: inset 0 -2px 0 var(--pp-color-gold-shadow);
+}
+.remove.remove { flex: none; min-height: 40px; }
+
+/* rounds played, newest first */
+.rounds { margin-top: var(--pp-space-5); padding-top: var(--pp-space-4); border-top: var(--pp-border-soft); }
+.heading {
+  display: flex; align-items: center; gap: var(--pp-space-2); margin: 0 0 var(--pp-space-2);
+  font-family: var(--pp-font-display); font-size: var(--pp-size-md); font-weight: var(--pp-weight-strong);
+  color: var(--pp-color-dim); text-transform: uppercase; letter-spacing: 2px;
+}
+.count {
+  padding: 0 var(--pp-space-2); font-size: var(--pp-size-xs); letter-spacing: 0;
+  color: var(--pp-color-ink); background: var(--pp-color-panel-raised); border-radius: var(--pp-radius-pill);
+}
+.scroll { background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md); }
+.history { list-style: none; margin: 0; padding: var(--pp-space-1) var(--pp-space-3); }
+.round {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--pp-space-2);
+  padding: var(--pp-space-2) 0; font-size: var(--pp-size-sm); color: var(--pp-color-ink); line-height: 1.4;
+}
+.round + .round { border-top: var(--pp-border-soft); }
+.key { font-weight: var(--pp-weight-display); color: var(--pp-color-ink); }
+.arrow, .sep { color: var(--pp-color-faint); }
+.points { font-weight: var(--pp-weight-strong); color: var(--pp-color-gold-hi); }
+.outcome { min-width: 0; overflow-wrap: anywhere; color: var(--pp-color-dim); }
+.house { color: var(--pp-color-ink); }
+.nobody { color: var(--pp-color-faint); font-style: italic; }
