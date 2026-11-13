@@ -5,6 +5,7 @@ import { noTickets } from "../tickets/none.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { newTableState, TableState } from "./state.ts";
 import { FLICK_COOLDOWN_MS } from "../../shared/rules.ts";
+import type { Command } from "./commands.ts";
 import { ROLE_ERROR, Table, type JoinRequest, type TableEvent } from "./table.ts";
 
 const DEALER_KEY = "dealer-key";
@@ -29,7 +30,7 @@ function setup(tickets: TicketSource = noTickets()) {
   const deb = join({ name: "Deb", dealerKey: DEALER_KEY });
   const ann = join({ name: "Ann" });
   const bob = join({ name: "Bob" });
-  const run = async (who: { playerId: string }, cmd: Parameters<Table["run"]>[1]) => {
+  const run = async (who: { playerId: string }, cmd: Command) => {
     const res = await table.run(who.playerId, cmd);
     assert.equal(res.error, undefined, `${cmd.t} failed: ${res.error}`);
   };
@@ -45,7 +46,7 @@ test("only the dealer runs the round", async () => {
   const { table, ann } = setup();
   assert.deepEqual(await table.run(ann.playerId, { t: "reveal" }), { error: ROLE_ERROR });
   assert.deepEqual(await table.run("nobody", { t: "vote", value: 3 }), { error: "You're not at this table" });
-  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: "3" } as never), { error: "That command didn't make sense" });
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: "3" }), { error: "That command didn't make sense" });
 });
 
 test("votes stay hidden until the reveal, except your own", async () => {

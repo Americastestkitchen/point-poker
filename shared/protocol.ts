@@ -139,34 +139,12 @@ export type JoinMsg = z.infer<typeof JoinMsg>;
 
 export const FxMsg = msg("fx", { fx: ClientFx });
 
-/** Everything that can change the table. Each one is checked against its schema and role on the server. */
-export const Commands = {
-  vote: msg("vote", { value: z.number().nullable() }),
-  /** Flick a chip at someone. Has a cooldown. */
-  flick: msg("flick", { target: z.string() }),
-  setLook: msg("setLook", { look: LookInput }),
-  // dealer only
-  loadTicket: msg("loadTicket", { ref: z.string().max(2000) }),
-  manualTicket: msg("manualTicket", { key: z.string(), summary: z.string(), description: z.string() }),
-  fetchQueue: msg("fetchQueue", {}),
-  dealerPlays: msg("dealerPlays", { plays: z.boolean() }),
-  deal: msg("deal", {}),
-  reveal: msg("reveal", {}),
-  settle: msg("settle", { finalPoints: z.number() }),
-  nextRound: msg("nextRound", {}),
-  /** Drop the current round (no payout) and go back to picking a ticket. */
-  cancelRound: msg("cancelRound", {}),
-  /** Skip the current ticket (no payout) and deal the next one in the queue. */
-  skip: msg("skip", {}),
-  clearQueue: msg("clearQueue", {}),
-  kick: msg("kick", { id: z.string() }),
-} as const;
-export type Command = z.infer<(typeof Commands)[keyof typeof Commands]>;
-
-/** On the wire a command rides in an envelope with an id; the server answers each with a `result`. */
-type CommandSchema = (typeof Commands)[keyof typeof Commands];
-export const AnyCommand = z.discriminatedUnion("t", Object.values(Commands) as [CommandSchema, ...CommandSchema[]]);
-export const CommandMsg = msg("cmd", { id: z.number(), cmd: AnyCommand });
+/**
+ * A command in its envelope; the server answers each one with a `result`. The
+ * commands themselves are defined in server/table/commands.ts, and the table
+ * checks each one against its own definition, so here it only needs a name.
+ */
+export const CommandMsg = msg("cmd", { id: z.number(), cmd: z.looseObject({ t: z.string() }) });
 export type CommandMsg = z.infer<typeof CommandMsg>;
 
 export const ClientMsg = z.discriminatedUnion("t", [JoinMsg, FxMsg, CommandMsg]);

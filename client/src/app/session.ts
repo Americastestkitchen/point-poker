@@ -2,8 +2,9 @@
 // line drops, sends commands and matches up their replies, and feeds what the
 // server says into the store. The socket and storage are injected, so it runs
 // in Node tests as well as the browser.
+import type { Command } from "../../../server/table/commands.ts";
 import { DEFAULT_LOOK } from "../../../shared/look.ts";
-import { ServerMsg, type ClientFx, type ClientMsg, type Command } from "../../../shared/protocol.ts";
+import { ServerMsg, type ClientFx, type ClientMsg } from "../../../shared/protocol.ts";
 import type { Storage } from "./storage.ts";
 import type { AppState, Store } from "./store.ts";
 

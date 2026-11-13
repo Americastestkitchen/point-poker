@@ -2,9 +2,9 @@
 // messages in and out, and adapters (tickets, clock, log) come in as deps.
 import { randomUUID } from "node:crypto";
 import { validateLook } from "../../shared/look.ts";
-import type { Command, JoinMsg, TableView } from "../../shared/protocol.ts";
+import type { JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
-import { COMMANDS, type CommandSpec, type Ctx } from "./commands.ts";
+import { findCommand, type Ctx } from "./commands.ts";
 import { clean, findPlayer, freeSeat, startRound } from "./rules.ts";
 import type { TableState } from "./state.ts";
 import { viewFor } from "./view.ts";
@@ -123,11 +123,11 @@ export class Table {
     this.ctx.changed();
   }
 
-  /** Runs a command: checks its shape, the player's role and the phase, then applies the rules. */
-  async run(playerId: string, cmd: Command): Promise<CommandResult> {
+  /** Runs a command as it came off the wire: checks its shape, the player's role and the phase, then applies the rules. */
+  async run(playerId: string, cmd: unknown): Promise<CommandResult> {
     const me = findPlayer(this.s, playerId);
     if (!me) return { error: "You're not at this table" };
-    const spec = (COMMANDS as Record<string, CommandSpec<Command> | undefined>)[cmd?.t];
+    const spec = findCommand(cmd);
     if (!spec) return { error: "Unknown command" };
     const parsed = spec.schema.safeParse(cmd);
     if (!parsed.success) return { error: "That command didn't make sense" };
@@ -137,7 +137,7 @@ export class Table {
       const error = await spec.run(this.ctx, me, parsed.data);
       return error ? { error } : {};
     } catch (e) {
-      this.deps.log.error("command failed", cmd.t, e);
+      this.deps.log.error("command failed", spec.t, e);
       return { error: "Something went wrong" };
     }
   }

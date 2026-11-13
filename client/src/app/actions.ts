@@ -1,9 +1,9 @@
 // Everything the player can do. The UI and the scene call these; nothing else
 // talks to the server. Dealer actions return promises that settle when the
 // server answers, and reject with its reason (like a Jira error).
+import type { Command } from "../../../server/table/commands.ts";
 import type { EmoteId } from "../../../shared/catalog/emotes.ts";
 import type { Look } from "../../../shared/look.ts";
-import type { Command } from "../../../shared/protocol.ts";
 import type { Session } from "./session.ts";
 import { myPlayer, type Store } from "./store.ts";
 

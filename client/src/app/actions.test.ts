@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { ClientFx, Command } from "../../../shared/protocol.ts";
+import type { Command } from "../../../server/table/commands.ts";
+import type { ClientFx } from "../../../shared/protocol.ts";
 import { createActions } from "./actions.ts";
 import type { GameEvent } from "./events.ts";
 import { ticket, view } from "./fixtures.ts";

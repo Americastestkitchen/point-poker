@@ -1,8 +1,8 @@
-// Every command a player can send, as data: who may run it, what it looks
-// like, and what it does. A new command is one new entry.
-import type { z } from "zod";
-import { validateLook } from "../../shared/look.ts";
-import { Commands, type Command } from "../../shared/protocol.ts";
+// Every command a player can send, as data: its name, who may send it, what
+// it carries, and what it does. A new command is one more defineCommand() in
+// the list; the Command type, the checks and the dispatch all come from it.
+import { z } from "zod";
+import { LookInput, validateLook } from "../../shared/look.ts";
 import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
 import { payOut, potOf, takeBack } from "./coins.ts";
 import { clean, isVoter, manualTicket, pickVote, resetTable, startRound } from "./rules.ts";
@@ -30,13 +30,25 @@ export interface Ctx {
   upcoming(project: string | undefined): Promise<{ label: string; tickets: TableState["queue"] }>;
 }
 
-type Run<C> = (ctx: Ctx, me: PlayerState, cmd: C) => void | string | Promise<void | string>;
-export interface CommandSpec<C> { role: Role; schema: z.ZodType<C>; run: Run<C> }
-type Spec<K extends Command["t"]> = CommandSpec<Extract<Command, { t: K }>>;
+/** Nothing means it worked; a string is the reason it didn't. */
+type Reply = void | string | Promise<void | string>;
 
-export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
-  vote: {
-    role: "player", schema: Commands.vote,
+/**
+ * One command. `t` is its name on the wire and `input` its fields; the schema
+ * (with `t`) is built from them, and `run` gets the parsed command, typed.
+ */
+export function defineCommand<const T extends string, R extends Role, S extends z.ZodRawShape>(def: {
+  t: T;
+  role: R;
+  input: S;
+  run: (ctx: Ctx, me: PlayerState, cmd: z.infer<z.ZodObject<{ t: z.ZodLiteral<T> } & S>>) => Reply;
+}) {
+  return { ...def, schema: z.object({ t: z.literal(def.t), ...def.input }) };
+}
+
+export const COMMANDS = [
+  defineCommand({
+    t: "vote", role: "player", input: { value: z.number().nullable() },
     run({ s, changed, fx }, me, { value }) {
       if (s.phase !== "voting" || !isVoter(s, me)) return;
       const before = me.vote;
@@ -44,35 +56,36 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       if (before !== null && me.vote !== null && before !== me.vote) fx({ kind: "adjust", id: me.id }, me.id);
       changed();
     },
-  },
-  flick: {
-    role: "player", schema: Commands.flick,
+  }),
+  /** Flick a chip at someone. Has a cooldown. */
+  defineCommand({
+    t: "flick", role: "player", input: { target: z.string() },
     run({ s, fx, ready }, me, { target }) {
       if (target === me.id || !s.players.some((p) => p.id === target)) return;
       if (!ready(me.id, "flick", FLICK_COOLDOWN_MS)) return "Not so fast";
       fx({ kind: "flick", from: me.id, to: target });
     },
-  },
-  setLook: {
-    role: "player", schema: Commands.setLook,
+  }),
+  defineCommand({
+    t: "setLook", role: "player", input: { look: LookInput },
     run({ changed }, me, { look }) {
       me.look = validateLook(look);
       changed();
     },
-  },
+  }),
 
   // ---------- dealer only ----------
 
-  loadTicket: {
-    role: "dealer", schema: Commands.loadTicket,
+  defineCommand({
+    t: "loadTicket", role: "dealer", input: { ref: z.string().max(2000) },
     run(ctx, _me, { ref }) {
       const key = parseIssueKey(ref);
       if (!key) return "That doesn't look like a Jira link or key (like SD-1234)";
       return ctx.load(ref, key);
     },
-  },
-  manualTicket: {
-    role: "dealer", schema: Commands.manualTicket,
+  }),
+  defineCommand({
+    t: "manualTicket", role: "dealer", input: { key: z.string(), summary: z.string(), description: z.string() },
     run({ s, changed, claimTicket }, _me, cmd) {
       const summary = clean(cmd.summary, 300);
       if (!summary) return;
@@ -81,9 +94,9 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       startRound(s);
       changed();
     },
-  },
-  fetchQueue: {
-    role: "dealer", schema: Commands.fetchQueue,
+  }),
+  defineCommand({
+    t: "fetchQueue", role: "dealer", input: {},
     async run({ s, changed, claimQueue, upcoming }) {
       const lastProject = s.ticket?.key.split("-")[0];
       const current = claimQueue();
@@ -98,9 +111,9 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
         if (current()) return `Couldn't load the sprint: ${(e as Error).message}`;
       }
     },
-  },
-  clearQueue: {
-    role: "dealer", schema: Commands.clearQueue,
+  }),
+  defineCommand({
+    t: "clearQueue", role: "dealer", input: {},
     run({ s, changed, claimQueue }) {
       claimQueue();
       s.queue = [];
@@ -108,34 +121,34 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       s.epic = null;
       changed();
     },
-  },
-  dealerPlays: {
-    role: "dealer", schema: Commands.dealerPlays,
+  }),
+  defineCommand({
+    t: "dealerPlays", role: "dealer", input: { plays: z.boolean() },
     run({ s, changed }, me, { plays }) {
       s.settings.dealerPlays = plays;
       if (!plays) me.vote = null;
       changed();
     },
-  },
-  deal: {
-    role: "dealer", schema: Commands.deal,
+  }),
+  defineCommand({
+    t: "deal", role: "dealer", input: {},
     run({ s, changed }) {
       if (!s.ticket) return "Load a ticket first";
       startRound(s);
       changed();
     },
-  },
-  reveal: {
-    role: "dealer", schema: Commands.reveal,
+  }),
+  defineCommand({
+    t: "reveal", role: "dealer", input: {},
     run({ s, changed }) {
       if (s.phase !== "voting") return;
       s.phase = "revealed";
       s.pot = potOf(s.players);
       changed();
     },
-  },
-  settle: {
-    role: "dealer", schema: Commands.settle,
+  }),
+  defineCommand({
+    t: "settle", role: "dealer", input: { finalPoints: z.number() },
     run({ s, changed, now, log }, _me, { finalPoints }) {
       if (s.phase !== "revealed" && s.phase !== "settled") return;
       if (!s.settings.deck.some((c) => c.points === finalPoints)) return;
@@ -165,9 +178,9 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       }));
       changed();
     },
-  },
-  nextRound: {
-    role: "dealer", schema: Commands.nextRound,
+  }),
+  defineCommand({
+    t: "nextRound", role: "dealer", input: {},
     run(ctx) {
       const { s } = ctx;
       ctx.claimTicket();
@@ -177,9 +190,10 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
     },
-  },
-  cancelRound: {
-    role: "dealer", schema: Commands.cancelRound,
+  }),
+  /** Drop the current round (no payout) and go back to picking a ticket. */
+  defineCommand({
+    t: "cancelRound", role: "dealer", input: {},
     run({ s, changed, notice, claimTicket }, me) {
       if (s.phase === "waiting" && !s.ticket) return;
       if (s.phase === "settled") return; // already paid out; just pick the next ticket
@@ -189,9 +203,10 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       notice("🎩 The dealer cancelled this round", { except: me.id });
       changed();
     },
-  },
-  skip: {
-    role: "dealer", schema: Commands.skip,
+  }),
+  /** Skip the current ticket (no payout) and deal the next one in the queue. */
+  defineCommand({
+    t: "skip", role: "dealer", input: {},
     run(ctx, me) {
       const { s } = ctx;
       if (!s.ticket || s.phase === "settled") return;
@@ -205,9 +220,9 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
     },
-  },
-  kick: {
-    role: "dealer", schema: Commands.kick,
+  }),
+  defineCommand({
+    t: "kick", role: "dealer", input: { id: z.string() },
     run({ s, changed, notice, remove }, me, { id }) {
       const p = s.players.find((x) => x.id === id);
       if (!p || p.id === me.id || p.id === s.dealerId) return;
@@ -216,5 +231,30 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
       notice(`👋 ${p.name} was removed from the table`);
       changed();
     },
-  },
-};
+  }),
+] as const;
+
+/** Everything a player can send. */
+export type Command = z.infer<(typeof COMMANDS)[number]["schema"]>;
+
+/** Any command, as the table runs it: found by name, then checked against its own schema. */
+export interface CommandDef {
+  readonly t: string;
+  readonly role: Role;
+  readonly schema: z.ZodType;
+  // A method, so each command's own `run` fits here; findCommand() only ever
+  // hands it what that command's schema parsed.
+  run(ctx: Ctx, me: PlayerState, cmd: unknown): Reply;
+}
+
+const BY_NAME = new Map<string, CommandDef>();
+for (const c of COMMANDS) {
+  if (BY_NAME.has(c.t)) throw new Error(`Two commands are called "${c.t}"`);
+  BY_NAME.set(c.t, c);
+}
+
+/** The definition for whatever `cmd` says it is, if there is one. */
+export function findCommand(cmd: unknown): CommandDef | undefined {
+  if (typeof cmd !== "object" || cmd === null || !("t" in cmd) || typeof cmd.t !== "string") return undefined;
+  return BY_NAME.get(cmd.t);
+}

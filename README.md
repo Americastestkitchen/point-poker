@@ -68,7 +68,8 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
   colours, bodies, hats, emotes, environments). Then:
   - `server/main.ts` reads the environment and wires everything together.
   - `server/table/` is one poker table: its state, rules, commands and payouts (`coins.ts`).
-    It's plain logic with unit tests, no sockets.
+    It's plain logic with unit tests, no sockets. Every command a player can send is one
+    `defineCommand()` in `commands.ts`; the client imports their types from there.
   - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
     (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
   - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
