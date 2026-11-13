@@ -18,9 +18,10 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       const s = store.getState();
       if (s.room?.phase !== "voting" || !myPlayer(s)?.plays || s.ui.myVote === value) return;
       const changed = s.ui.myVote !== null;
-      store.setUi({ myVote: value });
+      store.vote({ t: "played", value });
       store.events.emit({ t: "played", value, changed });
-      run({ t: "vote", value }).catch(report);
+      const answered = () => store.vote({ t: "answered" });
+      run({ t: "vote", value }).then(answered, (e: Error) => { answered(); report(e); });
     },
     /** Flick a chip at someone's head. Too soon after the last one and nothing happens. */
     flick(target: string) {

@@ -5,6 +5,7 @@ import { createStore as createZustand } from "zustand/vanilla";
 import type { TableView } from "../../../shared/protocol.ts";
 import type { Connection } from "./connection.ts";
 import { createEvents, diff, type Events, type ViewChange } from "./events.ts";
+import { vote, type VoteState } from "./vote.ts";
 
 export interface AppState {
   screen: "start" | "creator" | "table";
@@ -14,9 +15,8 @@ export interface AppState {
   room: TableView | null;
   /** What changed with the latest view. It arrives in the same update, so whoever redraws sees both at once. */
   changes: ViewChange[];
-  ui: {
-    /** Your card: set the moment you play it, then kept in step with your view. */
-    myVote: number | null;
+  /** Your card (see vote.ts), plus local UI state. */
+  ui: VoteState & {
     /** The look editor is open over the table. */
     lookOpen: boolean;
   };
@@ -28,7 +28,7 @@ const initial: AppState = {
   me: null,
   room: null,
   changes: [],
-  ui: { myVote: null, lookOpen: false },
+  ui: { myVote: null, votesInFlight: 0, lookOpen: false },
 };
 
 export function createStore() {
@@ -40,8 +40,14 @@ export function createStore() {
     receive(next: TableView) {
       const { room: prev, me, ui } = store.getState();
       // your view always includes your own card, so a reload mid-vote remembers it
-      const myVote = next.players.find((p) => p.id === me?.id)?.vote ?? null;
-      store.setState({ room: next, changes: diff(prev, next), ui: myVote !== ui.myVote ? { ...ui, myVote } : ui });
+      const server = next.players.find((p) => p.id === me?.id)?.vote ?? null;
+      store.setState({ room: next, changes: diff(prev, next), ui: withVote(ui, { t: "view", server }) });
+    },
+    /** You played a card, or the server answered one you played. */
+    vote(a: { t: "played"; value: number } | { t: "answered" }) {
+      const s = store.getState();
+      const action = a.t === "played" ? a : { t: "answered" as const, server: myPlayer(s)?.vote ?? null };
+      store.setState({ ui: withVote(s.ui, action) });
     },
     setUi(patch: Partial<AppState["ui"]>) {
       store.setState((s) => ({ ui: { ...s.ui, ...patch } }));
@@ -50,6 +56,12 @@ export function createStore() {
 }
 
 export type Store = ReturnType<typeof createStore>;
+
+/** The UI state with the vote reducer applied, the same object if nothing changed. */
+function withVote(ui: AppState["ui"], a: Parameters<typeof vote>[1]): AppState["ui"] {
+  const next = vote(ui, a);
+  return next === ui ? ui : { ...ui, ...next };
+}
 
 /** Your own seat in the current view. */
 export const myPlayer = (s: Pick<AppState, "me" | "room">) => s.room?.players.find((p) => p.id === s.me?.id);

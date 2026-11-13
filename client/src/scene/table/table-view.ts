@@ -38,6 +38,8 @@ export function mountTableView(stage: Stage, deps: {
   store.subscribe((s, prev) => {
     if (s.room !== prev.room) redraw(s.changes);
     else if (s.me !== prev.me) redraw([]);
+    // a refused vote hands your card back to the view; while votes are out, the card you played stays put
+    else if (s.ui.myVote !== prev.ui.myVote && !s.ui.votesInFlight) redraw([]);
   });
   store.events.on(react);
 
@@ -87,8 +89,10 @@ export function mountTableView(stage: Stage, deps: {
 
       // their card on the felt
       if (st.phase === "voting") {
-        if (p.hasVoted) {
-          const value = mine ? store.getState().ui.myVote : null;
+        // your own card follows your hand, so a view from before your vote can't snatch it off the felt
+        const myVote = store.getState().ui.myVote;
+        if (mine ? myVote !== null : p.hasVoted) {
+          const value = mine ? myVote : null;
           if (!card.group.visible) {
             if (mine) {
               card.show(value, camera.localToWorld(new THREE.Vector3(0, -0.3, -0.5)));

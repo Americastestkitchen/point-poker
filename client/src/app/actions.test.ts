@@ -4,7 +4,7 @@ import type { Command } from "../../../server/table/commands.ts";
 import type { ClientFx } from "../../../shared/protocol.ts";
 import { createActions } from "./actions.ts";
 import type { GameEvent } from "./events.ts";
-import { ticket, view } from "./fixtures.ts";
+import { ticket, view, withPlayers } from "./fixtures.ts";
 import { createStore } from "./store.ts";
 
 /** A fake session: records what would have gone over the wire and answers with `reply`. */
@@ -57,6 +57,30 @@ test("your card comes from your view, so a fresh page still knows it", () => {
   assert.equal(store.getState().ui.myVote, 5);
   store.receive(view({ phase: "voting", round: 2, ticket: ticket("SD-1") }));
   assert.equal(store.getState().ui.myVote, null, "a new round starts empty-handed");
+});
+
+test("a view from before your vote arrived doesn't take your card back", async () => {
+  let answer!: (error?: string) => void;
+  const { store, events } = setup();
+  // a session whose reply we hold back until we say so
+  const held = createActions({
+    request: () => new Promise<void>((resolve, reject) => (answer = (error) => (error ? reject(new Error(error)) : resolve()))),
+    fx: () => {},
+  }, store);
+  const voting = view({ phase: "voting", round: 1, ticket: ticket("SD-1") });
+  held.vote(3);
+  store.receive(voting); // sent before the server got the vote
+  assert.equal(store.getState().ui.myVote, 3);
+  store.receive(withPlayers(voting, (p) => (p.id === "ann" ? { hasVoted: true, vote: 3 } : {})));
+  answer();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(store.getState().ui.myVote, 3);
+
+  held.vote(5);
+  answer("Voting is over");
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(store.getState().ui.myVote, 3, "a refused vote puts your card back");
+  assert.deepEqual(events.at(-1), { t: "toast", text: "Voting is over", level: "error" });
 });
 
 test("dealer actions resolve when the server says yes and reject with its reason", async () => {
