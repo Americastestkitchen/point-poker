@@ -98,6 +98,12 @@ const TEXT_RULES = [
     pattern: /\bdocument\s*\.\s*(?!createElement\b)\w+|\.querySelector(All)?\s*\(/g,
     why: "don't reach into the page by id or selector; emit a GameEvent on store.events and let the UI react. document.createElement for a canvas is fine.",
   },
+  {
+    name: "the 3D world waits in frame time",
+    files: WORLD,
+    pattern: /\bset(Timeout|Interval)\b/g,
+    why: "wall-clock timers drift from the frame loop when the tab is hidden or a frame is slow; use stage.after(seconds, fn), or a per-frame dt timer.",
+  },
 ];
 
 /** Known breaks, each with the issue that removes it. The test fails when one is no longer needed. */
@@ -223,7 +229,7 @@ test("imports stay inside their boundaries", () => {
   assert.equal(stale.length, 0, `\n${stale.map((e) => `${e.file} no longer imports ${e.imports}: delete its entry in EXCEPTIONS (#${e.issue}).`).join("\n")}\n`);
 });
 
-test("the 3D world keeps out of the page", () => {
+test("source-text rules hold", () => {
   const broken: string[] = [];
   for (const rule of TEXT_RULES) {
     for (const file of files) {

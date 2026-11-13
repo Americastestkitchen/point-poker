@@ -76,11 +76,11 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
         });
       });
       const total = 0.6 + chips.length * 0.04 + 0.7;
-      setTimeout(() => {
+      stage.after(total, () => {
         // unless a new round has refilled it meanwhile
         if (state === "payingOut") state = "empty";
         landed();
-      }, total * 1000);
+      });
     },
 
     clear() { group.clear(); state = "empty"; },

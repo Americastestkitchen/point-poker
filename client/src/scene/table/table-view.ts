@@ -106,7 +106,7 @@ export function mountTableView(stage: Stage, deps: {
               avatar.play("placeCard");
               card.show(value, () => avatar.handWorldPos(), { delay: 0.3, gentle: true });
               card.nudge(0.75);
-              setTimeout(audio.slide, 300);
+              stage.after(0.3, audio.slide);
             }
           } else card.show(value);
           card.turnDown();
@@ -181,7 +181,7 @@ export function mountTableView(stage: Stage, deps: {
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
         const away = bounce.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)).setY(layout.table.y + 0.01);
-        flights.add({ obj: chip, from: bounce, to: away, t: 0, dur: 0.5, arc: 0.25, spin: 12, done: () => setTimeout(() => scene.remove(chip), 1500) });
+        flights.add({ obj: chip, from: bounce, to: away, t: 0, dur: 0.5, arc: 0.25, spin: 12, done: () => stage.after(1.5, () => scene.remove(chip)) });
       },
     });
   }
