@@ -1,0 +1,44 @@
+/* The table's code, as a row of little slots like the ones you typed it into. */
+.table {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--pp-space-3);
+  margin: 0 0 var(--pp-space-4); padding: var(--pp-space-2) var(--pp-space-3);
+  background: var(--pp-color-well); border: var(--pp-border-panel); border-radius: var(--pp-radius-md);
+}
+.tableLabel {
+  font-size: var(--pp-size-xs); font-weight: var(--pp-weight-strong); color: var(--pp-color-dim);
+  text-transform: uppercase; letter-spacing: 2px;
+}
+.code { display: inline-flex; gap: var(--pp-space-1); }
+.slot {
+  display: inline-grid; place-items: center; width: 28px; height: 34px;
+  font-family: var(--pp-font-display); font-weight: var(--pp-weight-display); font-size: var(--pp-size-lg);
+  color: var(--pp-color-gold-hi);
+  background: linear-gradient(var(--pp-color-button), var(--pp-color-button-low));
+  border: var(--pp-border-soft); border-bottom-width: 3px; border-radius: var(--pp-radius-sm);
+}
+
+.label { display: inline-flex; align-items: center; gap: var(--pp-space-3); }
+.icon { display: inline-grid; place-items: center; width: 26px; flex: none; font-size: var(--pp-size-lg); }
+.hint { display: block; padding-left: calc(26px + var(--pp-space-3)); }
+
+/* a tiny bean in your colour, so "Character" obviously means yours */
+.bean {
+  position: relative; display: block; width: 16px; height: 20px;
+  border-radius: 8px 8px 6px 6px;
+  background: var(--me, var(--pp-color-success));
+  box-shadow: inset -2px -2px 0 var(--pp-color-shade);
+}
+.bean::before, .bean::after {
+  content: ""; position: absolute; top: 4px; width: 5px; height: 5px; border-radius: var(--pp-radius-pill);
+  background: radial-gradient(circle at 50% 60%, var(--pp-color-paper-ink) 0 1.3px, var(--pp-color-paper) 1.6px);
+}
+.bean::before { left: 2px; }
+.bean::after { right: 2px; }
+
+.keys {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--pp-space-2) var(--pp-space-4);
+  margin: var(--pp-space-4) 0 0;
+}
+@media (hover: none) and (pointer: coarse) { .keys { display: none; } }
+
+.confirm { margin: 0; color: var(--pp-color-dim); }

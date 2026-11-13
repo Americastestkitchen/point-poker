@@ -1,6 +1,6 @@
 // The client's single store: the server's view and what changed in it, who
 // you are, the connection and local UI state, plus the event stream. Both the
-// HUD and the 3D scene read it. Values that change every frame never go in here.
+// screens and the 3D scene read it. Values that change every frame never go in here.
 import { createStore as createZustand } from "zustand/vanilla";
 import type { TableView } from "../../../shared/protocol.ts";
 import type { Connection } from "./connection.ts";
@@ -19,8 +19,17 @@ export interface AppState {
   ui: VoteState & {
     /** The look editor is open over the table. */
     lookOpen: boolean;
+    /** The one popup open over the table, if any. */
+    popup: Popup | null;
   };
 }
+
+/**
+ * The popups over the table. One at a time: opening one closes the other. A confirm
+ * asked from inside one stays local to it (a nested dialog), not a popup of its own.
+ */
+export const POPUPS = ["menu", "options", "help", "leaderboard", "dealer", "picker", "ticket"] as const;
+export type Popup = (typeof POPUPS)[number];
 
 const initial: AppState = {
   screen: "start",
@@ -28,7 +37,7 @@ const initial: AppState = {
   me: null,
   room: null,
   changes: [],
-  ui: { myVote: null, votesInFlight: 0, lookOpen: false },
+  ui: { myVote: null, votesInFlight: 0, lookOpen: false, popup: null },
 };
 
 export function createStore(): Store {
@@ -56,6 +65,16 @@ function build() {
     },
     setUi(patch: Partial<AppState["ui"]>) {
       store.setState((s) => ({ ui: { ...s.ui, ...patch } }));
+    },
+    /** `popup` opened over the table, replacing whichever one was open. */
+    popupOpened(popup: Popup) {
+      const { ui } = store.getState();
+      if (ui.popup !== popup) store.setState({ ui: { ...ui, popup } });
+    },
+    /** `popup` closed. Nothing happens if it isn't the one open (another one replaced it already). */
+    popupClosed(popup: Popup) {
+      const { ui } = store.getState();
+      if (ui.popup === popup) store.setState({ ui: { ...ui, popup: null } });
     },
     /** The line to the table moved on (see connection.ts). */
     connectionChanged(connection: Connection) {

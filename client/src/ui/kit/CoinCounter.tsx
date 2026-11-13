@@ -4,7 +4,7 @@ import { cx } from "./cx.ts";
 import s from "./CoinCounter.module.css";
 
 const ROLL_MS = 700;
-const fmt = (n: number) => n.toLocaleString("en-US");
+const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 /**
  * Your coins. A new value rolls up (or down) to it and the coin bumps. The rolling number is

@@ -5,15 +5,19 @@ import { COSMETICS } from "../../../../shared/catalog/cosmetics.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import { useUi } from "../context.tsx";
 import type { DemoState } from "../focus.ts";
-import { Button } from "../kit/Button.tsx";
+import { Button, ButtonLink } from "../kit/Button.tsx";
 import { Carousel } from "../kit/Carousel.tsx";
 import { CodeSlots } from "../kit/CodeSlots.tsx";
 import { CoinCounter } from "../kit/CoinCounter.tsx";
+import { ConfirmDialog } from "../kit/ConfirmDialog.tsx";
 import { Dialog } from "../kit/Dialog.tsx";
 import { KeyHint } from "../kit/KeyHint.tsx";
 import { MenuList } from "../kit/MenuList.tsx";
 import { Panel } from "../kit/Panel.tsx";
+import { ScrollArea } from "../kit/ScrollArea.tsx";
 import { Slider } from "../kit/Slider.tsx";
+import { Spinner } from "../kit/Spinner.tsx";
+import { TextField } from "../kit/TextField.tsx";
 import { Toast } from "../kit/Toast.tsx";
 import { Toggle } from "../kit/Toggle.tsx";
 import { Tooltip } from "../kit/Tooltip.tsx";
@@ -70,7 +74,14 @@ export function Gallery({ audio }: { audio: Audio }) {
   const [music, setMusic] = useState(true);
   const [volume, setVolume] = useState(0.6);
   const [coins, setCoins] = useState(1240);
-  const [dialog, setDialog] = useState<"none" | "plain" | "stacked" | "must">("none");
+  const [dialog, setDialog] = useState<"none" | "plain" | "stacked" | "must" | "paper" | "confirm">("none");
+  const [field, setField] = useState("");
+  const [fieldError, setFieldError] = useState("");
+  const [on, setOn] = useState(true);
+  const submitField = (v: string) => {
+    if (/^[A-Z]+-\d+$/i.test(v.trim())) { setFieldError(""); toasts.show(`Dealing ${v.trim().toUpperCase()}`, { tone: "success" }); }
+    else setFieldError("Paste a Jira link, or a key like SD-1234");
+  };
   const [mustOnTop, setMustOnTop] = useState(false);
 
   return (
@@ -121,10 +132,60 @@ export function Gallery({ audio }: { audio: Audio }) {
             </Button>
           )} />
         ))}
+        <States render={(demo, disabled) => <Button variant="link" demoState={demo} disabled={disabled}>Vote again</Button>} />
         <div className={s.row}>
           <Button size="sm">Small</Button>
           <Button>Medium</Button>
           <Button size="lg" variant="primary">Large</Button>
+          <Button size="lg" variant="primary" sub="SD-124">Next ticket →</Button>
+        </div>
+        <p className={s.note}>Shapes for a bar of small controls: pills, and round icon buttons (give those an aria-label). aria-pressed lights one up.</p>
+        <States render={(demo, disabled) => (
+          <span className={s.row}>
+            <Button shape="pill" size="sm" demoState={demo} disabled={disabled}>🔗 Invite</Button>
+            <Button shape="round" size="md" aria-label="Sound" aria-pressed={on} demoState={demo} disabled={disabled} onPress={() => setOn(!on)}>{on ? "🔊" : "🔇"}</Button>
+          </span>
+        )} />
+        <div className={s.row}>
+          <Button shape="round" size="sm" aria-label="Help">?</Button>
+          <Button shape="round" aria-label="Menu">☰</Button>
+          <Button shape="round" size="lg" aria-label="Mic" aria-pressed>🎙️</Button>
+          <Button shape="pill">🎩 Dealer</Button>
+          <ButtonLink href="https://example.com" variant="link">Open in Jira ↗</ButtonLink>
+          <ButtonLink href="https://example.com" size="sm">Open in Jira ↗</ButtonLink>
+        </div>
+      </Section>
+
+      <Section name="TextField" note="Enter submits; a pasted key submits straight away. Try SD-1234, then something else.">
+        <States wide render={(demo, disabled) => (
+          <TextField label="Ticket" value={demo ? "SD-12" : ""} onChange={() => {}} placeholder="Paste a Jira link or key, like SD-1234" demoState={demo} disabled={disabled} />
+        )} />
+        <div className={s.grid3}>
+          <TextField label="What are we estimating?" size="lg" hideLabel value={field} error={fieldError}
+            placeholder="Paste a Jira link or key, like SD-1234"
+            hint="Tip: paste an epic to line up all of its tickets."
+            onChange={(v) => { setField(v); setFieldError(""); }} onSubmit={submitField} onPasted={submitField}
+            trailing={<Button size="sm" variant="primary" onPress={() => submitField(field)}>Deal it</Button>} />
+          <TextField label="Your name" value="Ann" onChange={() => {}} error="That name's taken at this table" />
+        </div>
+      </Section>
+
+      <Section name="ScrollArea" note="The kit's thin gold rail, not the browser's scrollbar. With a label it's a Tab stop the arrow keys scroll.">
+        <div className={s.grid3}>
+          <Panel padding="sm">
+            <ScrollArea maxHeight="140px" label="Rounds played">
+              {Array.from({ length: 14 }, (_, i) => <div key={i} className={s.note}>SD-{120 + i} → {[1, 2, 3, 5, 8][i % 5]} pts</div>)}
+            </ScrollArea>
+          </Panel>
+        </div>
+      </Section>
+
+      <Section name="Spinner">
+        <div className={s.row}>
+          <Spinner size="sm" />
+          <Spinner />
+          <Spinner size="lg" />
+          <Spinner label="Fetching SD-1234 from Jira…" />
         </div>
       </Section>
 
@@ -194,8 +255,17 @@ export function Gallery({ audio }: { audio: Audio }) {
           <Button onPress={() => setDialog("plain")}>Open a dialog</Button>
           <Button onPress={() => setDialog("stacked")}>Open one on top of another</Button>
           <Button onPress={() => setDialog("must")}>Open one you must answer</Button>
+          <Button onPress={() => setDialog("paper")}>Open a long paper one</Button>
+          <Button onPress={() => setDialog("confirm")}>Ask "are you sure?"</Button>
         </div>
-        <Dialog open={dialog !== "none" && dialog !== "must"} onClose={() => setDialog("none")} title="Leave the table?"
+        <Dialog open={dialog === "paper"} onClose={() => setDialog("none")} title="SD-1234 · Make the export faster" variant="paper" width="xl">
+          {Array.from({ length: 30 }, (_, i) => <p key={i}>Line {i + 1}: only this body scrolls; the title stays put on a short phone.</p>)}
+        </Dialog>
+        <ConfirmDialog open={dialog === "confirm"} title="Kick Ann?" tone="danger" confirmLabel="Kick"
+          onConfirm={() => { setDialog("none"); toasts.show("Ann was kicked", { tone: "error" }); }} onCancel={() => setDialog("none")}>
+          <p>They won't be able to rejoin this table.</p>
+        </ConfirmDialog>
+        <Dialog open={dialog === "plain" || dialog === "stacked"} onClose={() => setDialog("none")} title="Leave the table?"
           actions={<><Button onPress={() => setDialog("none")}>Stay</Button><Button variant="danger" onPress={() => setDialog("none")}>Leave</Button></>}>
           <p>Your seat stays warm for a minute in case you come back.</p>
           {dialog === "stacked" && <StackedDialog />}

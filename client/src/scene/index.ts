@@ -13,7 +13,15 @@ import { createPot } from "./table/pot.ts";
 import { mountTableView } from "./table/table-view.ts";
 import { createTicketPaper } from "./table/ticket.ts";
 
-export async function mountScene(stage: Stage, deps: { store: Store; actions: Actions; audio: Audio }) {
+export interface SceneDeps {
+  store: Store;
+  actions: Actions;
+  audio: Audio;
+  /** The UI's keyboard gate (see screens/keys.ts): world shortcuts only when it says yes. */
+  allowsWorldKeys(): boolean;
+}
+
+export async function mountScene(stage: Stage, deps: SceneDeps) {
   const { store, actions, audio } = deps;
   // The Basement for now; switching on settings.environment comes with #10.
   const env = await (await loadEnvironment("basement")).build({ layout, audio, picking: stage.picking });
@@ -29,7 +37,7 @@ export async function mountScene(stage: Stage, deps: { store: Store; actions: Ac
 
   const rig = createCameraRig(stage.camera, layout, actions.gaze);
   const table = mountTableView(stage, { store, actions, audio, layout, flights, rig, ticket, pot, screen: env.props.statusScreen });
-  bindInput(stage, { store, actions, rig });
+  bindInput(stage, { actions, rig, allowsWorldKeys: deps.allowsWorldKeys });
   audio.ambience(env.ambience);
 
   stage.onFrame((dt) => rig.update(dt));

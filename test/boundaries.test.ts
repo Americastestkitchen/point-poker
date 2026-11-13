@@ -23,9 +23,8 @@ interface Rule {
 }
 
 const WORLD = ["client/src/scene/", "client/src/avatar/", "client/src/environments/"];
-// Current UI paths. Add client/src/screens/ here when #4/#11 introduce screens;
-// keep app-aware screens outside the independent ui/ kit.
-const UI = ["client/src/hud.ts", "client/src/lobby.ts", "client/src/ui/"];
+// UI paths: app-aware game screens, the legacy lobby (#4) and the independent ui/ kit.
+const UI = ["client/src/screens/", "client/src/lobby.ts", "client/src/ui/"];
 
 const RULES: Rule[] = [
   {
@@ -56,7 +55,7 @@ const RULES: Rule[] = [
   {
     name: "app is not visual",
     files: ["client/src/app/"],
-    forbid: [...WORLD, "client/src/ui/", "client/src/hud.ts", "client/src/lobby.ts", "three"],
+    forbid: [...WORLD, "client/src/ui/", "client/src/screens/", "client/src/lobby.ts", "three"],
     why: "client/src/app/ is the store, events, actions and session; the 3D world and the UI read it, never the other way round.",
   },
   {
@@ -68,6 +67,21 @@ const RULES: Rule[] = [
     name: "the UI doesn't import the 3D world",
     files: UI, forbid: WORLD,
     why: "the UI and the world talk through the store: read it, call actions, or listen on store.events; shared data goes in shared/.",
+  },
+  {
+    name: "screens use the kit through its front door",
+    files: ["client/src/screens/"], forbid: ["client/src/ui/"], allow: ["client/src/ui/index.ts"],
+    why: "screens import the kit from ui/index.ts only; if a screen needs something the kit doesn't export, add a generic primitive to ui/ and export it there.",
+  },
+  {
+    name: "screens are the game UI, not its wiring",
+    files: ["client/src/screens/"], forbid: ["client/src/main.ts", "client/src/lobby.ts", "client/src/app/session.ts"],
+    why: "screens get the store, actions and services injected through useGame(); commands go through actions, never the session or socket.",
+  },
+  {
+    name: "screens take only types from audio",
+    files: ["client/src/screens/"], forbid: ["client/src/audio/"], types: true,
+    why: "main.ts builds the audio and mic and injects them; screens only need their types.",
   },
   {
     name: "the UI kit stands alone",

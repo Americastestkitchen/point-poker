@@ -1,0 +1,82 @@
+/*
+ * The dialog's scrolling body clips to the panel's rounded corners: a little room keeps the
+ * first heading's corner and the focus glows at the edges from being cut off.
+ */
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-4); min-width: 0; padding: var(--pp-space-2) var(--pp-space-1) var(--pp-space-1); }
+
+/* the Jira field, its tip, the spinner and "Or pick from this sprint" */
+.jira { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-3); justify-items: stretch; min-width: 0; }
+.em { color: var(--pp-color-gold); font-weight: var(--pp-weight-strong); }
+.sprint { justify-self: center; min-height: 40px; }
+.busy {
+  display: flex; justify-content: center; padding: var(--pp-space-1) 0;
+  border-radius: var(--pp-radius-md); outline: none;
+}
+.formError {
+  margin: 0; padding: var(--pp-space-2) var(--pp-space-3);
+  font-size: var(--pp-size-sm); color: var(--pp-color-error); text-align: center;
+  background: color-mix(in srgb, var(--pp-color-error) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pp-color-error) 45%, transparent); border-radius: var(--pp-radius-md);
+}
+
+/* the lined-up tickets */
+/* a long queue scrolls on its own; on a short screen the whole picker scrolls instead */
+.queue { border-radius: var(--pp-radius-md); max-height: min(260px, 34dvh); }
+@media (max-height: 520px) { .queue { max-height: none; } }
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-1); padding-right: var(--pp-space-1); }
+.rowWrap { display: flex; min-width: 0; }
+.row {
+  flex: 1; min-width: 0; min-height: 44px;
+  display: flex; align-items: center; gap: var(--pp-space-3);
+  padding: var(--pp-space-2) var(--pp-space-3);
+  font: inherit; font-size: var(--pp-size-md); color: var(--pp-color-ink); text-align: left;
+  background: var(--pp-color-well); border: var(--pp-border-soft); border-radius: var(--pp-radius-md);
+  cursor: pointer; outline: none; user-select: none;
+  transition: background var(--pp-motion-base), border-color var(--pp-motion-base), transform var(--pp-motion-fast), opacity var(--pp-motion-base);
+}
+.row:hover:not(:disabled), .row:focus {
+  background: color-mix(in srgb, var(--pp-color-gold) 12%, var(--pp-color-well));
+  border-color: var(--pp-color-edge);
+}
+.row:focus { box-shadow: var(--pp-glow-focus); }
+.row:active:not(:disabled) { transform: translateY(1px); background: color-mix(in srgb, var(--pp-color-gold) 22%, var(--pp-color-well)); }
+.row:disabled { cursor: default; opacity: .45; }
+.key { flex: none; color: var(--pp-color-gold); font-weight: var(--pp-weight-strong); }
+.summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note { flex: none; font-size: var(--pp-size-xs); color: var(--pp-color-dim); }
+.played { opacity: .5; }
+.played:hover:not(:disabled), .played:focus { opacity: .85; }
+.current { border-color: var(--pp-color-gold); box-shadow: inset 0 0 0 1px var(--pp-color-gold); }
+.current .note { color: var(--pp-color-gold); }
+
+/* typing a ticket in */
+.manual { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--pp-space-2); min-width: 0; }
+.manualTitle { margin: 0; text-align: center; font-size: var(--pp-size-sm); color: var(--pp-color-dim); }
+.disclosure {
+  justify-self: center; display: inline-flex; align-items: center; gap: var(--pp-space-2);
+  min-height: 40px; padding: 0 var(--pp-space-4);
+  font: inherit; font-size: var(--pp-size-sm); color: var(--pp-color-dim);
+  background: transparent; border: 1px solid transparent; border-radius: var(--pp-radius-pill);
+  cursor: pointer; outline: none; user-select: none;
+  transition: color var(--pp-motion-base), background var(--pp-motion-base), border-color var(--pp-motion-base);
+}
+.disclosure:hover, .disclosure:focus {
+  color: var(--pp-color-ink);
+  background: color-mix(in srgb, var(--pp-color-gold) 10%, transparent);
+  border-color: var(--pp-color-edge);
+}
+.disclosure:focus { box-shadow: var(--pp-glow-focus); }
+.chevron { font-size: var(--pp-size-md); color: var(--pp-color-gold); transition: transform var(--pp-motion-slow) var(--pp-motion-spring); }
+.disclosure[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+/* who's here, the invite link and "I'll vote too" */
+.foot {
+  display: grid; gap: var(--pp-space-2);
+  padding-top: var(--pp-space-4); border-top: var(--pp-border-soft);
+}
+/* inset like the toggle's label and switch below it */
+.people { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pp-space-2) var(--pp-space-3); min-width: 0; padding-inline: var(--pp-space-3) 0; }
+.dots { display: inline-flex; align-items: center; gap: var(--pp-space-1); }
+.dots:empty { display: none; }
+.count { flex: 1; min-width: max-content; font-size: var(--pp-size-sm); color: var(--pp-color-dim); }
+.invite { flex: none; }

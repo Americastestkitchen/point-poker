@@ -1,0 +1,91 @@
+/*
+ * A playing card. Its width comes from the hand (--card-w); everything on it scales with that
+ * width (cqw), so a phone's smaller cards still read like cards.
+ */
+.card {
+  position: relative; flex: none; display: block; padding: 0;
+  width: var(--card-w, 76px); aspect-ratio: 76 / 108;
+  container-type: inline-size;
+  font-family: var(--pp-font-card); color: var(--pp-color-paper-ink);
+  background: linear-gradient(155deg, var(--pp-color-paper), color-mix(in srgb, var(--pp-color-paper) 55%, var(--pp-color-paper-low)) 60%, var(--pp-color-paper-low));
+  border: 1px solid color-mix(in srgb, var(--pp-color-backdrop) 25%, transparent);
+  border-radius: var(--pp-radius-sm);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pp-color-sheet-raised) 55%, transparent), var(--pp-shadow-card);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 140ms var(--pp-motion-spring), opacity var(--pp-motion-base), box-shadow var(--pp-motion-base), filter var(--pp-motion-base);
+  cursor: pointer; outline: none; user-select: none; -webkit-user-select: none;
+  touch-action: manipulation;
+  animation: deal 450ms calc(var(--i, 0) * 30ms) backwards var(--pp-motion-spring);
+}
+.red { color: var(--pp-color-paper-red); }
+
+/* the printed border and a little wear */
+.card::before {
+  content: ""; position: absolute; inset: 7cqw; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--pp-color-paper-ink) 12%, transparent); border-radius: 3px;
+}
+.card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: .5;
+  background:
+    radial-gradient(circle at 80% 15%, color-mix(in srgb, var(--pp-color-gold-shadow) 7%, transparent) 0 12px, transparent 13px),
+    radial-gradient(circle at 20% 85%, color-mix(in srgb, var(--pp-color-backdrop) 7%, transparent), transparent 40%);
+}
+
+.face { position: absolute; inset: 0; }
+.corner {
+  position: absolute; display: grid; justify-items: center;
+  line-height: .95; font-weight: var(--pp-weight-display); font-size: 20cqw;
+}
+.corner span:last-child { font-size: 17cqw; font-weight: var(--pp-weight-body); }
+.tl { top: 8cqw; left: 9cqw; }
+.br { bottom: 8cqw; right: 9cqw; transform: rotate(180deg); }
+.suit { position: absolute; inset: 0; display: grid; place-items: center; font-size: 84cqw; opacity: .09; }
+.num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 53cqw; font-weight: var(--pp-weight-display); letter-spacing: -1px;
+}
+
+/* lifted when it's the one you're on (mouse or keys), straightened up; a finger doesn't hover */
+.card:focus-visible {
+  transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) * -1));
+  filter: brightness(1.04);
+}
+@media (hover: hover) {
+  .card:hover { transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) * -1)); filter: brightness(1.04); }
+  .dimmed:hover { opacity: 1; }
+}
+.card:focus-visible { box-shadow: var(--pp-shadow-card), var(--pp-glow-focus); }
+
+.selected, .selected:hover, .selected:focus, .selected:focus-visible {
+  background: linear-gradient(155deg, var(--pp-color-sheet), var(--pp-color-paper));
+  transform: translateY(-22px) rotate(0deg); filter: none;
+  box-shadow: 0 0 0 3px var(--pp-color-highlight), 0 0 28px color-mix(in srgb, var(--pp-color-highlight) 65%, transparent), var(--pp-shadow-card);
+}
+.dimmed { opacity: .62; }
+.dimmed:focus-visible { opacity: 1; }
+.suggested { box-shadow: 0 0 0 3px var(--pp-color-success), var(--pp-shadow-card); }
+.suggested:focus-visible { box-shadow: 0 0 0 3px var(--pp-color-success), var(--pp-shadow-card), var(--pp-glow-focus); }
+
+.ribbon {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  padding: 2px 7px; border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-success); color: var(--pp-color-success-ink);
+  font-family: var(--pp-font-body); font-size: 10px; font-weight: var(--pp-weight-display);
+  letter-spacing: .5px; text-transform: uppercase; white-space: nowrap;
+}
+.votes {
+  position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px; max-width: calc(100% + 12px); flex-wrap: wrap; justify-content: center;
+  padding: 3px 5px; border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel-solid); border: var(--pp-border-soft);
+}
+
+.hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+@keyframes deal { from { transform: translateY(140px) rotate(8deg); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; transition: opacity var(--pp-motion-base), box-shadow var(--pp-motion-base); }
+}

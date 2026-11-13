@@ -8,15 +8,42 @@ import { first, step } from "./input/roving.ts";
 /** Forces how a control looks, for the dev gallery only. */
 export type DemoState = "hover" | "focus" | "pressed";
 
+/** Marks an element whose focus came from the mouse resting on it, not from a key or a press. */
+const HOVER_FOCUS = "data-hover-focus";
+
+/** Was `el` focused only because the mouse was over it? A popup doesn't hand focus back to one. */
+export const hoverFocused = (el: Element | null) => el?.hasAttribute(HOVER_FOCUS) ?? false;
+
+/** Is `el` somewhere you type (a text field)? */
+const typing = (el: Element | null) => !!el?.matches("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
+
 /** Props that make an element share the one focus and tick when it gets it. */
 export function useFocusable(disabled = false) {
   const { sounds } = useUi();
   return {
-    onPointerEnter: (e: PointerEvent<HTMLElement>) => {
-      if (e.pointerType === "mouse" && !disabled && document.activeElement !== e.currentTarget) {
-        e.currentTarget.focus({ preventScroll: true });
-      }
+    // Only a mouse that really moved: a control that appears under a resting cursor (a menu
+    // opening with Esc) must not take focus from the item the keyboard is on.
+    onPointerMove: (e: PointerEvent<HTMLElement>) => {
+      if (e.pointerType !== "mouse" || disabled || (e.movementX === 0 && e.movementY === 0)) return;
+      // never from a field you're typing in: Enter there must not press whatever the mouse is over
+      const held = document.activeElement;
+      if (held === e.currentTarget || (typing(held) && !hoverFocused(held))) return;
+      e.currentTarget.setAttribute(HOVER_FOCUS, "");
+      e.currentTarget.focus({ preventScroll: true });
     },
+    // The mouse moved on: focus it only borrowed goes back to the page, so it doesn't linger on
+    // a control nobody chose. Inside a dialog it stays (the arrow keys keep working there) and
+    // stays borrowed, so the next thing the mouse reaches can have it.
+    onPointerLeave: (e: PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget;
+      if (e.pointerType !== "mouse" || !hoverFocused(el) || el.closest("[role='dialog']")) return;
+      el.removeAttribute(HOVER_FOCUS);
+      if (document.activeElement === el) el.blur();
+    },
+    // clicking into a field or typing in it makes it yours: it keeps focus when the mouse leaves
+    onPointerDownCapture: (e: PointerEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
+    onKeyDownCapture: (e: KeyboardEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
+    onBlur: (e: FocusEvent<HTMLElement>) => e.currentTarget.removeAttribute(HOVER_FOCUS),
     onFocus: (_e: FocusEvent<HTMLElement>) => {
       if (!disabled) sounds.hover();
     },
@@ -45,7 +72,10 @@ export function useRoving(count: number, { orientation = "vertical", wrap = true
     const next = step(current, count, dir, { wrap, disabled });
     if (next >= 0) {
       e.preventDefault();
-      items.current[next]?.focus({ preventScroll: true });
+      const item = items.current[next];
+      item?.focus({ preventScroll: true });
+      // only as far as needed, so a list inside a scroll area follows the arrow keys
+      item?.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [count, orientation, wrap, disabled]);
 

@@ -1,0 +1,10 @@
+/* --dot is the player's own colour, set inline from their look */
+.dot {
+  display: inline-block; flex: none; border-radius: var(--pp-radius-pill);
+  border: 2px solid var(--dot); background: transparent;
+  transition: background var(--pp-motion-base), transform var(--pp-motion-base);
+}
+.sm { width: 9px; height: 9px; border-width: 0; background: var(--dot); }
+.md { width: 12px; height: 12px; }
+.filled { background: var(--dot); }
+.md.filled { transform: scale(1.1); }

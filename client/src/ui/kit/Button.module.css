@@ -49,3 +49,31 @@
 .ghost:focus, .ghost[data-demo="focus"] { box-shadow: var(--pp-glow-focus); }
 
 .button:disabled { opacity: .45; cursor: default; transform: none; }
+
+/* a link-looking button is still a button: no underline, the button's colours */
+a.button { text-decoration: none; }
+
+/* a rounded chip in a bar of small controls */
+.pill { border-radius: var(--pp-radius-pill); flex-direction: row; gap: var(--pp-space-2); }
+.pill.sm { min-height: 32px; padding: 0 var(--pp-space-3); }
+.pill.md { min-height: 40px; padding: 0 var(--pp-space-4); }
+/* one icon in a circle */
+.round { border-radius: var(--pp-radius-pill); padding: 0; aspect-ratio: 1; line-height: 1; }
+.round.sm { width: 32px; font-size: var(--pp-size-md); }
+.round.md { width: 40px; font-size: var(--pp-size-lg); }
+.round.lg { width: 52px; min-width: 0; font-size: var(--pp-size-xl); }
+
+/* a switch-like button that's on (mic, sound) */
+.button[aria-pressed="true"] {
+  border-color: var(--pp-color-gold);
+  box-shadow: var(--pp-shadow-button), 0 0 0 1px var(--pp-color-gold);
+}
+
+.link {
+  background: none; border: none; box-shadow: none;
+  color: var(--pp-color-dim); font-weight: var(--pp-weight-body);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.link.sm, .link.md { padding: var(--pp-space-1) var(--pp-space-2); }
+.link:hover:not(:disabled), .link[data-demo="hover"] { background: none; color: var(--pp-color-ink); transform: none; }
+.link:focus, .link[data-demo="focus"] { box-shadow: var(--pp-glow-focus); color: var(--pp-color-ink); }

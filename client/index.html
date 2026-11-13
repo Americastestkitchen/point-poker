@@ -12,7 +12,6 @@
 <body>
   <canvas id="scene"></canvas>
   <div id="vignette"></div>
-  <div id="bonk-flash">BONK!</div>
 
   <!-- landing / character creator -->
   <div id="lobby" class="modal">
@@ -55,84 +54,8 @@
     </div>
   </div>
 
-  <div id="hud" hidden>
-    <div id="topbar">
-      <button id="dealer-btn" class="chip-btn dealer-only" title="Dealer controls: skip, cancel, kick">🎩 Dealer</button>
-      <button id="wallet" class="chip-btn" title="Leaderboard"><span class="coin"></span><b id="wallet-n">0</b></button>
-      <button id="invite" class="chip-btn">🔗 Invite</button>
-      <button id="wardrobe" class="chip-btn" title="Change your character's body, color and hat"><span class="me-bean"></span>Look</button>
-      <button id="mic" class="chip-btn icon" title="Mic: your character's mouth moves when you talk (no audio is sent)"><span class="ico">🎙️</span></button>
-      <button id="mute" class="chip-btn icon" title="Sound"></button>
-      <button id="help" class="chip-btn icon" title="How to play">?</button>
-      <span id="conn"></span>
-    </div>
-
-    <button id="ticket-tab" hidden></button>
-    <div id="status"></div>
-    <div id="dock" class="dock" hidden></div>
-    <div id="announce" class="announce" hidden></div>
-    <div id="toasts"></div>
-
-    <div id="board" class="pop" hidden>
-      <div class="pop-h">Leaderboard <button class="x" data-close>✕</button></div>
-      <div id="board-body"></div>
-    </div>
-    <div id="dealer-pop" class="pop" hidden>
-      <div class="pop-h">Dealer controls <button class="x" data-close>✕</button></div>
-      <div id="dealer-body"></div>
-    </div>
-    <div id="help-pop" class="pop" hidden>
-      <div class="pop-h">How it works <button class="x" data-close>✕</button></div>
-      <ol>
-        <li>The dealer puts a Jira ticket on the table.</li>
-        <li>Everyone picks a card for how big they think it is. Nobody sees yours yet.</li>
-        <li>The dealer flips the cards and picks the final points.</li>
-        <li>Closest guess wins the pot (just for fun), but only if it's within one card of the final call. Ties split it.</li>
-      </ol>
-      <div class="pop-h sm">Just for fun</div>
-      <ul>
-        <li>Drag the room to look around</li>
-        <li>Click someone to flick a chip at them</li>
-        <li><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> wave, laugh, think, gasp</li>
-        <li>Click the duck</li>
-      </ul>
-    </div>
-
-    <div id="sheet-scrim" class="scrim" hidden></div>
-    <article id="sheet" hidden>
-      <button id="sheet-close" class="x" title="Put it back on the table">✕</button>
-      <div id="sheet-body"></div>
-    </article>
-
-    <div id="pk-scrim" class="scrim" hidden></div>
-    <section id="picker" hidden>
-      <button id="pk-close" class="x" title="Close">✕</button>
-      <h2>What are we estimating?</h2>
-      <div id="pk-jira">
-        <form id="pk-form">
-          <input id="pk-input" placeholder="Paste a Jira link or key, like SD-1234" autocomplete="off" spellcheck="false" />
-          <button class="btn gold">Deal it</button>
-        </form>
-        <div id="pk-error" hidden></div>
-        <div id="pk-status"></div>
-        <div class="pk-hint">Tip: paste an <b>epic</b> to line up all of its tickets.</div>
-        <button id="pk-sprint" class="btn ghost">📋 Or pick from this sprint</button>
-      </div>
-      <div id="pk-queue"></div>
-      <details id="pk-manual-wrap">
-        <summary>No Jira ticket? Type it in</summary>
-        <form id="pk-manual" class="pk-row">
-          <input id="pk-m-summary" placeholder="What are we estimating?" autocomplete="off" />
-          <button class="btn">Deal</button>
-        </form>
-      </details>
-      <div class="pk-foot">
-        <div id="pk-people"></div>
-        <button id="pk-invite" class="btn">🔗 Copy invite link</button>
-        <label class="pk-toggle"><input type="checkbox" id="pk-plays" /> I'll vote too</label>
-      </div>
-    </section>
-  </div>
+  <!-- the game UI (screens/, drawn by React with the UI kit) -->
+  <div id="ui"></div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>

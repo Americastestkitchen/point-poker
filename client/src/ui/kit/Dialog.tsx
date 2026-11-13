@@ -1,7 +1,10 @@
-import { createContext, useContext, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { createContext, useContext, useId, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useBack, useUi } from "../context.tsx";
+import { cx } from "./cx.ts";
+import { hoverFocused } from "../focus.ts";
 import { Panel } from "./Panel.tsx";
+import { ScrollArea } from "./ScrollArea.tsx";
 import s from "./Dialog.module.css";
 
 export interface DialogProps {
@@ -13,11 +16,17 @@ export interface DialogProps {
   actions?: ReactNode;
   /** Esc, the × and a click outside close it (default on). Off for "you must choose". */
   dismissable?: boolean;
-  width?: "sm" | "md" | "lg";
+  width?: "sm" | "md" | "lg" | "xl";
+  /** `paper` for a page you read (a ticket), not a game panel. */
+  variant?: "default" | "paper";
 }
 
 // what Tab stops on: the ✕ isn't one (Esc does its job), and neither is anything else at -1
-const FOCUSABLE = ":is(button, input):not(:disabled):not([tabindex='-1']), [tabindex='0']";
+const FOCUSABLE = [
+  ":is(button, input, select, textarea):not(:disabled):not([tabindex='-1'])",
+  ":is(a[href], [contenteditable='true'], [contenteditable='']):not([tabindex='-1'])",
+  "[tabindex='0']",
+].join(", ");
 
 /** How many dialogs this one is inside: one opened from inside another sits on top of it. */
 const Depth = createContext(0);
@@ -26,10 +35,11 @@ const Depth = createContext(0);
  * A popup over the game. It takes focus when it opens, keeps Tab inside, closes on Esc
  * (only the topmost one, if they stack) and hands focus back to where it was.
  */
-export function Dialog({ open, onClose, title, children, actions, dismissable = true, width = "md" }: DialogProps) {
+export function Dialog({ open, onClose, title, children, actions, dismissable = true, width = "md", variant = "default" }: DialogProps) {
   const { sounds, layer } = useUi();
   const box = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const pressedOutside = useRef(false);
   const close = () => {
     sounds.back();
     onClose();
@@ -38,12 +48,21 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   // one you must answer still takes Esc, and does nothing with it: Esc never reaches what's underneath
   useBack(dismissable ? close : () => {}, open, depth);
 
-  useEffect(() => {
+  // a layout effect: it notes where focus was before any field inside autofocuses (those use plain effects)
+  useLayoutEffect(() => {
     if (!open) return;
     const before = document.activeElement as HTMLElement | null;
-    const firstStop = box.current?.querySelector<HTMLElement>(`[data-autofocus], ${FOCUSABLE}`);
+    // focus goes back where it was, unless it was only there because the mouse was (see focus.ts):
+    // then it goes back to the page, like the mouse moving off would have sent it
+    // (inside another dialog it does go back: focus has to stay in the one still open)
+    const restore = hoverFocused(before) && !before?.closest("[role='dialog']") ? null : before;
+    // `data-autofocus` first, wherever it is; a field with autoFocus takes over after this
+    const firstStop = box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
     (firstStop ?? box.current)?.focus({ preventScroll: true });
-    return () => before?.focus?.({ preventScroll: true });
+    return () => {
+      if (restore) restore.focus?.({ preventScroll: true });
+      else if (box.current?.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+    };
   }, [open]);
 
   if (!open) return null;
@@ -61,14 +80,27 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   };
 
   return createPortal(
-    <div className={s.backdrop} style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }} onPointerDown={(e) => { if (dismissable && e.target === e.currentTarget) close(); }}>
-      <div ref={box} role="dialog" aria-modal aria-labelledby={titleId} tabIndex={-1} className={`${s.box} ${s[width]}`} onKeyDown={trapTab}>
-        <Panel padding="lg" className={s.panel}>
+    <div
+      className={s.backdrop}
+      style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }}
+      // a press that starts and ends on the backdrop closes it; it closes on the click, once the
+      // press is over, so nothing of that press lands on the page underneath and takes focus
+      onPointerDown={(e) => { pressedOutside.current = e.target === e.currentTarget; }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      onClick={(e) => {
+        const outside = pressedOutside.current && e.target === e.currentTarget;
+        pressedOutside.current = false;
+        if (dismissable && outside) close();
+      }}
+    >
+      <div ref={box} role="dialog" aria-modal aria-labelledby={titleId} tabIndex={-1} className={cx(s.box, s[width])} onKeyDown={trapTab}>
+        <Panel padding="lg" variant={variant} className={cx(s.panel, s[variant])}>
           <header className={s.head}>
             <h2 id={titleId} className={s.title}>{title}</h2>
             {dismissable && <button type="button" tabIndex={-1} className={s.x} aria-label="Close" onClick={close}>✕</button>}
           </header>
-          <div className={s.body}><Depth value={depth}>{children}</Depth></div>
+          {/* only the body scrolls: the title and the buttons stay put on a short phone */}
+          <ScrollArea className={s.body}><Depth value={depth}>{children}</Depth></ScrollArea>
           {actions && <footer className={s.actions}>{actions}</footer>}
         </Panel>
       </div>
