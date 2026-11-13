@@ -2,7 +2,7 @@
 // played (your optimistic vote). ActionDock.tsx only draws it and wires the presses.
 import type { PublicPlayer, TableView } from "../../../../shared/protocol.ts";
 import { cardValues, favourite, nextInQueue, tally, voters } from "../../../../shared/rules.ts";
-import { names } from "../text.ts";
+import { names, safeUrl } from "../text.ts";
 
 /** A line of words, with the part worth shouting about (a number) called out. */
 export type Words = readonly (string | { strong: string })[];
@@ -67,9 +67,6 @@ export interface DockInput {
   /** The card you see as played (store `ui.myVote`), ahead of the server. */
   myVote: number | null;
 }
-
-/** Only http(s) links leave the table. */
-export const safeUrl = (u: unknown): string | null => (typeof u === "string" && /^https?:\/\//i.test(u) ? u : null);
 
 export function dockModel({ room, meId, myVote }: DockInput): Dock {
   const key = `${room.phase}:${room.round}`;

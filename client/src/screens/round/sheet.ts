@@ -2,7 +2,7 @@
 // details say. Pure; TicketSheet.tsx draws it.
 import type { Epic, Ticket, TableView } from "../../../../shared/protocol.ts";
 import type { ViewChange } from "../../app/events.ts";
-import { safeUrl } from "./dock.ts";
+import { safeUrl } from "../text.ts";
 
 /** How long after "New ticket" the sheet slides in, so the announcement is read first. */
 export const OPEN_AFTER_DEAL_MS = 900;

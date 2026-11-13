@@ -1,7 +1,7 @@
 // Jira's Atlassian Document Format, read into a small tree of safe elements. Pure, so it's
 // tested in node; Adf.tsx turns the tree into React elements (never raw HTML), so ticket
 // content can't inject markup. Tags come from a fixed list, links only go to http(s).
-import { safeUrl } from "./dock.ts";
+import { safeUrl } from "../text.ts";
 
 /** The elements a description can use. */
 export type AdfTag =

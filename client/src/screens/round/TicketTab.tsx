@@ -1,7 +1,6 @@
 // The ticket tab (region "ticket", top left; full width on phones): a scrap of paper with the
 // type icon, key and summary (two lines at most) that opens the whole ticket (popup "ticket").
 // Hidden when there is no ticket.
-// Legacy parity: hud.ts renderTicketTab() and #ticket-tab.
 import { useFocusable } from "../../ui/index.ts";
 import { useAppState, usePopup } from "../game.tsx";
 import { TypeIcon } from "../parts/TypeIcon.tsx";

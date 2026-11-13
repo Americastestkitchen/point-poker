@@ -1,8 +1,7 @@
-// SLICE: chrome. The game menu (popup "menu"). Esc at the table already opens it: the screen
+// The game menu (popup "menu"). Esc at the table already opens it: the screen
 // root registers that (GameRoot.tsx useMenuKey), so this file only draws the menu and acts.
-// It takes over the top-bar buttons that left the top bar in #11: Look (Character), Sound
-// (Options), Help (How to play) and Invite, plus Leave table.
-// Props: none (reads useGame() / useAppState()).
+// It holds what you set rather than need at a glance: Character, Options (sound, mic),
+// How to play and Invite, plus Leave table.
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ConfirmDialog, Dialog, KeyHint, MenuList, type MenuItem } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, usePopup } from "../game.tsx";

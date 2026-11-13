@@ -72,7 +72,12 @@ export function TextField({
           aria-invalid={!!error}
           aria-describedby={message || hint ? `${id}-note` : undefined}
           {...focus}
-          onPaste={() => { pasted.current = true; }}
+          onPaste={() => {
+            // the change it causes comes straight after; a paste that changes nothing must not
+            // leave the flag up for the next key
+            pasted.current = true;
+            setTimeout(() => { pasted.current = false; }, 0);
+          }}
           onChange={(e) => {
             const next = e.target.value;
             onChange(next);

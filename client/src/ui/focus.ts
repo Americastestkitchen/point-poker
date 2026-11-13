@@ -14,12 +14,16 @@ const HOVER_FOCUS = "data-hover-focus";
 /** Was `el` focused only because the mouse was over it? A popup doesn't hand focus back to one. */
 export const hoverFocused = (el: Element | null) => el?.hasAttribute(HOVER_FOCUS) ?? false;
 
+/** Is `el` somewhere you type (a text field)? */
+const typing = (el: Element | null) => !!el?.matches("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
+
 /** Props that make an element share the one focus and tick when it gets it. */
 export function useFocusable(disabled = false) {
   const { sounds } = useUi();
   return {
     onPointerEnter: (e: PointerEvent<HTMLElement>) => {
-      if (e.pointerType === "mouse" && !disabled && document.activeElement !== e.currentTarget) {
+      // never from a field you're typing in: Enter there must not press whatever the mouse is over
+      if (e.pointerType === "mouse" && !disabled && document.activeElement !== e.currentTarget && !typing(document.activeElement)) {
         e.currentTarget.setAttribute(HOVER_FOCUS, "");
         e.currentTarget.focus({ preventScroll: true });
       }

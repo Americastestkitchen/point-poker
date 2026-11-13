@@ -1,7 +1,7 @@
 // The in-game HUD's layout: fixed regions along the edges of the screen, so the table, the
-// cards and the ticket in the middle stay clear. Each region holds one slice's component;
+// cards and the ticket in the middle stay clear. Each region holds one component;
 // popups are kit Dialogs and render over everything. Nothing here needs editing to change
-// what a region shows: edit the component in its slice folder.
+// what a region shows: edit the component in its folder (chrome/, round/, dealer/).
 //
 //   ┌ ticket ───────────── status ───────────────── top ┐   phones (portrait):  top
 //   │                                                   │                       ticket

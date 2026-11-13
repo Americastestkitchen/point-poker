@@ -1,7 +1,6 @@
 // The status line (region "status", top centre; never takes the pointer): the Pick → Reveal →
 // Settle steps, one line of what's happening, and while voting a dot per voter (filled once
 // they've picked). status.ts decides the words.
-// Legacy parity: hud.ts renderStatus().
 import { cx } from "../../ui/index.ts";
 import { useAppState, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";

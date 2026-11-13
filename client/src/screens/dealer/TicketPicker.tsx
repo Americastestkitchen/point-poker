@@ -1,14 +1,13 @@
-// SLICE: dealer. The dealer's ticket picker (popup "picker"): a Jira link or key (a pasted one
+// The dealer's ticket picker (popup "picker"): a Jira link or key (a pasted one
 // deals at once), "Or pick from this sprint", the lined-up tickets, "No Jira ticket? Type it
-// in", who's at the table with the invite link, and "I'll vote too".
+// in", who's at the table with the invite link, and "I play a card too".
 // Loads go through useGame().ticketLoad: while one runs the form waits with a spinner; a failure
 // opens this popup with the reason in the form (ticketLoad already bonked; no toast here).
 // It opens by itself once per stretch without a ticket and closes when one is dealt (picker.ts
-// pickerCue). Unlike the legacy picker it's always dismissable, even with no ticket: the dock's
+// pickerCue), and waits its turn if another popup or the look editor is open. It's always dismissable, even with no ticket: the dock's
 // "＋ Add a Jira ticket" opens it again, and the Esc game menu stays reachable.
 // Dealer only: it follows the role. The decisions live in picker.ts.
-// Props: none.
-import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TableView } from "../../../../shared/protocol.ts";
 import { Button, cx, Dialog, ScrollArea, Spinner, TextField, Toggle, useFocusable, useRoving, useUi } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, usePopup, useRoom, useTicketLoad } from "../game.tsx";
@@ -33,7 +32,11 @@ export function TicketPicker() {
     else if (next.popup === "close") store.popupClosed("picker");
   };
   useViewChanges((c) => { if (c.t === "ticketChanged") cue(c); });
-  useEffect(() => cue({ t: "seen", isDealer, hasTicket }), [isDealer, hasTicket]);
+  // it waits its turn: never over the look editor, never replacing a popup you're reading
+  const free = useAppState((st) => st.ui.popup === null && !st.ui.lookOpen);
+  useEffect(() => {
+    if (free) cue({ t: "seen", isDealer, hasTicket });
+  }, [isDealer, hasTicket, free]);
 
   // closed: a failure it showed is old news next time
   useEffect(() => {
@@ -202,15 +205,10 @@ function Queue({ room, disabled, onPick }: { room: TableView; disabled: boolean;
   const queue = queueRows(room);
   const roving = useRoving(queue?.rows.length ?? 0, { disabled: () => disabled });
   if (!queue) return null;
-  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
-    roving.onKeyDown(e);
-    // the list keeps its scroll to itself, so bring the newly focused row into view
-    if (e.defaultPrevented) (document.activeElement as HTMLElement | null)?.scrollIntoView({ block: "nearest" });
-  };
   return (
     <Section title={queue.title}>
       <ScrollArea className={s.queue}>
-        <div role="list" aria-label={queue.title} className={s.rows} onKeyDown={onKeyDown}>
+        <div role="list" aria-label={queue.title} className={s.rows} onKeyDown={roving.onKeyDown}>
           {queue.rows.map((r, i) => <QueueItem key={r.key} row={r} roving={roving.item(i)} disabled={disabled} onPick={onPick} />)}
         </div>
       </ScrollArea>
@@ -259,7 +257,7 @@ function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
           🔗 Copy invite link
         </Button>
       </div>
-      <Toggle label="🃏 I'll vote too" checked={room.settings.dealerPlays} onChange={(on) => dealerDo(actions.dealer.setPlays(on))} />
+      <Toggle label="🃏 I play a card too" checked={room.settings.dealerPlays} onChange={(on) => dealerDo(actions.dealer.setPlays(on))} />
     </footer>
   );
 }

@@ -3,7 +3,6 @@
 // The screen root opens it when the 3D paper is clicked; this opens it when you arrive mid-vote
 // and ~0.9 s after a deal, and puts it away on the reveal (sheet.ts decides). It follows the
 // ticket if that changes while it's open, and closes if the ticket goes away.
-// Legacy parity: hud.ts fillSheet / openSheet / closeSheet.
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Epic, Ticket } from "../../../../shared/protocol.ts";
 import { ButtonLink, cx, Dialog } from "../../ui/index.ts";
@@ -11,7 +10,7 @@ import { useGame, usePopup, useRoom } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
 import { TypeIcon } from "../parts/TypeIcon.tsx";
 import { Adf } from "./Adf.tsx";
-import { safeUrl } from "./dock.ts";
+import { safeUrl } from "../text.ts";
 import { assignee, crumbs, initials, OPEN_AFTER_DEAL_MS, sheetMove, statusTone } from "./sheet.ts";
 import s from "./TicketSheet.module.css";
 

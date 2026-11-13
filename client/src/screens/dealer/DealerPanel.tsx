@@ -1,9 +1,8 @@
-// SLICE: dealer. The dealer's control panel (popup "dealer"), opened from the top bar.
+// The dealer's control panel (popup "dealer"), opened from the top bar.
 // "This round": Restart vote, Skip ticket, Cancel round (asks first), Pick a ticket; each one
 // closes the panel. The players with their state and a Kick (asks first), and "I play a card
 // too". What shows and what's enabled is decided in panel.ts. Dealer only: it follows the role.
 // Confirms are local dialogs inside this one, not popups.
-// Props: none.
 import { useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, Dialog, ScrollArea, Toggle } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";

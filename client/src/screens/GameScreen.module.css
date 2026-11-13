@@ -1,5 +1,5 @@
 /*
- * The HUD's regions. Layout lives here only; slices style what's inside their own region.
+ * The HUD's regions. Layout lives here only; components style what's inside their own region.
  * --dock-max bounds the action dock, and the kit's toasts are lifted above it (--toast-lift),
  * so a toast never lands on your cards.
  */

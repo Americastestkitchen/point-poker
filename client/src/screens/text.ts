@@ -17,3 +17,6 @@ export function ticketKind(type: string): { kind: TicketKind; glyph: string } {
   const kind = KINDS[type.trim().toLowerCase()] ?? (type.trim() ? "other" : "task");
   return { kind, glyph: GLYPHS[kind] };
 }
+
+/** Only http(s) links leave the table: anything else from a ticket is not a link. */
+export const safeUrl = (u: unknown): string | null => (typeof u === "string" && /^https?:\/\//i.test(u) ? u : null);

@@ -1,10 +1,9 @@
-// SLICE: chrome. The leaderboard (popup "leaderboard"), opened from the coins in the top bar.
-// Legacy parity: hud.ts renderBoard(): players by chips (a crown for a leader with chips, you
+// The leaderboard (popup "leaderboard"), opened from the coins in the top bar.
+// Players by chips (a crown for a leader with chips, you
 // highlighted, away players dimmed; the dealer can remove an away player, no confirm),
 // "Rounds played" newest first, and "📋 Copy for Jira": the latest result per ticket as
 // "KEY\tN pts\tSummary" lines through useGame().copy (an in-game dialog when the clipboard
 // says no). Rounds scroll in their own ScrollArea.
-// Props: none.
 import type { RoundResult } from "../../../../shared/protocol.ts";
 import { Button, cx, Dialog, ScrollArea } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";

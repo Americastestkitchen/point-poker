@@ -84,11 +84,14 @@ renderer/import exception.
   callbacks as needed). Pass audio via `sounds` and a shared `createToasts()`
   instance via `toasts`. Keep its unmount cleanup with the app lifecycle.
 - React reads the injected store using `useSyncExternalStore(store.subscribe,
-  store.getState)` and derives display values during render. There is no app
-  store hook today; any future wrapper belongs in `screens/`. Do not copy server
-  room/player/phase state into component state. Form drafts (use `editProfile`
-  where applicable) and temporary focus may be local; shared local UI state gets
-  named store methods. Commands go through injected actions, not session/socket calls.
+  store.getState)` and derives display values during render. The wrappers
+  are `useAppState`, `useRoom`, `useMe` and `usePopup` in `screens/game.tsx`. Do not
+  copy server room/player/phase state into component state. Form drafts (use
+  `editProfile` where applicable) and temporary focus may be local; shared local UI
+  state gets named store methods (`popupOpened`/`popupClosed`). The injected screen
+  services in `useGame()` (`ticketLoad`, `copy`, `mic`) keep their own transient
+  state, read with `useSyncExternalStore` like `toasts`; do not add more without
+  that reason. Commands go through injected actions, not session/socket calls.
 - One adapter at the screen root subscribes to `store.events`, mapping `toast`
   to `toasts.show(text, { tone: level ?? "info" })`; unsubscribe on cleanup.
   `screens/GameRoot.tsx` is that adapter (it also shows joins, leaves and removal). An awaited action's

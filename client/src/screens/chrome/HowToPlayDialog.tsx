@@ -1,9 +1,8 @@
-// SLICE: chrome. How to play (popup "help"), opened from the game menu.
-// Legacy parity: index.html #help-pop: the four steps, then "Just for fun": drag to look
+// How to play (popup "help"), opened from the game menu.
+// The four steps, then "Just for fun": drag to look
 // around, click someone to flick a chip, Z X C V to wave / laugh / think / gasp, click the
 // duck. Also R / a double-click to recenter the view (scene/engine/input.ts).
 // Closing it (Esc, ✕, Back) goes back to the menu when it was opened from there.
-// Props: none.
 import { EMOTES } from "../../../../shared/catalog/emotes.ts";
 import { Button, Dialog, KeyHint } from "../../ui/index.ts";
 import { usePopupWithBack } from "./popups.ts";

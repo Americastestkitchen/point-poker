@@ -1,7 +1,6 @@
 // The action dock (region "dock", bottom centre): what you can do this phase. dock.ts decides
 // what shows (title, hand, buttons); this draws it and sends the presses through actions.
 // It stays within the inherited --dock-max height, so the table stays clear.
-// Legacy parity: hud.ts renderDock() and cardHtml().
 import { Button, ButtonLink, cx, Spinner } from "../../ui/index.ts";
 import { useAppState, useGame, usePopup, useRoom, useTicketLoad } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";

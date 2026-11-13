@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player, ticket, view, withPlayers } from "../../app/fixtures.ts";
 import type { TableView } from "../../../../shared/protocol.ts";
-import { dockModel, plain, safeUrl, type Dock, type DockBody } from "./dock.ts";
+import { safeUrl } from "../text.ts";
+import { dockModel, plain, type Dock, type DockBody } from "./dock.ts";
 
 // deb deals (sits out), ann and bob play
 const dock = (room: TableView, meId: string, myVote: number | null = null) => dockModel({ room, meId, myVote });

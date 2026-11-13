@@ -1,9 +1,7 @@
-// SLICE: chrome. The always-visible top bar: only what you need at a glance, right to left from
+// The always-visible top bar: only what you need at a glance, right to left from
 // the corner: the menu (☰, Esc), the mic, your coins (the leaderboard) and, for the dealer, the
 // dealer's controls. A line about the connection shows up beside them while it's down.
-// Invite, Look, Sound and Help moved into the game menu (issue #11).
-// Legacy parity: hud.ts setupChrome() / setupMic() / setWallet / countWalletTo / coinBurst.
-// Props: none, it reads useGame()/useAppState().
+// Invite, Character, Sound and Help live in the game menu.
 import { useRef, type PointerEvent } from "react";
 import { Button, CoinCounter, cx, KeyHint, Spinner, Tooltip } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, useMicStatus, usePopup } from "../game.tsx";
@@ -17,7 +15,7 @@ export function TopBar() {
   const dealer = usePopup("dealer");
   const board = usePopup("leaderboard");
   const wallet = useRef<HTMLButtonElement>(null);
-  const coins = useWallet(wallet, s.flyCoin!);
+  const coins = useWallet(wallet, s.flyCoin ?? "pp-fly-coin");
   const iAmDealer = me?.isDealer ?? false;
   const tap = useLetGoAfterTouch();
 

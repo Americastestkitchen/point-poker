@@ -1,7 +1,6 @@
 // "BONK!" across the whole screen when a chip hits you (region "flash"; never takes the
 // pointer), and the whole page, canvas included, shakes for a moment. A second hit restarts
 // both. The shake sits out under prefers-reduced-motion (the CSS decides).
-// Legacy parity: hud.ts react() "bonked" (#bonk-flash and the body's shake class).
 import { useEffect, useRef, useState } from "react";
 import { useGameEvents } from "../moments.ts";
 import s from "./BonkFlash.module.css";

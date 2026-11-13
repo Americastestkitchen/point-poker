@@ -1,8 +1,7 @@
-// SLICE: chrome. Options (popup "options"), opened from the game menu: things you set rather
-// than need at a glance. Sound (legacy #mute: audio.muted / audio.setMuted()) and the mic
-// (legacy #mic, the same control as the top bar's: useGame().mic and useMicStatus()).
+// Options (popup "options"), opened from the game menu: things you set rather
+// than need at a glance. Sound (audio.muted / audio.setMuted()) and the mic
+// (the same control as the top bar's: useGame().mic and useMicStatus()).
 // Closing it (Esc, ✕, Back) goes back to the menu when it was opened from there.
-// Props: none.
 import { useReducer } from "react";
 import { Button, Dialog, Toggle } from "../../ui/index.ts";
 import { useGame, useMicStatus } from "../game.tsx";
