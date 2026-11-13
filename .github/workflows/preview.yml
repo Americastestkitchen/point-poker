@@ -54,14 +54,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
+  # Runs on every PR event so the check shows as passed instead of skipped;
+  # the steps only do anything once the PR is closed.
   destroy:
-    if: github.event.action == 'closed'
     runs-on: ubuntu-latest
     steps:
+      - name: Nothing to delete (PR still open)
+        if: github.event.action != 'closed'
+        run: echo "PR is open; the preview stays up."
       - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: github.event.action == 'closed'
       - name: Delete the preview app
+        if: github.event.action == 'closed'
         run: flyctl apps destroy "$APP" --yes || echo "Nothing to delete"
       - name: Note it on the PR
+        if: github.event.action == 'closed'
         run: |
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
           [ -n "$id" ] && gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$MARKER
