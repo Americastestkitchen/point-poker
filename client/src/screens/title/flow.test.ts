@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { noTable, start, step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
 
-const menu = (saved: boolean): TitleState => ({ view: { t: "menu" }, saved, invite: null });
+const menu = (saved: boolean): TitleState => ({ view: { t: "menu" }, saved, invite: null, requests: 0 });
 
 /** Runs `events` from `state`, collecting every effect along the way. */
 function run(state: TitleState, events: TitleEvent[]) {
@@ -18,7 +18,7 @@ function run(state: TitleState, events: TitleEvent[]) {
 test("the site opens on the menu; an invite link checks its table first", () => {
   assert.deepEqual(start("", true), { state: menu(true), effects: [] });
   assert.deepEqual(start("ABCD", true), {
-    state: { view: { t: "checking", code: "ABCD" }, saved: true, invite: "ABCD" },
+    state: { view: { t: "checking", code: "ABCD" }, saved: true, invite: "ABCD", requests: 0 },
     effects: [{ t: "check", code: "ABCD" }],
   });
 });
@@ -109,52 +109,55 @@ test("joining without a profile: character select, whose Back returns to the cod
 
 test("opening a table: straight away with a profile, through character select without one", () => {
   const r = run(menu(true), [{ t: "pick", item: "open" }]);
-  assert.deepEqual(r.view, { t: "opening", sending: true, passcode: null });
-  assert.deepEqual(r.effects, [{ t: "open", passcode: null }]);
-  assert.deepEqual(run(r.state, [{ t: "opened", code: "ABCD" }]).effects, [{ t: "sit", code: "ABCD" }]);
+  assert.deepEqual(r.view, { t: "opening", sending: true, passcode: null, request: 1 });
+  assert.deepEqual(r.effects, [{ t: "open", request: 1, passcode: null }]);
+  assert.deepEqual(run(r.state, [{ t: "opened", request: 1, code: "ABCD" }]).effects, [{ t: "sit", code: "ABCD" }]);
 
   const first = run(menu(false), [{ t: "pick", item: "open" }]);
   assert.equal(first.view.t, "character");
-  assert.deepEqual(run(first.state, [{ t: "done" }]).effects, [{ t: "open", passcode: null }]);
+  assert.deepEqual(run(first.state, [{ t: "done" }]).effects, [{ t: "open", request: 1, passcode: null }]);
   assert.deepEqual(run(first.state, [{ t: "back" }]).view, { t: "menu" }, "Back changes your mind");
 });
 
 test("the menu is busy while a table opens: picks wait, and only one open is asked", () => {
   const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
-  assert.deepEqual(
-    run(opening, [
-      { t: "pick", item: "join" },
-      { t: "pick", item: "open" },
-    ]),
-    {
-      state: opening,
-      view: opening.view,
-      effects: [],
-    },
-  );
+  const r = run(opening, [
+    { t: "pick", item: "join" },
+    { t: "pick", item: "open" },
+  ]);
+  assert.deepEqual(r, { state: opening, view: opening.view, effects: [] });
 });
 
 test("the host passcode: asked for, sent once, and a wrong one says so", () => {
   const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
-  const asked = run(opening, [{ t: "passcodeNeeded", tried: false }]);
-  assert.deepEqual(asked.view, { t: "opening", sending: false, passcode: { wrong: false } });
+  const asked = run(opening, [{ t: "passcodeNeeded", request: 1, tried: false }]);
+  assert.deepEqual(asked.view, { t: "opening", sending: false, passcode: { wrong: false }, request: 1 });
 
   const sent = run(asked.state, [{ t: "passcodeEntered", passcode: " hunter2 " }]);
-  assert.deepEqual(sent.effects, [{ t: "open", passcode: "hunter2" }]);
+  assert.deepEqual(sent.effects, [{ t: "open", request: 2, passcode: "hunter2" }]);
   assert.deepEqual(run(sent.state, [{ t: "passcodeEntered", passcode: "again" }]).effects, [], "not twice");
   assert.deepEqual(run(asked.state, [{ t: "passcodeEntered", passcode: "  " }]).effects, [], "not blank");
 
-  const wrong = run(sent.state, [{ t: "passcodeNeeded", tried: true }]);
-  assert.deepEqual(wrong.view, { t: "opening", sending: false, passcode: { wrong: true } });
+  const wrong = run(sent.state, [{ t: "passcodeNeeded", request: 2, tried: true }]);
+  assert.deepEqual(wrong.view, { t: "opening", sending: false, passcode: { wrong: true }, request: 2 });
   assert.deepEqual(run(wrong.state, [{ t: "back" }]).view, { t: "menu" }, "Cancel");
 });
 
 test("a failed open says why, once, and a late answer after Cancel does nothing", () => {
   const opening = run(menu(true), [{ t: "pick", item: "open" }]).state;
-  const failed = run(opening, [{ t: "openFailed", reason: "nope" }]);
+  const failed = run(opening, [{ t: "openFailed", request: 1, reason: "nope" }]);
   assert.deepEqual(failed.view, { t: "menu" });
   assert.deepEqual(failed.effects, [{ t: "error", text: "nope" }]);
-  assert.deepEqual(run(opening, [{ t: "back" }, { t: "opened", code: "ABCD" }]).effects, []);
+  assert.deepEqual(run(opening, [{ t: "back" }, { t: "opened", request: 1, code: "ABCD" }]).effects, []);
+});
+
+test("Cancel, then Open again: the first ask's late answer isn't taken for the second's", () => {
+  const second = run(menu(true), [{ t: "pick", item: "open" }, { t: "back" }, { t: "pick", item: "open" }]);
+  assert.deepEqual(second.effects.at(-1), { t: "open", request: 2, passcode: null });
+  const late = run(second.state, [{ t: "openFailed", request: 1, reason: "slow no" }]);
+  assert.deepEqual(late.view, second.view, "still waiting for the second ask");
+  assert.deepEqual(late.effects, []);
+  assert.deepEqual(run(late.state, [{ t: "opened", request: 2, code: "WXYZ" }]).effects, [{ t: "sit", code: "WXYZ" }]);
 });
 
 test("Character from the menu saves and comes back to the menu", () => {

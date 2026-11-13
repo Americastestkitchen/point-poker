@@ -30,8 +30,11 @@ export type TitleView =
   | { t: "invite"; code: string }
   /** An invite to a table that's no longer open. */
   | { t: "gone"; code: string }
-  /** Opening a table: `sending` while the server's asked; `passcode` once it wants the host passcode. */
-  | { t: "opening"; sending: boolean; passcode: { wrong: boolean } | null }
+  /**
+   * Opening a table: `sending` while the server's asked; `passcode` once it wants the host
+   * passcode. `request` numbers the ask in flight, so only its own answer counts.
+   */
+  | { t: "opening"; sending: boolean; passcode: { wrong: boolean } | null; request: number }
   /** On the way to the table. */
   | { t: "sitting"; code: string };
 
@@ -41,6 +44,8 @@ export interface TitleState {
   saved: boolean;
   /** The table code in the address bar from an invite link, until you leave that invite. */
   invite: string | null;
+  /** How many times a table was asked to open: each ask's number, to match its answer. */
+  requests: number;
 }
 
 export type TitleEvent =
@@ -53,18 +58,19 @@ export type TitleEvent =
   /** Character select's Done: your profile is saved. */
   | { t: "done" }
   | { t: "back" }
-  | { t: "opened"; code: string }
+  /** Answers to open request number `request`. */
+  | { t: "opened"; request: number; code: string }
   /** The server wants a (different) host passcode; `tried` says whether one was sent. */
-  | { t: "passcodeNeeded"; tried: boolean }
-  | { t: "openFailed"; reason: string }
+  | { t: "passcodeNeeded"; request: number; tried: boolean }
+  | { t: "openFailed"; request: number; reason: string }
   | { t: "passcodeEntered"; passcode: string };
 
 export type TitleEffect =
   /** Ask whether table `code` is open; answer with `checked` (invite) or `codeChecked` (typed). */
   | { t: "check"; code: string }
   /** Open a table with this passcode (null: the one that worked last time); answer with
-   * `opened`, `passcodeNeeded` or `openFailed`. */
-  | { t: "open"; passcode: string | null }
+   * `opened`, `passcodeNeeded` or `openFailed`, carrying `request`. */
+  | { t: "open"; request: number; passcode: string | null }
   | { t: "sit"; code: string }
   /** Take the invite out of the address bar. */
   | { t: "forgetInvite" }
@@ -77,9 +83,9 @@ export interface Step {
 
 /** Where you land: the menu, or checking an invite link's table first. */
 export function start(invite: string, saved: boolean): Step {
-  if (!invite) return { state: { view: { t: "menu" }, saved, invite: null }, effects: [] };
+  if (!invite) return { state: { view: { t: "menu" }, saved, invite: null, requests: 0 }, effects: [] };
   return {
-    state: { view: { t: "checking", code: invite }, saved, invite },
+    state: { view: { t: "checking", code: invite }, saved, invite, requests: 0 },
     effects: [{ t: "check", code: invite }],
   };
 }
@@ -124,18 +130,18 @@ export function step(state: TitleState, e: TitleEvent): Step {
       if (view.t === "join" || view.t === "gone" || view.t === "opening") return go({ t: "menu" });
       return stay;
     case "opened":
-      if (view.t !== "opening" || !view.sending) return stay;
+      if (!awaiting(view, e.request)) return stay;
       return go({ t: "sitting", code: e.code }, { t: "sit", code: e.code });
     case "passcodeNeeded":
-      if (view.t !== "opening" || !view.sending) return stay;
-      return go({ t: "opening", sending: false, passcode: { wrong: e.tried } });
+      if (!awaiting(view, e.request)) return stay;
+      return go({ ...view, sending: false, passcode: { wrong: e.tried } });
     case "openFailed":
-      if (view.t !== "opening" || !view.sending) return stay;
+      if (!awaiting(view, e.request)) return stay;
       return go({ t: "menu" }, { t: "error", text: e.reason });
     case "passcodeEntered": {
       const passcode = e.passcode.trim();
       if (view.t !== "opening" || view.sending || !passcode) return stay;
-      return go({ ...view, sending: true }, { t: "open", passcode });
+      return open(state, view.passcode, passcode);
     }
     default:
       return e satisfies never;
@@ -151,13 +157,26 @@ function land(state: TitleState, next: Next): Step {
     case "invite":
       return to({ t: "invite", code: next.code });
     case "open":
-      return to({ t: "opening", sending: true, passcode: null }, { t: "open", passcode: null });
+      return open(state, null, null);
     case "sit":
       return to({ t: "sitting", code: next.code }, { t: "sit", code: next.code });
     default:
       return next satisfies never;
   }
 }
+
+/** Ask the server to open a table, as a new numbered request (`form`: the passcode form, if up). */
+function open(state: TitleState, form: { wrong: boolean } | null, passcode: string | null): Step {
+  const request = state.requests + 1;
+  return settle({
+    state: { ...state, requests: request, view: { t: "opening", sending: true, passcode: form, request } },
+    effects: [{ t: "open", request, passcode }],
+  });
+}
+
+/** Is this view waiting for the answer to open request `request`? */
+const awaiting = (view: TitleView, request: number): view is Extract<TitleView, { t: "opening" }> =>
+  view.t === "opening" && view.sending && view.request === request;
 
 /** Leaving an invite for the menu (or finding its table gone) takes it out of the address bar. */
 function settle(s: Step): Step {

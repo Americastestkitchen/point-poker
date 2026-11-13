@@ -73,9 +73,11 @@ announce, dock, flash) and popups (`ui.popup`); each region's component lives in
 slice folder (`screens/chrome/`, `round/`, `dealer/`). Use `useGame()`, `useAppState`,
 `usePopup`, `useViewChanges` / `useGameEvents` (`screens/moments.ts`) and the shared
 helpers there. The title screens are the pure reducer `screens/title/flow.ts`: each
-request is a view, its answer counts only while you're still on it, and what to do
-outside the screen comes back as effects that `TitleScreen` runs through
-`useGame().title` (opening a table, checking a code, sitting down).
+request is a view (an open request also carries a number), its answer counts only while
+you're still on it, and what to do outside the screen comes back as effects.
+`screens/title/runner.ts` runs them through `useGame().title` (opening a table, checking a
+code, sitting down) and feeds the answers back; `TitleScreen` reads it with
+`useSyncExternalStore`.
 
 - Put app-aware React screens in **`client/src/screens/`**, outside `ui/` and
   `app/`. The folder is in `UI` and the app visual-import prohibition in

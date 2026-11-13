@@ -81,7 +81,12 @@ addEventListener("pagehide", (e) => {
 });
 
 stage.start();
-mountScene(stage, { store, actions, audio, allowsWorldKeys: game.allowsWorldKeys }).catch((e: unknown) => {
-  reportError(e); // the browser's console and error reporting see it, as if it were uncaught
-  toasts.show("The room didn't load. Reload the page to try again.", { tone: "error" });
-});
+// The room bakes its words (the sign, the whiteboard, name tags) into canvas textures once, so it
+// waits for Fredoka; the UI doesn't (CSS swaps the font in by itself). If it never loads, go anyway.
+Promise.all([document.fonts.load("700 40px Fredoka"), document.fonts.load("400 30px Fredoka")])
+  .catch(() => {})
+  .then(() => mountScene(stage, { store, actions, audio, allowsWorldKeys: game.allowsWorldKeys }))
+  .catch((e: unknown) => {
+    reportError(e); // the browser's console and error reporting see it, as if it were uncaught
+    toasts.show("The room didn't load. Reload the page to try again.", { tone: "error" });
+  });

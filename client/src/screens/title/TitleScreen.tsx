@@ -2,7 +2,7 @@
 // opening a table, character select, an invite link's "Join table ABCD", and an invite to a
 // table that's gone. flow.ts decides where each choice leads; this draws the view and runs the
 // effects it asks for (asking the server, sitting down) through the injected `title`.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { randomLook } from "../../../../shared/look.ts";
 import { TABLE_CODE } from "../../../../shared/rules.ts";
 import type { Profile, Storage } from "../../app/storage.ts";
@@ -10,7 +10,8 @@ import { Button, CodeSlots, Dialog, MenuList, Panel, Spinner, TextField, useBack
 import { CharacterEditor } from "../character/CharacterEditor.tsx";
 import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
-import { start, step, type Step, type TitleEffect, type TitleEvent, type TitleState, type TitleView } from "./flow.ts";
+import type { TitleEvent, TitleView } from "./flow.ts";
+import { createTitleFlow } from "./runner.ts";
 import logo from "../../../../assets/logo.svg";
 import s from "./TitleScreen.module.css";
 
@@ -31,70 +32,33 @@ const MENU = [
 type MenuId = (typeof MENU)[number]["id"];
 
 /**
- * flow.ts's state and a dispatch that runs its effects. The current state also lives in a ref,
- * so an answer that arrives later steps from where you are by then, not from where you asked;
- * effects run here, in event handlers, never inside a state update React may repeat.
+ * The title flow for this screen: built once, attached while the screen is up, read the React
+ * way. "Saved profile" lives in the flow's state only.
  */
 function useTitleFlow(saved: boolean) {
   const { store, title } = useGame();
-  const [first] = useState(() => start(title.inviteCode, saved));
-  const [state, setState] = useState<TitleState>(first.state);
-  const current = useRef(first.state);
-
-  const dispatch = (e: TitleEvent) => apply(step(current.current, e));
-  function apply({ state: next, effects }: Step) {
-    current.current = next;
-    setState(next);
-    for (const effect of effects) run(effect);
-  }
-  function run(effect: TitleEffect) {
-    switch (effect.t) {
-      case "check":
-        // the same question for an invite link and a typed code: the flow takes the one it asked
-        return void title.tables.check(effect.code).then((r) => {
-          const open = r.t !== "gone"; // if the server can't say, try the table anyway
-          dispatch({ t: "checked", code: effect.code, open });
-          dispatch({ t: "codeChecked", code: effect.code, open });
-        });
-      case "open":
-        return void title.tables
-          .open(effect.passcode ?? title.tables.savedPasscode())
-          .then((r) =>
-            dispatch(
-              r.t === "opened"
-                ? { t: "opened", code: r.code }
-                : r.t === "passcode"
-                  ? { t: "passcodeNeeded", tried: r.tried }
-                  : { t: "openFailed", reason: r.reason },
-            ),
-          );
-      case "sit":
-        return title.sit(effect.code);
-      case "forgetInvite":
-        return title.forgetInvite();
-      case "error":
-        return store.events.emit({ t: "toast", text: effect.text, level: "error" });
-      default:
-        return effect satisfies never;
-    }
-  }
-
-  // the first view's effects (checking an invite link), once
-  const begun = useRef(false);
+  const [flow] = useState(() =>
+    createTitleFlow({
+      title,
+      saved,
+      error: (text) => store.events.emit({ t: "toast", text, level: "error" }),
+    }),
+  );
   useEffect(() => {
-    if (begun.current) return;
-    begun.current = true;
-    for (const effect of first.effects) run(effect);
-  });
-
-  return { state, dispatch };
+    flow.attach();
+    return () => flow.detach();
+  }, [flow]);
+  const state = useSyncExternalStore(flow.subscribe, flow.getState);
+  return { state, dispatch: flow.dispatch };
 }
 
 export function TitleScreen() {
   const { store, storage } = useGame();
-  const [me, setMe] = useState(() => loadProfile(storage));
-  const { state, dispatch } = useTitleFlow(me.saved);
-  const { view } = state;
+  const [first] = useState(() => loadProfile(storage));
+  /** Your bean as you last saved it (or a fresh random one): a draft for character select. */
+  const [profile, setProfile] = useState(first.profile);
+  const { state, dispatch } = useTitleFlow(first.saved);
+  const { view, saved } = state;
 
   const pick = (id: MenuId) => {
     if (id === "options" || id === "help") return store.popupOpened(id);
@@ -105,12 +69,13 @@ export function TitleScreen() {
     <div className={s.root} data-screen="title">
       <Body
         view={view}
-        me={me}
+        profile={profile}
+        saved={saved}
         dispatch={dispatch}
         onPick={pick}
         onSaved={(profile) => {
           storage.setProfile(profile);
-          setMe({ profile, saved: true });
+          setProfile(profile);
           dispatch({ t: "done" });
         }}
       />
@@ -127,12 +92,13 @@ export function TitleScreen() {
 
 function Body(props: {
   view: TitleView;
-  me: { profile: Profile; saved: boolean };
+  profile: Profile;
+  saved: boolean;
   dispatch(e: TitleEvent): void;
   onPick(id: MenuId): void;
   onSaved(profile: Profile): void;
 }) {
-  const { view, me, dispatch } = props;
+  const { view, profile, saved, dispatch } = props;
   switch (view.t) {
     case "checking":
     case "sitting":
@@ -145,7 +111,7 @@ function Body(props: {
     case "character":
       return (
         <CharacterEditor
-          initial={me.profile}
+          initial={profile}
           withName
           dealer={false}
           doneLabel={doneLabel(view.next)}
@@ -157,7 +123,7 @@ function Body(props: {
       return (
         <Invite
           code={view.code}
-          profile={me.profile}
+          profile={profile}
           onJoin={() => dispatch({ t: "joinInvite" })}
           onChange={() => dispatch({ t: "changeLook" })}
         />
@@ -169,8 +135,8 @@ function Body(props: {
     case "opening":
       return (
         <Menu
-          profile={me.profile}
-          saved={me.saved}
+          profile={profile}
+          saved={saved}
           joining={view.t === "join" ? view : null}
           opening={view.t === "opening"}
           onPick={props.onPick}
