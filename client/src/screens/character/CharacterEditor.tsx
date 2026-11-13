@@ -3,9 +3,10 @@
 // sit down, and the game menu's "Change look" opens it over the table (without the name, which
 // the table already knows you by). The draft is local until Done.
 import { useState } from "react";
-import { BODIES } from "../../../../shared/catalog/bodies.ts";
+import { BODIES, BODY_IDS } from "../../../../shared/catalog/bodies.ts";
 import { COLOR_NAMES, COLORS } from "../../../../shared/catalog/colors.ts";
 import { COSMETICS, type CosmeticId } from "../../../../shared/catalog/cosmetics.ts";
+import { byId } from "../../../../shared/catalog/registry.ts";
 import { randomLook, wornIn } from "../../../../shared/look.ts";
 import { editProfile, readyToSit, type ProfileAction } from "../../app/profile.ts";
 import type { Profile } from "../../app/storage.ts";
@@ -13,17 +14,13 @@ import { Button, Carousel, Panel, TextField, useBack } from "../../ui/index.ts";
 import { useShowcase } from "./showcase.ts";
 import s from "./CharacterEditor.module.css";
 
-const BODY_IDS = BODIES.map((b) => b.id);
-const BODY_LABEL = new Map(BODIES.map((b) => [b.id, b.label]));
+const BODY = byId(BODIES);
+const COSMETIC = byId(COSMETICS);
 /** Bare, then everything that sits on your head. */
 const HATS: readonly (CosmeticId | null)[] = [
   null,
   ...COSMETICS.filter((c) => c.slots.includes("head")).map((c) => c.id),
 ];
-const HAT_LABEL = new Map<CosmeticId | null, string>([
-  [null, "no hat"],
-  ...COSMETICS.map((c) => [c.id, c.label] as const),
-]);
 
 export interface CharacterEditorProps {
   initial: Profile;
@@ -77,7 +74,7 @@ export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, 
             options={BODY_IDS}
             value={draft.look.body}
             onChange={(body) => edit({ t: "body", body })}
-            render={(b) => BODY_LABEL.get(b) ?? b}
+            render={(b) => BODY[b].label}
           />
           <Carousel
             label="Colour"
@@ -96,7 +93,7 @@ export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, 
             options={HATS}
             value={wornIn(draft.look, "head")}
             onChange={(id) => edit({ t: "wear", slot: "head", id })}
-            render={(h) => HAT_LABEL.get(h) ?? "no hat"}
+            render={(h) => (h ? COSMETIC[h].label : "no hat")}
           />
           <Button shape="pill" onPress={randomize}>
             🎲 Randomize

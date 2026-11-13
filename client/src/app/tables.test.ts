@@ -47,7 +47,7 @@ test("checking an invite: open, gone, or we couldn't tell", async () => {
     { status: 502, body: "<html>" },
     "offline",
   ]);
-  assert.deepEqual(await tables.check("ABCD"), { t: "open", info });
+  assert.deepEqual(await tables.check("ABCD"), { t: "open" });
   assert.deepEqual(await tables.check("WXYZ"), { t: "gone" });
   assert.deepEqual(await tables.check("ABCD"), { t: "unknown" });
   assert.deepEqual(await tables.check("ABCD"), { t: "unknown" });

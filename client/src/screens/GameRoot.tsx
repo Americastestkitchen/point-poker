@@ -14,9 +14,10 @@ import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notice
 import { CopyFallback } from "./parts/CopyFallback.tsx";
 import { GameScreen } from "./GameScreen.tsx";
 import { LookEditor } from "./character/LookEditor.tsx";
+import type { Title } from "./title/runner.ts";
 import { TitleScreen } from "./title/TitleScreen.tsx";
 
-export function GameRoot() {
+export function GameRoot({ title }: { title: Title }) {
   useNotices();
   useOpenTicket();
   useWindowTitle();
@@ -24,7 +25,7 @@ export function GameRoot() {
   const atTable = useAppState((st) => st.screen === "table");
   return (
     <>
-      {atTable ? <GameScreen /> : <TitleScreen />}
+      {atTable ? <GameScreen /> : <TitleScreen title={title} />}
       <LookEditor />
       <OptionsDialog />
       <HowToPlayDialog />

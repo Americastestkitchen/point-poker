@@ -12,7 +12,7 @@ for running, releasing and secrets. Keep changes focused; Jira is read-only.
   session and storage, without visual dependencies. World (`scene/`, `avatar/`,
   `environments/`) and UI communicate through that layer, without mutual imports.
 - Read `store.getState()` / `store.subscribe()`. Write through named methods such as
-  `receive`, `connectionChanged`, `seated`, `vote`, `lookOpened`, `showcased` and `setUi`;
+  `receive`, `connectionChanged`, `seated`, `vote`, `lookOpened`, `popupOpened` and `showcased`;
   add a purpose-specific method in `app/store.ts` when needed. The public `Store`
   type omits `setState`. Server views remain authoritative; `app/vote.ts` owns
   the existing optimistic vote reconciliation.
@@ -75,7 +75,7 @@ slice folder (`screens/chrome/`, `round/`, `dealer/`). Use `useGame()`, `useAppS
 helpers there. The title screens are the pure reducer `screens/title/flow.ts`: each
 request is a view (an open request also carries a number), its answer counts only while
 you're still on it, and what to do outside the screen comes back as effects.
-`screens/title/runner.ts` runs them through `useGame().title` (opening a table, checking a
+`screens/title/runner.ts` runs them through the `title` that `createGameUi` hands down (opening a table, checking a
 code, sitting down) and feeds the answers back; `TitleScreen` reads it with
 `useSyncExternalStore`.
 

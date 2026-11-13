@@ -1,8 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { OpenResult, TableCheck } from "../../app/tables.ts";
-import type { Title } from "../game.tsx";
-import { createTitleFlow } from "./runner.ts";
+import { createTitleFlow, type Title } from "./runner.ts";
 
 /** A promise you settle by hand, to answer the server's calls in any order. */
 function later<T>() {
@@ -40,7 +39,7 @@ function setup({ invite = "", saved = true, savedPasscode = "" } = {}) {
   return { flow, checks, opens, sat, errors, forgotten: () => forgotten };
 }
 
-const open = { t: "open", info: { exists: true, jiraEnabled: false, needsPasscode: false } } as const;
+const open = { t: "open" } as const;
 
 test("an invite link is checked once, when the screen first attaches", async () => {
   const { flow, checks } = setup({ invite: "ABCD" });

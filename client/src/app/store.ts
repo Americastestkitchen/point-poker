@@ -87,9 +87,6 @@ function build() {
       const action = a.t === "played" ? a : { t: "answered" as const, server: myPlayer(s)?.vote ?? null };
       store.setState({ ui: withVote(s.ui, action) });
     },
-    setUi(patch: Partial<AppState["ui"]>) {
-      store.setState((s) => ({ ui: { ...s.ui, ...patch } }));
-    },
     /** `popup` opened over the table, replacing whichever one was open. */
     popupOpened(popup: Popup) {
       const { ui } = store.getState();

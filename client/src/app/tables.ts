@@ -21,7 +21,7 @@ export type OpenResult =
   | { t: "failed"; reason: string };
 
 /** Whether an invite's table is still open; "unknown" when the server couldn't be asked. */
-export type TableCheck = { t: "open"; info: TableInfo } | { t: "gone" } | { t: "unknown" };
+export type TableCheck = { t: "open" } | { t: "gone" } | { t: "unknown" };
 
 export const OPEN_FAILED = "Couldn't open a table. Try again in a moment.";
 
@@ -51,7 +51,7 @@ export function createTables(deps: {
       const res = await deps.fetch(`/api/rooms/${encodeURIComponent(code)}`).catch(() => null);
       const info = res ? TableInfo.safeParse(await res.json().catch(() => null)) : null;
       if (!info?.success) return { t: "unknown" };
-      return info.data.exists ? { t: "open", info: info.data } : { t: "gone" };
+      return info.data.exists ? { t: "open" } : { t: "gone" };
     },
   };
 }

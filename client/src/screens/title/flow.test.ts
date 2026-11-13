@@ -75,12 +75,12 @@ test("joining by code: asks once, says why a closed table failed, sits you at an
     "the 4th letter and Enter ask once",
   );
 
-  assert.deepEqual(run(asked.state, [{ t: "codeChecked", code: "ABCD", open: false }]).view, {
+  assert.deepEqual(run(asked.state, [{ t: "checked", code: "ABCD", open: false }]).view, {
     t: "join",
     checking: null,
     error: noTable("ABCD"),
   });
-  assert.deepEqual(run(asked.state, [{ t: "codeChecked", code: "ABCD", open: true }]).effects, [
+  assert.deepEqual(run(asked.state, [{ t: "checked", code: "ABCD", open: true }]).effects, [
     { t: "sit", code: "ABCD" },
   ]);
   assert.deepEqual(run(joining, [{ t: "codeEntered", code: "AB" }]).effects, [], "a short code isn't asked about");
@@ -91,7 +91,7 @@ test("going Back while a typed code is checked: its answer can't sit you down", 
     { t: "pick", item: "join" },
     { t: "codeEntered", code: "ABCD" },
   ]).state;
-  const r = run(asked, [{ t: "back" }, { t: "codeChecked", code: "ABCD", open: true }]);
+  const r = run(asked, [{ t: "back" }, { t: "checked", code: "ABCD", open: true }]);
   assert.deepEqual(r.view, { t: "menu" });
   assert.deepEqual(r.effects, []);
 });
@@ -101,7 +101,7 @@ test("joining without a profile: character select, whose Back returns to the cod
     { t: "pick", item: "join" },
     { t: "codeEntered", code: "ABCD" },
   ]).state;
-  const r = run(asked, [{ t: "codeChecked", code: "ABCD", open: true }]);
+  const r = run(asked, [{ t: "checked", code: "ABCD", open: true }]);
   assert.equal(r.view.t, "character");
   assert.deepEqual(run(r.state, [{ t: "back" }]).view, { t: "join", checking: null, error: null });
   assert.deepEqual(run(r.state, [{ t: "done" }]).effects, [{ t: "sit", code: "ABCD" }]);

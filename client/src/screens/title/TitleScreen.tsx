@@ -1,7 +1,7 @@
 // The title screens, over the drifting 3D room: the main menu with your bean, joining by code,
 // opening a table, character select, an invite link's "Join table ABCD", and an invite to a
 // table that's gone. flow.ts decides where each choice leads; this draws the view and runs the
-// effects it asks for (asking the server, sitting down) through the injected `title`.
+// effects it asks for (asking the server, sitting down) through the `title` it's given.
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { randomLook } from "../../../../shared/look.ts";
 import { TABLE_CODE } from "../../../../shared/rules.ts";
@@ -11,7 +11,7 @@ import { CharacterEditor } from "../character/CharacterEditor.tsx";
 import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
 import type { TitleEvent, TitleView } from "./flow.ts";
-import { createTitleFlow } from "./runner.ts";
+import { createTitleFlow, type Title } from "./runner.ts";
 import logo from "../../../../assets/logo.svg";
 import s from "./TitleScreen.module.css";
 
@@ -35,8 +35,8 @@ type MenuId = (typeof MENU)[number]["id"];
  * The title flow for this screen: built once, attached while the screen is up, read the React
  * way. "Saved profile" lives in the flow's state only.
  */
-function useTitleFlow(saved: boolean) {
-  const { store, title } = useGame();
+function useTitleFlow(title: Title, saved: boolean) {
+  const { store } = useGame();
   const [flow] = useState(() =>
     createTitleFlow({
       title,
@@ -52,12 +52,12 @@ function useTitleFlow(saved: boolean) {
   return { state, dispatch: flow.dispatch };
 }
 
-export function TitleScreen() {
+export function TitleScreen({ title }: { title: Title }) {
   const { store, storage } = useGame();
   const [first] = useState(() => loadProfile(storage));
   /** Your bean as you last saved it (or a fresh random one): a draft for character select. */
   const [profile, setProfile] = useState(first.profile);
-  const { state, dispatch } = useTitleFlow(first.saved);
+  const { state, dispatch } = useTitleFlow(title, first.saved);
   const { view, saved } = state;
 
   const pick = (id: MenuId) => {

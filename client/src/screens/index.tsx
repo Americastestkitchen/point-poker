@@ -8,11 +8,12 @@ import type { Mic } from "../audio/mic.ts";
 import type { Audio } from "../audio/sfx.ts";
 import type { Toasts } from "../ui/index.ts";
 import { createCopy, type ClipboardLike } from "./copy.ts";
-import { GameProvider, type Game, type Title } from "./game.tsx";
+import { GameProvider, type Game } from "./game.tsx";
 import { GameRoot } from "./GameRoot.tsx";
 import { focusOf, worldKeysAllowed } from "./keys.ts";
 import { createMicControl } from "./mic.ts";
 import { createTicketLoad } from "./ticket-load.ts";
+import type { Title } from "./title/runner.ts";
 
 export interface GameUiDeps {
   store: Store;
@@ -67,8 +68,6 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     mic,
     ticketLoad,
     copy,
-    title: deps.title,
-    openLook: () => store.lookOpened(),
     leaveTable: deps.leaveTable,
     invite: () =>
       void copy.copy(deps.inviteUrl(), {
@@ -85,7 +84,7 @@ export function createGameUi(deps: GameUiDeps): GameUi {
   return {
     ui: (
       <GameProvider value={game}>
-        <GameRoot />
+        <GameRoot title={deps.title} />
       </GameProvider>
     ),
     allowsWorldKeys() {

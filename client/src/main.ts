@@ -4,6 +4,7 @@
 // Browser APIs also live in rendering, input, audio and DOM UI modules.
 import { createActions } from "./app/actions.ts";
 import { createSession } from "./app/session.ts";
+import { createSit } from "./app/sit.ts";
 import { createStorage } from "./app/storage.ts";
 import { createStore } from "./app/store.ts";
 import { createTables } from "./app/tables.ts";
@@ -57,13 +58,7 @@ const game = createGameUi({
   title: {
     inviteCode: invite,
     tables,
-    sit(code) {
-      if (store.getState().screen === "table") return; // already sat down: one table, one socket
-      // the address becomes this table's invite link: a reload brings you back to it, one click away
-      setRoomParam(code);
-      store.seated();
-      session.join(code);
-    },
+    sit: createSit({ store, session, showInvite: setRoomParam }),
     forgetInvite: () => setRoomParam(null),
   },
   leaveTable: () => location.assign(location.pathname),

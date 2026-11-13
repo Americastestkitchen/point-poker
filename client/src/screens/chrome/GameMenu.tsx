@@ -20,7 +20,7 @@ export function GameMenu() {
 
 /** Mounted only while the menu is open, so a half-asked "leave?" is gone next time. */
 function MenuBody({ close }: { close: () => void }) {
-  const { store, openLook, invite, leaveTable } = useGame();
+  const { store, invite, leaveTable } = useGame();
   const code = useAppState((st) => st.room?.code);
   const me = useMe();
   // the "are you sure?" over the menu: a nested dialog, local to it
@@ -45,7 +45,7 @@ function MenuBody({ close }: { close: () => void }) {
         return close();
       case "look":
         close();
-        return openLook();
+        return store.lookOpened();
       case "options":
         return store.popupOpened("options");
       case "help":

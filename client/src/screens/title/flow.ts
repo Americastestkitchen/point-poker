@@ -49,10 +49,10 @@ export interface TitleState {
 }
 
 export type TitleEvent =
+  /** The answer to a `check`, for an invite link's table or a typed code alike. */
   | { t: "checked"; code: string; open: boolean }
   | { t: "pick"; item: "open" | "join" | "character" }
   | { t: "codeEntered"; code: string }
-  | { t: "codeChecked"; code: string; open: boolean }
   | { t: "changeLook" }
   | { t: "joinInvite" }
   /** Character select's Done: your profile is saved. */
@@ -66,7 +66,7 @@ export type TitleEvent =
   | { t: "passcodeEntered"; passcode: string };
 
 export type TitleEffect =
-  /** Ask whether table `code` is open; answer with `checked` (invite) or `codeChecked` (typed). */
+  /** Ask whether table `code` is open; answer with `checked`. */
   | { t: "check"; code: string }
   /** Open a table with this passcode (null: the one that worked last time); answer with
    * `opened`, `passcodeNeeded` or `openFailed`, carrying `request`. */
@@ -102,10 +102,16 @@ export function step(state: TitleState, e: TitleEvent): Step {
 
   switch (e.t) {
     case "checked":
-      if (view.t !== "checking" || view.code !== e.code) return stay;
-      if (!e.open) return go({ t: "gone", code: e.code });
-      // with a profile: your bean and one "Join table" button; without: make one, then sit
-      return state.saved ? go({ t: "invite", code: e.code }) : character({ t: "sit", code: e.code }, { t: "menu" });
+      if (view.t === "checking" && view.code === e.code) {
+        if (!e.open) return go({ t: "gone", code: e.code });
+        // with a profile: your bean and one "Join table" button; without: make one, then sit
+        return state.saved ? go({ t: "invite", code: e.code }) : character({ t: "sit", code: e.code }, { t: "menu" });
+      }
+      if (view.t === "join" && view.checking === e.code) {
+        if (!e.open) return go({ t: "join", checking: null, error: noTable(e.code) });
+        return toward({ t: "sit", code: e.code }, { t: "join", checking: null, error: null });
+      }
+      return stay;
     case "pick":
       if (view.t !== "menu" && view.t !== "join") return stay;
       if (e.item === "join") return go({ t: "join", checking: null, error: null });
@@ -114,10 +120,6 @@ export function step(state: TitleState, e: TitleEvent): Step {
     case "codeEntered":
       if (view.t !== "join" || view.checking || e.code.length !== TABLE_CODE.length) return stay;
       return go({ t: "join", checking: e.code, error: null }, { t: "check", code: e.code });
-    case "codeChecked":
-      if (view.t !== "join" || view.checking !== e.code) return stay;
-      if (!e.open) return go({ t: "join", checking: null, error: noTable(e.code) });
-      return toward({ t: "sit", code: e.code }, { t: "join", checking: null, error: null });
     case "changeLook":
       if (view.t !== "invite") return stay;
       return character({ t: "invite", code: view.code }, view);
