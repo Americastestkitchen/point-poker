@@ -71,6 +71,7 @@ export function Gallery({ audio }: { audio: Audio }) {
   const [volume, setVolume] = useState(0.6);
   const [coins, setCoins] = useState(1240);
   const [dialog, setDialog] = useState<"none" | "plain" | "stacked" | "must">("none");
+  const [mustOnTop, setMustOnTop] = useState(false);
 
   return (
     <main className={s.page}>
@@ -198,6 +199,12 @@ export function Gallery({ audio }: { audio: Audio }) {
           actions={<><Button onPress={() => setDialog("none")}>Stay</Button><Button variant="danger" onPress={() => setDialog("none")}>Leave</Button></>}>
           <p>Your seat stays warm for a minute in case you come back.</p>
           {dialog === "stacked" && <StackedDialog />}
+          {dialog === "plain" && <Button size="sm" variant="ghost" onPress={() => setMustOnTop(true)}>Put a must-answer one on top</Button>}
+        </Dialog>
+        {/* a sibling, not a child: it opens later, over the dialog above */}
+        <Dialog open={mustOnTop} onClose={() => setMustOnTop(false)} title="Still there?" dismissable={false} width="sm"
+          actions={<Button variant="primary" onPress={() => setMustOnTop(false)}>I'm here</Button>}>
+          <p>Esc does nothing here, and doesn't close the dialog underneath either.</p>
         </Dialog>
         <Dialog open={dialog === "must"} onClose={() => setDialog("none")} title="The dealer left" dismissable={false} width="sm"
           actions={<Button variant="primary" onPress={() => setDialog("none")}>Take over as dealer</Button>}>

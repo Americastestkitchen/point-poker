@@ -52,10 +52,13 @@ export function useUi(): Ui {
   return ui;
 }
 
-/** While `active`, Esc calls `onBack` (unless something opened after this takes it first). */
-export function useBack(onBack: () => void, active = true) {
+/**
+ * While `active`, Esc calls `onBack`, unless something on top of this takes it first:
+ * anything nested deeper (`depth`), or opened later at the same depth.
+ */
+export function useBack(onBack: () => void, active = true, depth = 0) {
   const { backStack } = useUi();
   const latest = useRef(onBack);
   latest.current = onBack;
-  useEffect(() => (active ? backStack.push(() => latest.current()) : undefined), [active, backStack]);
+  useEffect(() => (active ? backStack.push(() => latest.current(), depth) : undefined), [active, backStack, depth]);
 }

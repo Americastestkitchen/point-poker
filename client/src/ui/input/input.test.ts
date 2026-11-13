@@ -52,6 +52,31 @@ test("Esc closes whatever opened last, and nothing when nothing's open", () => {
   assert.equal(back.depth, 0);
 });
 
+test("Esc goes to the deepest thing first, whatever order they registered in", () => {
+  const back = createBackStack();
+  const closed: string[] = [];
+  // React runs a child's effects before its parent's, so a nested dialog registers first
+  const popNested = back.push(() => closed.push("nested"), 2);
+  back.push(() => closed.push("outer"), 1);
+  back.back();
+  assert.deepEqual(closed, ["nested"]);
+  popNested();
+  back.back();
+  assert.deepEqual(closed, ["nested", "outer"]);
+});
+
+test("something that can't be closed still takes Esc, so what's under it stays open", () => {
+  const back = createBackStack();
+  const closed: string[] = [];
+  back.push(() => closed.push("leave?"), 1);
+  const popMust = back.push(() => {}, 1); // a must-answer dialog, opened later
+  assert.equal(back.back(), true, "Esc is used up");
+  assert.deepEqual(closed, []);
+  popMust();
+  back.back();
+  assert.deepEqual(closed, ["leave?"]);
+});
+
 test("code slots keep letters only, uppercased, up to the length", () => {
   assert.equal(typeInto("", "ab", 4), "AB");
   assert.equal(typeInto("AB", "c-d9e", 4), "ABCD", "drops other characters and overflow");

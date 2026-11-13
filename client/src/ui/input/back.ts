@@ -1,13 +1,17 @@
-// "Esc goes back": whatever opened last (a dialog, a sub-menu) closes first.
+// "Esc goes back": whatever is on top (a dialog, a sub-menu) takes it first.
 
 export type BackHandler = () => void;
 
 export function createBackStack() {
-  const stack: { handler: BackHandler }[] = [];
+  const stack: { handler: BackHandler; depth: number }[] = [];
   return {
-    /** Register a way back; call the returned function when it's no longer open. */
-    push(handler: BackHandler): () => void {
-      const entry = { handler };
+    /**
+     * Register a way back; call the returned function when it's no longer open.
+     * `depth` is how deeply it's nested (a dialog opened from inside a dialog is one deeper):
+     * the deepest goes first, and among equals the one that opened last.
+     */
+    push(handler: BackHandler, depth = 0): () => void {
+      const entry = { handler, depth };
       stack.push(entry);
       return () => {
         const i = stack.indexOf(entry);
@@ -16,7 +20,8 @@ export function createBackStack() {
     },
     /** Go back from the topmost thing. False when there's nothing to go back from. */
     back(): boolean {
-      const top = stack.at(-1);
+      let top = stack[0];
+      for (const entry of stack) if (top && entry.depth >= top.depth) top = entry;
       if (!top) return false;
       top.handler();
       return true;
