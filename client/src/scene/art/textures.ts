@@ -1,5 +1,6 @@
 // Canvas-drawn textures: cards, felt, signage, name tags.
 import * as THREE from "three";
+import { CARD_SUIT } from "../../../../shared/catalog/decks.ts";
 
 export function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const c = document.createElement("canvas");
@@ -14,11 +15,6 @@ export function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext
 
 export const FONT = `"Fredoka", "Baloo 2", "Trebuchet MS", system-ui, sans-serif`;
 
-/** Every value gets a suit, so the deck reads like a real (cheap) deck of cards. */
-export const CARD_SUIT: Record<number, { glyph: string; red: boolean }> = {
-  0: { glyph: "♠", red: false }, 1: { glyph: "♥", red: true }, 2: { glyph: "♣", red: false }, 3: { glyph: "♦", red: true },
-  5: { glyph: "♠", red: false }, 8: { glyph: "♥", red: true }, 13: { glyph: "♣", red: false }, 21: { glyph: "♦", red: true },
-};
 export const CARD_SERIF = `"Georgia", "Times New Roman", serif`;
 
 function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

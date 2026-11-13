@@ -1,6 +1,7 @@
 // Everything drawn on top of the 3D scene: the action dock, the dealer's
 // ticket picker, the ticket sheet, announcements and the wallet. It reads the
 // store and the event stream, and acts only through `actions`.
+import { CARD_SUIT } from "../../shared/catalog/decks.ts";
 import type { TableView } from "../../shared/protocol.ts";
 import { cardValues, favourite, nextInQueue, parseIssueKey, tally, voters } from "../../shared/rules.ts";
 import { renderAdf } from "./adf.ts";
@@ -10,7 +11,6 @@ import type { Storage } from "./app/storage.ts";
 import { myPlayer, type AppState, type Store } from "./app/store.ts";
 import type { Mic } from "./audio/mic.ts";
 import type { Audio } from "./audio/sfx.ts";
-import { CARD_SUIT } from "./scene/art/textures.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -247,6 +247,13 @@ export class Hud {
       case "openTicket":
         this.openSheet();
         return;
+      case "bonked": {
+        const f = $("bonk-flash");
+        f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+        document.body.classList.add("shake");
+        setTimeout(() => document.body.classList.remove("shake"), 360);
+        return;
+      }
     }
   }
 
