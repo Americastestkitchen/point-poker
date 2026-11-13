@@ -1,6 +1,7 @@
 // The round's state machine: which moves each phase allows, and the only
-// functions that change the phase. Commands check here first, so a move the
-// phase doesn't allow is refused with a reason instead of quietly doing nothing.
+// functions that change the phase. The table checks here before it runs a
+// command (each one names its move), so a move the phase doesn't allow is
+// refused with a reason instead of quietly doing nothing.
 //
 // waiting ──deal──▶ voting ──reveal──▶ revealed ──settle──▶ settled
 //    ▲  (a ticket)    │ ▲                  │                  │ settle again

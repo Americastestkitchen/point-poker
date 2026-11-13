@@ -5,7 +5,7 @@ import { validateLook } from "../../shared/look.ts";
 import type { Fx, JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { findCommand, type DealerCtx } from "./commands.ts";
-import { startRound } from "./round.ts";
+import { refusal, startRound } from "./round.ts";
 import { clean, findPlayer, freeSeat } from "./rules.ts";
 import type { TableState } from "./state.ts";
 import { viewFor } from "./view.ts";
@@ -134,6 +134,8 @@ export class Table {
     if (!parsed.success) return { error: "That command didn't make sense" };
     if (spec.role === "dealer" && me.id !== this.s.dealerId) return { error: ROLE_ERROR };
     this.s.lastActive = this.deps.now();
+    const no = spec.move === "anytime" ? undefined : refusal(this.s, spec.move);
+    if (no) return { error: no };
     try {
       const error = await spec.run(this.ctx, me, parsed.data);
       return error ? { error } : {};
