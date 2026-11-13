@@ -2,9 +2,10 @@
 import { BODIES } from "../../shared/catalog/bodies.ts";
 import { COLORS } from "../../shared/catalog/colors.ts";
 import { COSMETICS } from "../../shared/catalog/cosmetics.ts";
-import { randomLook, wear, wornIn } from "../../shared/look.ts";
+import { randomLook, wornIn } from "../../shared/look.ts";
 import { OpenedTable, TableInfo } from "../../shared/protocol.ts";
 import type { Actions } from "./app/actions.ts";
+import { editProfile, readyToSit, type ProfileAction } from "./app/profile.ts";
 import type { Profile, Storage } from "./app/storage.ts";
 import type { Store } from "./app/store.ts";
 import type { Audio } from "./audio/sfx.ts";
@@ -20,7 +21,8 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
   const { store, storage, audio, actions, roomCode } = deps;
   const dealerKey = roomCode ? storage.dealerKey(roomCode) : undefined;
   const saved = storage.profile();
-  const me: Profile = { name: saved.name ?? "", look: saved.look ?? randomLook() };
+  let me: Profile = { name: saved.name ?? "", look: saved.look ?? randomLook() };
+  const edit = (a: ProfileAction) => { me = editProfile(me, a); };
   let preview: ReturnType<typeof createTurntable> | null = null;
   const inGame = () => store.getState().screen === "table";
 
@@ -99,18 +101,19 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
     ($("look-more") as HTMLDetailsElement).open = playing;
     const nameIn = $<HTMLInputElement>("name-input");
     nameIn.value = me.name;
-    nameIn.oninput = () => (me.name = nameIn.value);
+    nameIn.oninput = () => edit({ t: "name", name: nameIn.value });
 
-    choices($("colors"), COLORS, (c) => c === me.look.color, (b, c) => (b.style.background = c), (color) => (me.look = { ...me.look, color }));
-    choices($("bodies"), BODIES, (b) => b.id === me.look.body, (el, b) => (el.innerHTML = icon(b)), (b) => (me.look = { ...me.look, body: b.id }));
-    choices($("hats"), HATS, (h) => h.id === wornIn(me.look, "head"), (b, h) => (b.innerHTML = icon(h)), (h) => (me.look = wear(me.look, "head", h.id)));
+    choices($("colors"), COLORS, (c) => c === me.look.color, (b, c) => (b.style.background = c), (color) => edit({ t: "color", color }));
+    choices($("bodies"), BODIES, (b) => b.id === me.look.body, (el, b) => (el.innerHTML = icon(b)), (b) => edit({ t: "body", body: b.id }));
+    choices($("hats"), HATS, (h) => h.id === wornIn(me.look, "head"), (b, h) => (b.innerHTML = icon(h)), (h) => edit({ t: "wear", slot: "head", id: h.id }));
     preview ??= createTurntable($<HTMLCanvasElement>("preview"), me.look, { dealer: !!dealerKey, visible: () => !$("lobby").hidden });
     preview.setLook(me.look);
 
     $("sit-form").onsubmit = (e) => {
       e.preventDefault();
-      me.name = nameIn.value.trim() || me.name;
-      if (!me.name) { nameIn.focus(); nameIn.classList.add("nudge"); setTimeout(() => nameIn.classList.remove("nudge"), 500); return; }
+      const ready = readyToSit(me);
+      if (!ready) { nameIn.focus(); nameIn.classList.add("nudge"); setTimeout(() => nameIn.classList.remove("nudge"), 500); return; }
+      me = ready;
       storage.setProfile(me);
       $("lobby").hidden = true;
       if (inGame()) {
@@ -121,5 +124,5 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
     setTimeout(() => nameIn.focus(), 50);
   }
 
-  return { boot, openCreator, me };
+  return { boot, openCreator, profile: () => me };
 }
