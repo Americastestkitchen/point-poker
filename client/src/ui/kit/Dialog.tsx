@@ -39,6 +39,7 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   const { sounds, layer } = useUi();
   const box = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const pressedOutside = useRef(false);
   const close = () => {
     sounds.back();
     onClose();
@@ -79,9 +80,19 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   };
 
   return createPortal(
-    <div className={s.backdrop} style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }} onPointerDown={(e) => { if (dismissable && e.target === e.currentTarget) close(); }}
-      // a press on the backdrop must not pull focus to the page after the dialog underneath took it back
-      onMouseDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}>
+    <div
+      className={s.backdrop}
+      style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }}
+      // a press that starts and ends on the backdrop closes it; it closes on the click, once the
+      // press is over, so nothing of that press lands on the page underneath and takes focus
+      onPointerDown={(e) => { pressedOutside.current = e.target === e.currentTarget; }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      onClick={(e) => {
+        const outside = pressedOutside.current && e.target === e.currentTarget;
+        pressedOutside.current = false;
+        if (dismissable && outside) close();
+      }}
+    >
       <div ref={box} role="dialog" aria-modal aria-labelledby={titleId} tabIndex={-1} className={cx(s.box, s[width])} onKeyDown={trapTab}>
         <Panel padding="lg" variant={variant} className={cx(s.panel, s[variant])}>
           <header className={s.head}>
