@@ -3,11 +3,12 @@
 // HUD and the 3D scene read it. Values that change every frame never go in here.
 import { createStore as createZustand } from "zustand/vanilla";
 import type { TableView } from "../../../shared/protocol.ts";
+import type { Connection } from "./connection.ts";
 import { createEvents, diff, type Events, type ViewChange } from "./events.ts";
 
 export interface AppState {
   screen: "start" | "creator" | "table";
-  connection: { room: string; status: "idle" | "connecting" | "open" | "closed"; reason?: string };
+  connection: Connection;
   /** Who you are at this table (from the welcome); your seat and role come from the view. */
   me: { id: string } | null;
   room: TableView | null;
@@ -23,7 +24,7 @@ export interface AppState {
 
 const initial: AppState = {
   screen: "start",
-  connection: { room: "", status: "idle" },
+  connection: { status: "idle" },
   me: null,
   room: null,
   changes: [],

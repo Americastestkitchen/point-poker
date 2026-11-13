@@ -5,8 +5,9 @@
 import type { Command } from "../../../server/table/commands.ts";
 import { DEFAULT_LOOK } from "../../../shared/look.ts";
 import { ServerMsg, type ClientFx, type ClientMsg } from "../../../shared/protocol.ts";
+import { nextConnection, type ConnectionEffect, type ConnectionEvent } from "./connection.ts";
 import type { Storage } from "./storage.ts";
-import type { AppState, Store } from "./store.ts";
+import type { Store } from "./store.ts";
 
 /**
  * The bits of a WebSocket the session uses. The browser's WebSocket and
@@ -41,33 +42,60 @@ export interface Session {
 }
 
 const OPEN = 1;
-/** 4001 kicked, 4002 opened elsewhere, 4003 table full, 4004 no such table: don't fight it. */
-const FINAL = (code: number) => code >= 4001 && code <= 4004;
 
 export function createSession(deps: SessionDeps): Session {
   const { storage, store } = deps;
   const retryDelay = deps.retryDelay ?? ((n) => Math.min(5000, 500 * 2 ** n));
+  // the line itself; whether we should have one is the store's `connection`
   let ws: SocketLike | null = null;
-  let room = "";
-  let attempt = 0;
-  let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let nextId = 1;
   const pending = new Map<number, { resolve(): void; reject(e: Error): void }>();
 
-  const status = (connection: AppState["connection"]) => store.setState({ connection });
-  const live = () => ws?.readyState === OPEN && !stopped;
+  const connection = () => store.getState().connection;
+  const room = () => { const c = connection(); return c.status === "idle" ? "" : c.room; };
+  const live = () => ws?.readyState === OPEN && connection().status === "open";
   const send = (msg: ClientMsg) => ws!.send(JSON.stringify(msg));
+
+  /** Moves the connection on, then does what that step says. */
+  function step(e: ConnectionEvent) {
+    const [next, effect] = nextConnection(connection(), e, retryDelay);
+    if (next !== connection()) store.setState({ connection: next });
+    if (effect) run(effect);
+  }
+
+  function run(effect: ConnectionEffect) {
+    switch (effect.t) {
+      case "dial": return dial();
+      case "redial": timer = setTimeout(dial, effect.afterMs); return;
+      case "hello": return send(hello());
+      case "hangUp": {
+        clearTimeout(timer);
+        const sock = ws;
+        ws = null;
+        failPending();
+        sock?.close();
+        return;
+      }
+      default: return effect satisfies never;
+    }
+  }
+
+  /** Anything still waiting for an answer won't get one now. */
+  function failPending() {
+    for (const p of pending.values()) p.reject(new Error("Lost the connection. Try again?"));
+    pending.clear();
+  }
 
   function hello(): ClientMsg {
     const p = storage.profile();
-    return { t: "join", name: p.name ?? "", look: p.look ?? DEFAULT_LOOK, token: storage.token(room), dealerKey: storage.dealerKey(room) };
+    return { t: "join", name: p.name ?? "", look: p.look ?? DEFAULT_LOOK, token: storage.token(room()), dealerKey: storage.dealerKey(room()) };
   }
 
   function receive(m: ServerMsg) {
     switch (m.t) {
       case "welcome":
-        storage.setToken(room, m.token);
+        storage.setToken(room(), m.token);
         store.setState({ me: { id: m.playerId } });
         return;
       case "view":
@@ -88,15 +116,10 @@ export function createSession(deps: SessionDeps): Session {
     }
   }
 
-  function connect() {
-    status({ room, status: "connecting" });
-    const sock = deps.connect(`${deps.url}?room=${encodeURIComponent(room)}`);
+  function dial() {
+    const sock = deps.connect(`${deps.url}?room=${encodeURIComponent(room())}`);
     ws = sock;
-    sock.onopen = () => {
-      attempt = 0;
-      status({ room, status: "open" });
-      sock.send(JSON.stringify(hello()));
-    };
+    sock.onopen = () => { if (ws === sock) step({ t: "opened" }); };
     sock.onmessage = (e: { data: unknown }) => {
       let parsed;
       try { parsed = ServerMsg.safeParse(JSON.parse(String(e.data))); } catch { return; }
@@ -106,24 +129,14 @@ export function createSession(deps: SessionDeps): Session {
     sock.onclose = (e: { code: number; reason: string }) => {
       if (ws !== sock) return;
       ws = null;
-      // anything still waiting for an answer won't get one now
-      for (const p of pending.values()) p.reject(new Error("Lost the connection. Try again?"));
-      pending.clear();
-      if (stopped || FINAL(e.code)) {
-        stopped = true;
-        status({ room, status: "closed", reason: e.reason });
-        return;
-      }
-      status({ room, status: "connecting" });
-      timer = setTimeout(connect, retryDelay(attempt++));
+      failPending();
+      step({ t: "dropped", code: e.code, reason: e.reason });
     };
   }
 
   return {
     join(code) {
-      room = code;
-      stopped = false;
-      connect();
+      step({ t: "join", room: code });
     },
     request(cmd) {
       if (!live()) return Promise.reject(new Error("Not connected right now. Try again in a moment."));
@@ -136,9 +149,7 @@ export function createSession(deps: SessionDeps): Session {
       if (live()) send({ t: "fx", fx });
     },
     close() {
-      stopped = true;
-      clearTimeout(timer);
-      ws?.close();
+      step({ t: "leave" });
     },
   };
 }

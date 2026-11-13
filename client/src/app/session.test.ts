@@ -104,3 +104,14 @@ test("reconnects after a dropped line, but not after being kicked", async () => 
   await assert.rejects(session.request({ t: "reveal" }));
   assert.equal(sockets[1].sent.length, 1, "nothing goes out once closed for good");
 });
+
+test("leaving while waiting to redial stops for good", async () => {
+  const { sockets, store, session } = setup();
+  session.join("ABCD");
+  sockets[0].open();
+  sockets[0].drop();
+  session.close();
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(sockets.length, 1, "no redial after leaving");
+  assert.equal(store.getState().connection.status, "closed");
+});

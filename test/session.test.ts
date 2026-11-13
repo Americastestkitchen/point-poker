@@ -295,7 +295,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   await deb.actions.dealer.kick(cat.id);
   await cat.until((p) => p.closed, "cat kicked");
   assert.equal(cat.closeCode, 4001);
-  assert.equal(cat.store.getState().connection.reason, "Removed by the dealer");
+  assert.deepEqual(cat.store.getState().connection, { status: "closed", room: code, reason: "Removed by the dealer" });
   await reloaded.untilState((s) => s.players.length === 3, "cat gone");
   await reloaded.until((p) => p.toasts().includes("👋 Cat was removed from the table"), "kick toast");
   await reloaded.until((p) => p.events.some((e) => e.t === "left" && e.player.id === cat.id), "left event");

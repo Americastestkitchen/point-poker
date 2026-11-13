@@ -85,9 +85,9 @@ export class Hud {
       document.body.classList.toggle("is-dealer", mine.isDealer);
     }
     if (s.connection !== prev?.connection) {
-      const { status, reason } = s.connection;
-      $("conn").textContent = status === "open" || status === "idle" ? "" : status === "connecting" ? "reconnecting…" : `disconnected: ${reason ?? ""}`;
-      if (status === "closed" && reason === "Removed by the dealer") this.toast("👋 The dealer removed you from this table.", "error");
+      const c = s.connection;
+      $("conn").textContent = c.status === "connecting" ? "reconnecting…" : c.status === "closed" ? `disconnected: ${c.reason}` : "";
+      if (c.status === "closed" && c.reason === "Removed by the dealer") this.toast("👋 The dealer removed you from this table.", "error");
     }
     if (s.room !== prev?.room) {
       // a new view: draw it, then react to what changed in it
@@ -163,7 +163,8 @@ export class Hud {
   }
 
   async copyInvite() {
-    const url = `${location.origin}${location.pathname}?room=${this.store.getState().connection.room}`;
+    const c = this.store.getState().connection;
+    const url = `${location.origin}${location.pathname}?room=${c.status === "idle" ? "" : c.room}`;
     try {
       await navigator.clipboard.writeText(url);
       this.toast("🔗 Invite link copied. Paste it in Slack or Teams.");
