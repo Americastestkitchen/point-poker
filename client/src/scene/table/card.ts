@@ -10,6 +10,7 @@ export interface TableCard {
   readonly group: THREE.Group;
   /** The face value, or null for a card whose face we don't know. */
   readonly value: number | null;
+  /** Face up, or waiting its turn to turn up. */
   readonly isFaceUp: boolean;
   /** Your own card doesn't float a big copy over the table when it flips. */
   noFloat: boolean;
@@ -24,9 +25,26 @@ export interface TableCard {
   /** Someone fiddles with the card after `delay` seconds: it wiggles and ends up (mostly) straight. */
   nudge(delay?: number): void;
   hide(): void;
-  faceUp(up: boolean): void;
+  /** Turns it face up showing `value`, after `delay` seconds; `onTurn` runs as it starts to turn. */
+  turnUp(value: number | null, opts?: { delay?: number; onTurn?: () => void }): void;
+  turnDown(): void;
   update(dt: number): void;
 }
+
+/** Where the card is. */
+type Placement =
+  | { at: "hidden" }
+  /** In someone's hand: it leaves after `wait` seconds, from wherever the hand is by then. */
+  | { at: "hand"; wait: number; hand: () => THREE.Vector3; gentle: boolean }
+  /** On its way down to the felt; `t` goes 0..1. Hand-placed cards drift in low and flat; tossed ones arc and spin. */
+  | { at: "landing"; t: number; gentle: boolean }
+  | { at: "felt" };
+
+/** Which way up it is. On a reveal, a card can wait its turn before it turns. */
+type Facing =
+  | { side: "down" }
+  | { side: "waiting to turn"; in: number; value: number | null; onTurn?: () => void }
+  | { side: "up" };
 
 /** A playing card: two faces back to back. */
 function cardMesh() {
@@ -58,48 +76,48 @@ export function createTableCard(scene: THREE.Scene): TableCard {
   scene.add(float, group);
 
   let value: number | null = null;
-  let flip = 0; // 0 face down, 1 face up
-  let flipTarget = 0;
-  let arrive = 1; // 0..1 slide-in progress
+  let place: Placement = { at: "hidden" };
+  let facing: Facing = { side: "down" };
+  /** The flip animation, following `facing`: 0 face down .. 1 face up. */
+  let flip = 0;
   const from = new THREE.Vector3();
   const home = new THREE.Vector3();
   const base = new THREE.Vector3();
   let floatT = 0;
-  /** Seconds before a placed card leaves the hand. */
-  let wait = 0;
-  let fromFn: (() => THREE.Vector3) | null = null;
-  /** Hand-placed cards drift in low and flat; tossed ones arc and spin. */
-  let gentle = false;
   let yaw = 0;
   /** How crooked the card sits; adjusting squares it back up. */
   let skew = 0, skewTarget = 0;
   const shift = new THREE.Vector3();
   const shiftTarget = new THREE.Vector3();
   let wiggle = 0;
-  let nudgeIn = -1;
+  /** Seconds until someone fiddles with it, if anyone's about to. */
+  let nudgeIn: number | null = null;
+
+  const setValue = (next: number | null) => {
+    if (next === value) return;
+    value = next;
+    card.setValue(next);
+  };
 
   const self: TableCard = {
     group,
     get value() { return value; },
-    get isFaceUp() { return flipTarget === 1; },
+    get isFaceUp() { return facing.side !== "down"; },
     noFloat: false,
 
     show(next, fromWorld, opts = {}) {
-      if (!group.visible) {
-        wait = 0; fromFn = null; gentle = !!opts.gentle;
-        if (typeof fromWorld === "function") { fromFn = fromWorld; wait = opts.delay ?? 0; from.copy(home); arrive = 0; }
-        else if (fromWorld) { from.copy(fromWorld); arrive = 0; }
-        else { base.copy(home); arrive = 1; }
+      if (place.at === "hidden") {
+        const gentle = !!opts.gentle;
+        if (typeof fromWorld === "function") place = { at: "hand", wait: opts.delay ?? 0, hand: fromWorld, gentle };
+        else if (fromWorld) { from.copy(fromWorld); place = { at: "landing", t: 0, gentle }; }
+        else { base.copy(home); place = { at: "felt" }; }
         // land a little crooked, like a real person dropping a card
         skew = skewTarget = (Math.random() - 0.5) * 0.5;
         shift.set((Math.random() - 0.5) * 0.06, 0, (Math.random() - 0.5) * 0.05);
         shiftTarget.copy(shift);
       }
       group.visible = true;
-      if (next !== value) {
-        value = next;
-        card.setValue(next);
-      }
+      setValue(next);
     },
 
     placeAt(slot, count, mine) {
@@ -111,25 +129,39 @@ export function createTableCard(scene: THREE.Scene): TableCard {
     nudge(delay = 0) { nudgeIn = delay; },
 
     hide() {
-      wait = 0; fromFn = null; nudgeIn = -1; group.visible = false;
-      flip = flipTarget = 0; float.visible = false; floatT = 0;
+      place = { at: "hidden" };
+      facing = { side: "down" };
+      nudgeIn = null;
+      group.visible = false;
+      flip = 0;
+      float.visible = false;
+      floatT = 0;
     },
 
-    faceUp(up) { flipTarget = up ? 1 : 0; },
+    turnUp(next, { delay = 0, onTurn } = {}) {
+      if (delay > 0) { facing = { side: "waiting to turn", in: delay, value: next, onTurn }; return; }
+      setValue(next);
+      facing = { side: "up" };
+      onTurn?.();
+    },
+
+    turnDown() { facing = { side: "down" }; },
 
     update(dt) {
-      if (!group.visible) return;
-      if (wait > 0) {
+      if (place.at === "hidden") return;
+      if (place.at === "hand") {
         // still in someone's hand
-        wait -= dt;
+        place.wait -= dt;
         card.object.visible = false;
-        if (wait > 0) return;
-        if (fromFn) from.copy(fromFn());
+        if (place.wait > 0) return;
+        from.copy(place.hand());
+        place = { at: "landing", t: 0, gentle: place.gentle };
       }
       card.object.visible = true;
-      if (nudgeIn >= 0) {
+      if (nudgeIn !== null) {
         nudgeIn -= dt;
         if (nudgeIn < 0) {
+          nudgeIn = null;
           wiggle = 1;
           skewTarget = (Math.random() - 0.5) * 0.08;
           shiftTarget.set((Math.random() - 0.5) * 0.015, 0, (Math.random() - 0.5) * 0.015);
@@ -141,6 +173,10 @@ export function createTableCard(scene: THREE.Scene): TableCard {
         skew += (skewTarget - skew) * k;
         shift.lerp(shiftTarget, k);
       }
+      if (facing.side === "waiting to turn") {
+        facing.in -= dt;
+        if (facing.in <= 0) self.turnUp(facing.value, { onTurn: facing.onTurn });
+      }
       if (flip > 0.98 && value !== null && !self.noFloat) {
         if (!float.visible) {
           float.material.map = cardFront(value);
@@ -151,15 +187,21 @@ export function createTableCard(scene: THREE.Scene): TableCard {
         const k = 1 - Math.pow(1 - floatT, 3);
         float.position.copy(home).y += 0.12 + k * 0.2;
         float.scale.set(0.2 * k, 0.29 * k, 1);
-      } else if (flipTarget === 0) {
+      } else if (facing.side !== "up") {
         float.visible = false;
         floatT = 0;
       }
-      const speed = 2.6;
-      flip += Math.sign(flipTarget - flip) * Math.min(Math.abs(flipTarget - flip), dt * speed);
-      if (arrive < 1) arrive = Math.min(1, arrive + dt * 2.4);
-      const e = 1 - Math.pow(1 - arrive, 3);
-      if (arrive < 1) base.lerpVectors(from, home, e);
+      const target = facing.side === "up" ? 1 : 0;
+      flip += Math.sign(target - flip) * Math.min(Math.abs(target - flip), dt * 2.6);
+      // landing: an eased slide from where it left the hand (or was tossed from) to its spot
+      let e = 1, gentle = false;
+      if (place.at === "landing") {
+        place.t = Math.min(1, place.t + dt * 2.4);
+        e = 1 - Math.pow(1 - place.t, 3);
+        gentle = place.gentle;
+        if (place.t >= 1) place = { at: "felt" };
+      }
+      if (place.at === "landing") base.lerpVectors(from, home, e);
       else base.lerp(home, Math.min(1, dt * 6));
       group.position.copy(base).add(shift);
       const jiggle = Math.sin(wiggle * 30) * wiggle;

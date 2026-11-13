@@ -106,17 +106,14 @@ export function mountTableView(stage: Stage, deps: {
               setTimeout(audio.slide, 300);
             }
           } else card.show(value);
-          card.faceUp(false);
+          card.turnDown();
         } else card.hide();
       } else if (revealed && p.vote !== null) {
         if (!card.group.visible) card.show(null);
         if (!card.isFaceUp) {
-          // on the reveal, cards flip one after another
+          // on the reveal, cards turn one after another
           const stagger = happened("revealed");
-          const value = p.vote, delay = stagger ? 250 * flipIndex++ : 0;
-          setTimeout(() => { card.show(value); card.faceUp(true); if (delay || stagger) audio.flip(); }, delay);
-          card.faceUp(true);
-          card.show(card.value);
+          card.turnUp(p.vote, { delay: stagger ? 0.25 * flipIndex++ : 0, onTurn: stagger ? () => audio.flip() : undefined });
         }
       } else card.hide();
 
@@ -218,7 +215,7 @@ export function mountTableView(stage: Stage, deps: {
           const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
           if (e.changed) seat.card.hide();
           seat.card.show(e.value, from);
-          seat.card.faceUp(false);
+          seat.card.turnDown();
         }
         audio.slide();
         return;
