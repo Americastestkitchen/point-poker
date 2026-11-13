@@ -1,19 +1,28 @@
 // Everything drawn on top of the 3D scene: the action dock, the dealer's
-// ticket picker, the ticket sheet, announcements and the wallet.
-import { DECK, type ClientMsg, type PublicPlayer, type RoomState } from "../../shared/protocol.ts";
+// ticket picker, the ticket sheet, announcements and the wallet. It reads the
+// store and the event stream, and acts only through `actions`.
+import type { TableView } from "../../shared/protocol.ts";
+import { cardValues, favourite, nextInQueue, parseIssueKey, tally, voters } from "../../shared/rules.ts";
 import { renderAdf } from "./adf.ts";
-import { sfx } from "./sfx.ts";
-import { CARD_SUIT } from "./textures.ts";
+import type { Actions } from "./app/actions.ts";
+import type { GameEvent, ViewChange } from "./app/events.ts";
+import type { Storage } from "./app/storage.ts";
+import { myPlayer, type AppState, type Store } from "./app/store.ts";
+import type { Mic } from "./audio/mic.ts";
+import type { Audio } from "./audio/sfx.ts";
+import { CARD_SUIT } from "./scene/art/textures.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const KEY_RE = /\b[A-Za-z][A-Za-z0-9_]+-\d+\b/;
 
-export interface HudHooks {
-  send(m: ClientMsg): void;
-  playCard(value: number): void;
+export interface HudDeps {
+  store: Store;
+  actions: Actions;
+  audio: Audio;
+  storage: Storage;
+  mic: Mic;
+  /** Opens the look editor over the table. */
   openLook(): void;
-  roomCode: string;
 }
 
 const TYPE_ICON: Record<string, [string, string]> = {
@@ -40,42 +49,68 @@ function names(list: string[]) {
 
 export class Hud {
   private me = { id: "", isDealer: false };
-  private st: RoomState | null = null;
+  private st: TableView | null = null;
   private myVote: number | null = null;
   private wallet = 0;
   private loading = false;
-  private loadTimer = 0;
+  private loadSeq = 0;
   private sheetKey = "";
   private pickerForced = false;
   private dockKey = "";
-  private readonly h: HudHooks;
+  private phaseKey = "";
+  private readonly store: Store;
+  private readonly actions: Actions;
+  private readonly audio: Audio;
+  private readonly deps: HudDeps;
 
-  constructor(hooks: HudHooks) {
-    this.h = hooks;
+  constructor(deps: HudDeps) {
+    this.deps = deps;
+    this.store = deps.store;
+    this.actions = deps.actions;
+    this.audio = deps.audio;
     this.setupChrome();
+    this.setupMic();
     this.setupPicker();
     this.setupSheet();
+    this.store.subscribe((s, prev) => this.onStore(s, prev));
+    this.store.events.on((e) => this.react(e));
+    this.onStore(this.store.getState(), null);
   }
 
-  setMe(id: string, isDealer: boolean) {
-    this.me = { id, isDealer };
-    document.body.classList.toggle("is-dealer", isDealer);
-  }
-
-  setVote(v: number | null) {
-    this.myVote = v;
-    if (this.st) { this.renderDock(this.st, false); this.renderStatus(this.st); }
+  private onStore(s: AppState, prev: AppState | null) {
+    // your seat and role come from the view, so they follow the dealer role if it moves
+    const mine = myPlayer(s);
+    if (mine && (mine.id !== this.me.id || mine.isDealer !== this.me.isDealer)) {
+      this.me = { id: mine.id, isDealer: mine.isDealer };
+      document.body.classList.toggle("is-dealer", mine.isDealer);
+    }
+    if (s.connection !== prev?.connection) {
+      const c = s.connection;
+      $("conn").textContent = c.status === "connecting" ? "reconnecting…" : c.status === "closed" ? `disconnected: ${c.reason}` : "";
+      if (c.status === "closed" && c.reason === "Removed by the dealer") this.toast("👋 The dealer removed you from this table.", "error");
+    }
+    if (s.room !== prev?.room) {
+      // a new view: draw it, then react to what changed in it
+      this.myVote = s.ui.myVote;
+      if (s.room) {
+        this.render(s.room, s.changes);
+        for (const c of s.changes) this.react(c);
+      }
+    } else if (s.ui.myVote !== prev?.ui.myVote) {
+      this.myVote = s.ui.myVote;
+      if (this.st) { this.renderDock(this.st, false); this.renderStatus(this.st); }
+    }
   }
 
   // ------------------------------------------------------------------ chrome
 
   private setupChrome() {
     $("invite").onclick = () => this.copyInvite();
-    $("wardrobe").onclick = () => this.h.openLook();
+    $("wardrobe").onclick = () => this.deps.openLook();
     const mute = $("mute");
-    const paint = () => (mute.textContent = sfx.muted ? "🔇" : "🔊");
+    const paint = () => (mute.textContent = this.audio.muted ? "🔇" : "🔊");
     paint();
-    mute.onclick = () => { sfx.setMuted(!sfx.muted); paint(); };
+    mute.onclick = () => { this.audio.setMuted(!this.audio.muted); paint(); };
     $("help").onclick = () => this.togglePop("help-pop");
     $("wallet").onclick = () => this.togglePop("board");
     $("dealer-btn").onclick = () => this.togglePop("dealer-pop");
@@ -98,8 +133,33 @@ export class Hud {
     el.hidden = !show;
   }
 
+  /** Mic loudness makes your bean's mouth move; no audio ever leaves the browser. */
+  private setupMic() {
+    const { mic, storage } = this.deps;
+    const btn = $("mic");
+    const paint = () => {
+      const on = mic.status === "on";
+      btn.classList.toggle("on", on);
+      btn.title = on ? "Mic on: your mouth moves when you talk (no audio is sent). Click to turn off." : "Turn on mic: your character's mouth moves when you talk (no audio is sent)";
+    };
+    mic.onLevel = (level) => this.actions.talk(level);
+    mic.onMeter = (level) => btn.style.setProperty("--lvl", level.toFixed(2));
+    mic.onStatus = (status) => {
+      // remember it for next time once it's settled either way
+      if (status !== "starting") storage.setMic(status === "on");
+      paint();
+    };
+    const start = () => mic.start().catch(() => this.toast("Couldn't use the mic. Check your browser's permission for this site.", "error"));
+    // a click while the browser is still asking means "never mind"
+    btn.onclick = () => (mic.status === "on" || mic.status === "starting" ? mic.stop() : void start());
+    paint();
+    if (storage.mic()) start();
+    else setTimeout(() => this.toast("🎙️ Tip: turn on your mic (top right) and your bean's mouth moves when you talk. No audio is sent."), 4000);
+  }
+
   async copyInvite() {
-    const url = `${location.origin}${location.pathname}?room=${this.h.roomCode}`;
+    const c = this.store.getState().connection;
+    const url = `${location.origin}${location.pathname}?room=${c.status === "idle" ? "" : c.room}`;
     try {
       await navigator.clipboard.writeText(url);
       this.toast("🔗 Invite link copied. Paste it in Slack or Teams.");
@@ -119,22 +179,15 @@ export class Hud {
 
   // ------------------------------------------------------------------ main update
 
-  update(prev: RoomState | null, st: RoomState) {
+  private render(st: TableView, changes: readonly ViewChange[]) {
     this.st = st;
-    const phaseChanged = prev?.phase !== st.phase || prev?.round !== st.round;
-    const newTicket = st.ticket && (prev?.ticket?.key !== st.ticket.key || (phaseChanged && st.phase === "voting"));
+    const phaseKey = `${st.phase}:${st.round}`;
+    const phaseChanged = phaseKey !== this.phaseKey;
+    this.phaseKey = phaseKey;
 
-    // people coming and going
-    if (prev) {
-      for (const p of st.players) if (!prev.players.some((q) => q.id === p.id) && p.id !== this.me.id) this.toast(`👋 ${p.name} sat down`);
-      for (const p of prev.players) if (!st.players.some((q) => q.id === p.id)) this.toast(`🚪 ${p.name} left`);
-    }
-
-    // the dealer's ticket picker
+    // the dealer's ticket picker opens by itself when there's no ticket
     if (this.me.isDealer) {
-      if (this.loading && (newTicket || (st.queue.length && prev?.queue.length !== st.queue.length))) this.stopLoading();
       if (!st.ticket && !this.pickerForced) { this.pickerForced = true; this.openPicker(); }
-      if (st.ticket && newTicket) { this.pickerForced = false; this.closePicker(); }
       this.renderPicker(st);
     }
 
@@ -143,32 +196,63 @@ export class Hud {
     this.renderDock(st, phaseChanged);
     this.renderBoard(st);
     this.renderDealer(st);
-    this.renderWallet(st, prev);
+    // a winner's wallet counts up when the coins land; everything else updates straight away
+    const iWon = changes.some((c) => c.t === "settled") && st.winners.includes(this.me.id);
+    if (!iWon) this.setWallet(st.players.find((p) => p.id === this.me.id)?.chips ?? 0);
+    const mine = st.players.find((p) => p.id === this.me.id);
+    if (mine) $("wardrobe").style.setProperty("--me", mine.look.color);
+    document.title = `${st.ticket ? st.ticket.key + " · " : ""}Point Poker`;
+  }
 
-    if (!prev) {
-      if (st.ticket && st.phase === "voting") this.openSheet();
-      return;
+  private react(e: ViewChange | GameEvent) {
+    const st = this.st;
+    switch (e.t) {
+      case "synced":
+        if (st?.ticket && st.phase === "voting") this.openSheet();
+        return;
+      case "joined":
+        if (e.player.id !== this.me.id) this.toast(`👋 ${e.player.name} sat down`);
+        return;
+      case "left":
+        this.toast(`🚪 ${e.player.name} left`);
+        return;
+      case "ticketChanged":
+        if (!this.me.isDealer) return;
+        this.pickerForced = false;
+        this.closePicker();
+        return;
+      case "dealt":
+        if (!st?.ticket) return;
+        this.announce(`<div class="a-kicker">New ticket</div><div class="a-title">${esc(st.ticket.key)}</div><div class="a-sub">${esc(st.ticket.summary)}</div>`, "deal", 1800);
+        setTimeout(() => this.openSheet(), 900);
+        return;
+      case "revealed": {
+        if (!st) return;
+        this.closeSheet();
+        const votes = st.players.filter((p) => p.plays && p.vote !== null).map((p) => p.vote!);
+        const same = votes.length > 1 && votes.every((v) => v === votes[0]);
+        this.announce(same
+          ? `<div class="a-title">Everyone said ${votes[0]}! 🎉</div><div class="a-sub">Consensus. Mark it on the calendar.</div>`
+          : `<div class="a-title">Cards up!</div><div class="a-sub">${votes.length ? `From ${Math.min(...votes)} to ${Math.max(...votes)}` : "Nobody picked a card"}</div>`, "reveal", 1700);
+        this.audio.flip();
+        return;
+      }
+      case "settled":
+        if (st) this.celebrate(st);
+        return;
+      case "toast":
+        this.toast(e.text, e.level);
+        if (e.level === "error") this.audio.bonk();
+        return;
+      case "openTicket":
+        this.openSheet();
+        return;
     }
-    if (phaseChanged && st.phase === "voting" && st.ticket) {
-      this.announce(`<div class="a-kicker">New ticket</div><div class="a-title">${esc(st.ticket.key)}</div><div class="a-sub">${esc(st.ticket.summary)}</div>`, "deal", 1800);
-      setTimeout(() => this.openSheet(), 900);
-    }
-    if (phaseChanged && st.phase === "revealed") {
-      this.closeSheet();
-      const votes = st.players.filter((p) => p.plays && p.vote !== null).map((p) => p.vote!);
-      const same = votes.length > 1 && votes.every((v) => v === votes[0]);
-      this.announce(same
-        ? `<div class="a-title">Everyone said ${votes[0]}! 🎉</div><div class="a-sub">Consensus. Mark it on the calendar.</div>`
-        : `<div class="a-title">Cards up!</div><div class="a-sub">${votes.length ? `From ${Math.min(...votes)} to ${Math.max(...votes)}` : "Nobody picked a card"}</div>`, "reveal", 1700);
-      sfx.flip();
-    }
-    const resettled = !phaseChanged && st.phase === "settled" && prev.finalPoints !== st.finalPoints;
-    if (st.phase === "settled" && (phaseChanged || resettled)) this.celebrate(st);
   }
 
   // ------------------------------------------------------------------ ticket tab + sheet
 
-  private renderTicketTab(st: RoomState) {
+  private renderTicketTab(st: TableView) {
     const t = st.ticket;
     const tab = $("ticket-tab");
     tab.hidden = !t;
@@ -182,7 +266,7 @@ export class Hud {
     $("sheet-close").onclick = () => this.closeSheet();
   }
 
-  private fillSheet(st: RoomState) {
+  private fillSheet(st: TableView) {
     const t = st.ticket;
     if (!t) return;
     this.sheetKey = t.key + st.round;
@@ -225,7 +309,7 @@ export class Hud {
     s.classList.remove("leaving");
     void s.offsetWidth;
     s.classList.add("arriving");
-    sfx.slide();
+    this.audio.slide();
   }
 
   closeSheet() {
@@ -239,36 +323,34 @@ export class Hud {
 
   // ------------------------------------------------------------------ status (top centre)
 
-  private renderStatus(st: RoomState) {
-    const voters = st.players.filter((p) => p.plays);
+  private renderStatus(st: TableView) {
+    const playing = voters(st.players);
     const step = st.phase === "voting" ? 1 : st.phase === "revealed" ? 2 : st.phase === "settled" ? 3 : 0;
     const steps = ["Pick", "Reveal", "Settle"].map((s, i) =>
       `<span class="step ${i + 1 < step ? "done" : i + 1 === step ? "on" : ""}"><b>${i + 1 < step ? "✓" : i + 1}</b>${s}</span>`).join(`<span class="bar"></span>`);
     let line = "";
-    const amVoter = !!voters.find((p) => p.id === this.me.id);
+    const amVoter = !!playing.find((p) => p.id === this.me.id);
     if (st.phase === "waiting") line = this.me.isDealer ? "Add a ticket to start" : "Waiting for the dealer to add a ticket…";
     else if (st.phase === "voting") {
-      const n = voters.filter((p) => p.hasVoted).length;
-      line = amVoter && this.myVote === null ? "Pick a card below" : `${n} of ${voters.length} picked`;
+      const n = playing.filter((p) => p.hasVoted).length;
+      line = amVoter && this.myVote === null ? "Pick a card below" : `${n} of ${playing.length} picked`;
     } else if (st.phase === "revealed") line = this.me.isDealer ? "Choose the final points below" : "The dealer is choosing the final points…";
     else if (st.phase === "settled") line = `Final: ${st.finalPoints} points`;
-    const dots = st.phase === "voting" ? `<div class="dots">${voters.map((p) =>
-      `<span class="dot ${p.hasVoted ? "in" : ""}" style="--c:${p.color}" title="${esc(p.name)}${p.hasVoted ? " ✓" : " is thinking…"}"></span>`).join("")}</div>` : "";
+    const dots = st.phase === "voting" ? `<div class="dots">${playing.map((p) =>
+      `<span class="dot ${p.hasVoted ? "in" : ""}" style="--c:${p.look.color}" title="${esc(p.name)}${p.hasVoted ? " ✓" : " is thinking…"}"></span>`).join("")}</div>` : "";
     $("status").innerHTML = `<div class="steps ${step ? "" : "idle"}">${steps}</div><div class="s-line">${esc(line)}</div>${dots}`;
   }
 
   // ------------------------------------------------------------------ dock (bottom centre)
 
-  private renderDock(st: RoomState, phaseChanged: boolean) {
-    const voters = st.players.filter((p) => p.plays);
-    const amVoter = !!voters.find((p) => p.id === this.me.id);
-    const counts = new Map<number, PublicPlayer[]>();
-    for (const p of voters) if (p.vote !== null) counts.set(p.vote, [...(counts.get(p.vote) ?? []), p]);
-    let top = -1, best = 0;
-    for (const [v, ps] of counts) if (ps.length > best || (ps.length === best && v > top)) { best = ps.length; top = v; }
+  private renderDock(st: TableView, phaseChanged: boolean) {
+    const playing = voters(st.players);
+    const amVoter = !!playing.find((p) => p.id === this.me.id);
+    const deck = cardValues(st.settings.deck);
+    const counts = tally(playing);
     // only call out a favourite when there clearly is one
-    if (best < 2 || [...counts.values()].filter((ps) => ps.length === best).length > 1) top = -1;
-    const voteDots = (v: number) => (counts.get(v) ?? []).map((p) => `<i style="--c:${p.color}" title="${esc(p.name)}"></i>`).join("");
+    const top = favourite(counts) ?? -1;
+    const voteDots = (v: number) => (counts.get(v) ?? []).map((p) => `<i style="--c:${p.look.color}" title="${esc(p.name)}"></i>`).join("");
 
     let title = "", body = "", side = "";
     const D = this.me.isDealer;
@@ -278,29 +360,27 @@ export class Hud {
         body = `<button class="btn gold xl" data-act="picker">＋ Add a Jira ticket</button>`;
       } else body = `<div class="waiting"><span class="spin"></span>The dealer is picking a ticket</div>`;
     } else if (st.phase === "voting") {
-      const n = voters.filter((p) => p.hasVoted).length;
-      const all = n === voters.length && n > 0;
+      const n = playing.filter((p) => p.hasVoted).length;
+      const all = n === playing.length && n > 0;
       if (amVoter) {
         title = this.myVote === null ? "How big is it? Pick a card" : `You picked <b>${this.myVote}</b> · tap another card to change`;
-        body = `<div class="hand">${DECK.map((v) => cardHtml(v, v === this.myVote ? "on" : this.myVote !== null ? "dim" : "")).join("")}</div>`;
+        body = `<div class="hand">${deck.map((v) => cardHtml(v, v === this.myVote ? "on" : this.myVote !== null ? "dim" : "")).join("")}</div>`;
       } else if (D) {
-        const waiting = voters.filter((p) => !p.hasVoted).map((p) => p.name);
+        const waiting = playing.filter((p) => !p.hasVoted).map((p) => p.name);
         title = all ? "Everyone's in!" : waiting.length ? `Waiting on ${esc(names(waiting.slice(0, 4)))}${waiting.length > 4 ? "…" : ""}` : "Nobody's at the table yet";
       }
-      if (D) side = `<button class="btn gold big ${all ? "pulse" : ""}" data-act="reveal" ${n ? "" : "disabled"}>Reveal cards<small>${n} of ${voters.length} in</small></button>
+      if (D) side = `<button class="btn gold big ${all ? "pulse" : ""}" data-act="reveal" ${n ? "" : "disabled"}>Reveal cards<small>${n} of ${playing.length} in</small></button>
         <button class="btn link" data-act="redeal">Restart vote</button>`;
     } else if (st.phase === "revealed" || st.phase === "settled") {
       const settled = st.phase === "settled";
       if (D) {
         title = settled ? `Final: <b>${st.finalPoints}</b> points · tap a card to change it` : "Tap the final points";
-        body = `<div class="hand settle">${DECK.map((v) => cardHtml(v,
+        body = `<div class="hand settle">${deck.map((v) => cardHtml(v,
           `${settled && v === st.finalPoints ? "on" : settled ? "dim" : ""} ${!settled && v === top ? "suggest" : ""}`,
           `${counts.get(v) ? `<span class="c-votes">${voteDots(v)}</span>` : ""}${!settled && v === top ? `<span class="c-ribbon">most votes</span>` : ""}`)).join("")}</div>`;
         if (!settled) side = `<button class="btn link" data-act="redeal">Vote again</button>`;
         else {
-          const played = new Set([...st.history.map((h) => h.key), ...st.skipped]);
-          const next = st.queue.find((x) => !played.has(x.key) && x.key !== st.ticket?.key && x.points === null)
-            ?? st.queue.find((x) => !played.has(x.key) && x.key !== st.ticket?.key);
+          const next = nextInQueue(st);
           side = next
             ? `<button class="btn gold big" data-act="next">Next ticket →<small>${esc(next.key)}</small></button><button class="btn link" data-act="picker">Choose a different one</button>`
             : `<button class="btn gold big" data-act="picker">＋ Next ticket</button>`;
@@ -308,7 +388,7 @@ export class Hud {
         }
       } else {
         title = settled ? `Final: <b>${st.finalPoints}</b> points` : "Here's how everyone voted";
-        body = `<div class="spread">${DECK.filter((v) => counts.has(v) || (settled && v === st.finalPoints)).map((v) =>
+        body = `<div class="spread">${deck.filter((v) => counts.has(v) || (settled && v === st.finalPoints)).map((v) =>
           `<div class="mini ${settled && v === st.finalPoints ? "on" : ""}"><span>${v}</span><div class="mini-dots">${voteDots(v)}</div></div>`).join("") || `<div class="waiting">Nobody voted</div>`}</div>`;
       }
     }
@@ -322,18 +402,18 @@ export class Hud {
     dock.hidden = !body && !side && !title;
     dock.querySelectorAll<HTMLButtonElement>(".pcard").forEach((b) => {
       const v = Number(b.dataset.v);
-      b.onpointerenter = () => sfx.hover();
+      b.onpointerenter = () => this.audio.hover();
       b.onclick = () => {
-        if (st.phase === "voting") this.h.playCard(v);
-        else if (D && (st.phase === "revealed" || st.phase === "settled") && v !== st.finalPoints) this.h.send({ t: "settle", finalPoints: v });
+        if (st.phase === "voting") this.actions.vote(v);
+        else if (D && (st.phase === "revealed" || st.phase === "settled") && v !== st.finalPoints) this.dealerDo(this.actions.dealer.settle(v));
       };
     });
     dock.querySelectorAll<HTMLButtonElement>("[data-act]").forEach((b) => (b.onclick = () => {
       const act = b.dataset.act;
       if (act === "picker") this.openPicker();
-      else if (act === "reveal") this.h.send({ t: "reveal" });
-      else if (act === "redeal") this.h.send({ t: "deal" });
-      else if (act === "next") { this.h.send({ t: "nextRound" }); this.startLoading("Dealing the next ticket…"); }
+      else if (act === "reveal") this.dealerDo(this.actions.dealer.reveal());
+      else if (act === "redeal") this.dealerDo(this.actions.dealer.deal());
+      else if (act === "next") this.whileLoading(this.actions.dealer.next(), "Dealing the next ticket…");
     }));
   }
 
@@ -344,26 +424,26 @@ export class Hud {
     const submit = () => {
       const ref = input.value.trim();
       if (!ref) return input.focus();
-      if (!KEY_RE.test(ref)) return this.pickerError("Paste a Jira link, or a key like SD-1234");
-      this.h.send({ t: "loadTicket", ref });
-      this.startLoading(`Fetching ${ref.match(KEY_RE)![0].toUpperCase()} from Jira…`);
+      const key = parseIssueKey(ref);
+      if (!key) return this.pickerError("Paste a Jira link, or a key like SD-1234");
+      this.whileLoading(this.actions.dealer.load(ref), `Fetching ${key} from Jira…`);
     };
     $("pk-form").onsubmit = (e) => { e.preventDefault(); submit(); };
-    input.addEventListener("paste", () => setTimeout(() => { if (KEY_RE.test(input.value)) submit(); }, 0));
+    input.addEventListener("paste", () => setTimeout(() => { if (parseIssueKey(input.value)) submit(); }, 0));
     input.oninput = () => this.pickerError("");
     $("pk-close").onclick = () => this.closePicker();
     $("pk-scrim").onclick = () => { if (this.st?.ticket) this.closePicker(); };
-    $("pk-sprint").onclick = () => { this.h.send({ t: "fetchQueue" }); this.startLoading("Loading this sprint's tickets…"); };
+    $("pk-sprint").onclick = () => this.whileLoading(this.actions.dealer.loadSprint(), "Loading this sprint's tickets…");
     $("pk-invite").onclick = () => this.copyInvite();
     $("pk-manual").onsubmit = (e) => {
       e.preventDefault();
       const summary = $<HTMLInputElement>("pk-m-summary").value.trim();
       if (!summary) return;
-      this.h.send({ t: "manualTicket", key: "", summary, description: "" });
+      this.dealerDo(this.actions.dealer.typeIn(summary));
       $<HTMLInputElement>("pk-m-summary").value = "";
     };
     const plays = $<HTMLInputElement>("pk-plays");
-    plays.onchange = () => this.h.send({ t: "dealerPlays", plays: plays.checked });
+    plays.onchange = () => this.dealerDo(this.actions.dealer.setPlays(plays.checked));
   }
 
   openPicker() {
@@ -381,15 +461,15 @@ export class Hud {
     $("pk-scrim").hidden = true;
   }
 
-  private renderPicker(st: RoomState) {
+  private renderPicker(st: TableView) {
     $("pk-close").hidden = !st.ticket;
     $("pk-jira").hidden = !st.jiraEnabled;
     $("pk-sprint").hidden = !st.jiraEnabled;
     ($("pk-manual-wrap") as HTMLDetailsElement).open ||= !st.jiraEnabled;
-    $<HTMLInputElement>("pk-plays").checked = st.dealerPlays;
+    $<HTMLInputElement>("pk-plays").checked = st.settings.dealerPlays;
     const others = st.players.filter((p) => !p.isDealer);
     $("pk-people").innerHTML = others.length
-      ? `${others.slice(0, 8).map((p) => `<span class="dot in" style="--c:${p.color}" title="${esc(p.name)}"></span>`).join("")}<span>${others.length} at the table</span>`
+      ? `${others.slice(0, 8).map((p) => `<span class="dot in" style="--c:${p.look.color}" title="${esc(p.name)}"></span>`).join("")}<span>${others.length} at the table</span>`
       : `<span>Nobody's here yet</span>`;
     $("pk-invite").classList.toggle("gold", others.length === 0);
     const done = new Set(st.history.map((h) => h.key));
@@ -400,31 +480,38 @@ export class Hud {
         <span class="k">${esc(q.key)}</span><span class="s">${esc(q.summary)}</span>
         <span class="p">${done.has(q.key) ? "✓ done" : skipped.has(q.key) ? "skipped" : q.points !== null ? `${q.points} pts` : ""}</span></button>`).join("")}</div>` : "";
     $("pk-queue").querySelectorAll<HTMLButtonElement>("[data-key]").forEach((b) => (b.onclick = () => {
-      this.h.send({ t: "loadTicket", ref: b.dataset.key! });
-      this.startLoading(`Fetching ${b.dataset.key}…`);
+      this.whileLoading(this.actions.dealer.load(b.dataset.key!), `Fetching ${b.dataset.key}…`);
     }));
   }
 
-  private startLoading(text: string) {
+  /** Shows the picker's spinner until the server answers; a failure shows up in the picker. Latest one wins. */
+  private whileLoading(work: Promise<void>, text: string) {
+    const mine = ++this.loadSeq;
     this.loading = true;
     $("picker").classList.add("loading");
     $("pk-status").textContent = text;
-    clearTimeout(this.loadTimer);
-    this.loadTimer = window.setTimeout(() => { if (this.loading) { this.stopLoading(); this.pickerError("Jira is taking too long. Try again?"); } }, 15000);
+    work.then(
+      () => { if (mine === this.loadSeq) this.stopLoading(); },
+      (e: Error) => { if (mine === this.loadSeq) this.loadFailed(e.message); },
+    );
+  }
+
+  /** A dealer action nobody waits on: if the server says no, say why. */
+  private dealerDo(work: Promise<void>) {
+    work.catch((e: Error) => { this.toast(e.message, "error"); this.audio.bonk(); });
   }
 
   private stopLoading() {
     this.loading = false;
     $("picker").classList.remove("loading");
     $("pk-status").textContent = "";
-    clearTimeout(this.loadTimer);
   }
 
-  loadFailed(text: string) {
+  private loadFailed(text: string) {
     this.stopLoading();
     if ($("picker").hidden) this.openPicker();
     this.pickerError(text);
-    sfx.bonk();
+    this.audio.bonk();
   }
 
   private pickerError(text: string) {
@@ -436,11 +523,10 @@ export class Hud {
   // ------------------------------------------------------------------ wallet + leaderboard
 
   /** The dealer's control panel: round actions and the player list with kick buttons. */
-  private renderDealer(st: RoomState) {
+  private renderDealer(st: TableView) {
     if (!this.me.isDealer) return;
     const live = st.phase === "voting" || st.phase === "revealed";
-    const nextUp = st.queue.find((q) => !q.played && q.key !== st.ticket?.key && q.points === null)
-      ?? st.queue.find((q) => !q.played && q.key !== st.ticket?.key);
+    const nextUp = nextInQueue(st);
     const btn = (act: string, label: string, sub: string, on: boolean, cls = "") =>
       `<button class="btn ${cls}" data-dc="${act}" ${on ? "" : "disabled"}><span>${label}<small>${sub}</small></span></button>`;
     const players = st.players.filter((p) => !p.isDealer);
@@ -454,33 +540,26 @@ export class Hud {
       </div>
       <div class="dc-sec">Players (${players.length})</div>
       ${players.length ? players.map((p) => `<div class="dc-row">
-        <span class="dot in" style="--c:${p.color}"></span>
+        <span class="dot in" style="--c:${p.look.color}"></span>
         <span class="lb-name">${esc(p.name)}</span>
         <span class="dc-state">${!p.connected ? "away" : st.phase === "voting" ? (p.hasVoted ? "✓ voted" : "thinking…") : ""}</span>
         <button class="dc-kick" data-kick="${p.id}" data-name="${esc(p.name)}">Kick</button>
       </div>`).join("") : `<div class="dc-state">Nobody else here yet. Send the invite link.</div>`}
-      <label class="dc-toggle"><input type="checkbox" id="dc-plays" ${st.dealerPlays ? "checked" : ""}> I play a card too</label>`;
+      <label class="dc-toggle"><input type="checkbox" id="dc-plays" ${st.settings.dealerPlays ? "checked" : ""}> I play a card too</label>`;
     const body = $("dealer-body");
     body.querySelectorAll<HTMLButtonElement>("[data-dc]").forEach((b) => (b.onclick = () => {
       const act = b.dataset.dc;
-      if (act === "redeal") this.h.send({ t: "deal" });
-      else if (act === "skip") { this.h.send({ t: "skip" }); if (nextUp) this.startLoading(`Skipping to ${nextUp.key}…`); }
-      else if (act === "cancel") { if (confirm("Cancel this round? Nobody gets paid and the ticket is cleared.")) this.h.send({ t: "cancelRound" }); }
+      if (act === "redeal") this.dealerDo(this.actions.dealer.deal());
+      else if (act === "skip") { if (nextUp) this.whileLoading(this.actions.dealer.skip(), `Skipping to ${nextUp.key}…`); else this.dealerDo(this.actions.dealer.skip()); }
+      else if (act === "cancel") { if (confirm("Cancel this round? Nobody gets paid and the ticket is cleared.")) this.dealerDo(this.actions.dealer.cancel()); }
       else if (act === "picker") this.openPicker();
       $("dealer-pop").hidden = true;
     }));
     body.querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => {
-      if (confirm(`Kick ${b.dataset.name} from the table? They won't be able to rejoin.`)) this.h.send({ t: "kick", id: b.dataset.kick! });
+      if (confirm(`Kick ${b.dataset.name} from the table? They won't be able to rejoin.`)) this.dealerDo(this.actions.dealer.kick(b.dataset.kick!));
     }));
     const plays = body.querySelector<HTMLInputElement>("#dc-plays")!;
-    plays.onchange = () => this.h.send({ t: "dealerPlays", plays: plays.checked });
-  }
-
-  private renderWallet(st: RoomState, prev: RoomState | null) {
-    const mine = st.players.find((p) => p.id === this.me.id)?.chips ?? 0;
-    // a winner's wallet counts up when the coins land; everything else updates straight away
-    const winning = st.phase === "settled" && st.winners.includes(this.me.id) && prev && (prev.phase !== "settled" || prev.finalPoints !== st.finalPoints);
-    if (!winning) this.setWallet(mine);
+    plays.onchange = () => this.dealerDo(this.actions.dealer.setPlays(plays.checked));
   }
 
   private setWallet(n: number) {
@@ -501,11 +580,11 @@ export class Hud {
     w.classList.remove("bump"); void w.offsetWidth; w.classList.add("bump");
   }
 
-  private renderBoard(st: RoomState) {
+  private renderBoard(st: TableView) {
     const rows = [...st.players].sort((a, b) => b.chips - a.chips).map((p, i) => `
       <div class="lb-row ${p.id === this.me.id ? "me" : ""} ${p.connected ? "" : "away"}">
         <span class="lb-rank">${i === 0 && p.chips > 0 ? "👑" : i + 1}</span>
-        <span class="dot in" style="--c:${p.color}"></span>
+        <span class="dot in" style="--c:${p.look.color}"></span>
         <span class="lb-name">${esc(p.name)}${p.isDealer ? " · dealer" : ""}${p.connected ? "" : " · away"}</span>
         <span class="lb-chips">🪙 ${p.chips}</span>
         ${this.me.isDealer && !p.isDealer && !p.connected ? `<button class="btn link" data-kick="${p.id}">remove</button>` : ""}
@@ -521,7 +600,7 @@ export class Hud {
       try { await navigator.clipboard.writeText(text); this.toast(`📋 Copied ${latest.size} ticket${latest.size === 1 ? "" : "s"} and their points`); }
       catch { prompt("Copy these:", text.replace(/\n/g, " | ")); }
     });
-    $("board-body").querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => this.h.send({ t: "kick", id: b.dataset.kick! })));
+    $("board-body").querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => this.dealerDo(this.actions.dealer.kick(b.dataset.kick!))));
   }
 
   // ------------------------------------------------------------------ announcements + winning
@@ -540,7 +619,7 @@ export class Hud {
     }, ms));
   }
 
-  private celebrate(st: RoomState) {
+  private celebrate(st: TableView) {
     const winners = st.players.filter((p) => st.winners.includes(p.id));
     const iWon = st.winners.includes(this.me.id);
     const final = `<div class="a-kicker">Final call · ${st.finalPoints} points</div>`;
@@ -592,10 +671,10 @@ export class Hud {
       ], { duration: 1150 + i * 35, easing: "cubic-bezier(.3,.1,.3,1)", delay: i * 18, fill: "forwards" });
       anim.onfinish = () => {
         c.remove();
-        if (++landed % 3 === 0) sfx.chip();
+        if (++landed % 3 === 0) this.audio.chip();
         if (landed === 1) this.countWalletTo(this.st?.players.find((p) => p.id === this.me.id)?.chips ?? this.wallet);
       };
     }
-    sfx.win();
+    this.audio.win();
   }
 }

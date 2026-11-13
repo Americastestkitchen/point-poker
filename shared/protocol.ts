@@ -1,140 +1,174 @@
-// Messages and state shared by the server and the browser client.
+// Messages and views shared by the server and the browser client.
+// Every message is a Zod schema; the TypeScript types come from the schemas.
+import { z } from "zod";
+import { EMOTE_IDS } from "./catalog/emotes.ts";
+import { ENVIRONMENT_IDS } from "./catalog/environments.ts";
+import { Look, LookInput } from "./look.ts";
 
-/** The cards in every player's hand. */
-export const DECK = [1, 2, 3, 5, 8] as const;
-export type CardValue = (typeof DECK)[number];
+export const Phase = z.enum(["waiting", "voting", "revealed", "settled"]);
+export type Phase = z.infer<typeof Phase>;
 
-export const MAX_PLAYERS = 8; // not counting the dealer
+/** One card in a deck. `points` is null for cards like "?" that don't count. */
+export const Card = z.object({ label: z.string(), points: z.number().nullable() });
+export type Card = z.infer<typeof Card>;
 
-export const COLORS = [
-  "#ff6b4a", "#ffd23f", "#3bceac", "#5b8cff", "#c56bff",
-  "#ff5fa2", "#8ce05a", "#ff9f1c", "#4ad6ff", "#e8e1d0",
-] as const;
-
-export const HATS = [
-  "none", "beanie", "tophat", "cone", "party", "chef", "horns", "fez", "crown",
-] as const;
-export type Hat = (typeof HATS)[number];
-
-/** Body shapes. All goofy, none dignified. */
-export const BODIES = ["bean", "chonk", "noodle", "box", "pear"] as const;
-export type Body = (typeof BODIES)[number];
-
-export const EMOTES = ["wave", "laugh", "think", "shock"] as const;
-export type Emote = (typeof EMOTES)[number];
-
-export type Phase = "waiting" | "voting" | "revealed" | "settled";
-
-export interface Ticket {
-  key: string;
-  summary: string;
-  description: string;
-  type: string;
-  status: string;
-  priority: string;
-  assignee: string;
-  reporter: string;
-  labels: string[];
-  currentPoints: number | null;
-  url: string;
+export const Ticket = z.object({
+  key: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  type: z.string(),
+  status: z.string(),
+  priority: z.string(),
+  assignee: z.string(),
+  reporter: z.string(),
+  labels: z.array(z.string()),
+  currentPoints: z.number().nullable(),
+  url: z.string(),
   /** Jira's rich description (Atlassian Document Format), rendered client-side. */
-  adf: unknown;
-  statusCategory: "new" | "indeterminate" | "done" | "";
-  parent: { key: string; summary: string } | null;
-}
+  adf: z.json().nullable(),
+  statusCategory: z.enum(["new", "indeterminate", "done", ""]),
+  parent: z.object({ key: z.string(), summary: z.string() }).nullable(),
+});
+export type Ticket = z.infer<typeof Ticket>;
 
-export interface TicketSummary {
-  key: string;
-  summary: string;
-  points: number | null;
-  status: string;
-  played?: boolean;
-}
+export const TicketSummary = z.object({
+  key: z.string(),
+  summary: z.string(),
+  points: z.number().nullable(),
+  status: z.string(),
+  played: z.boolean().optional(),
+});
+export type TicketSummary = z.infer<typeof TicketSummary>;
 
-export interface PublicPlayer {
-  id: string;
-  name: string;
-  color: string;
-  hat: Hat;
-  body: Body;
-  seat: number; // 0..MAX_PLAYERS-1, dealer is -1
-  isDealer: boolean;
-  connected: boolean;
-  plays: boolean; // false for a dealer who sits out
-  hasVoted: boolean;
-  vote: number | null; // only filled in once revealed
-  chips: number;
-  lastWin: number;
-}
+export const Epic = z.object({ key: z.string(), summary: z.string(), url: z.string() });
+export type Epic = z.infer<typeof Epic>;
 
-export interface RoundResult {
-  key: string;
-  summary: string;
-  finalPoints: number;
-  pot: number;
-  winners: string[]; // names
-  share: number;
+/** The deck, the extra house rules and where the table is. */
+export const TableSettings = z.object({
+  deck: z.array(Card),
+  dealerPlays: z.boolean(),
+  environment: z.enum(ENVIRONMENT_IDS),
+});
+export type TableSettings = z.infer<typeof TableSettings>;
+
+export const PublicPlayer = z.object({
+  id: z.string(),
+  name: z.string(),
+  look: Look,
+  seat: z.number(), // 0..MAX_PLAYERS-1, dealer is -1
+  isDealer: z.boolean(),
+  connected: z.boolean(),
+  plays: z.boolean(), // false for a dealer who sits out
+  hasVoted: z.boolean(),
+  /** Everyone's once the cards are up; before that only your own. */
+  vote: z.number().nullable(),
+  chips: z.number(),
+  lastWin: z.number(),
+});
+export type PublicPlayer = z.infer<typeof PublicPlayer>;
+
+export const RoundResult = z.object({
+  key: z.string(),
+  summary: z.string(),
+  finalPoints: z.number(),
+  pot: z.number(),
+  winners: z.array(z.string()), // names
+  share: z.number(),
   /** Nobody was within one card, so the dealer raked in the pot. */
-  houseWon?: boolean;
-}
+  houseWon: z.boolean().optional(),
+});
+export type RoundResult = z.infer<typeof RoundResult>;
 
-export interface RoomState {
-  code: string;
-  phase: Phase;
-  round: number;
-  ticket: Ticket | null;
-  players: PublicPlayer[];
-  pot: number; // sum of votes, known once revealed
-  finalPoints: number | null;
-  winners: string[]; // player ids
-  share: number;
+/** What one player gets to see of the table. */
+export const TableView = z.object({
+  code: z.string(),
+  phase: Phase,
+  round: z.number(),
+  ticket: Ticket.nullable(),
+  players: z.array(PublicPlayer),
+  pot: z.number(), // sum of votes, known once revealed
+  finalPoints: z.number().nullable(),
+  winners: z.array(z.string()), // player ids
+  share: z.number(),
   /** Nobody was within one card of the final call; `winners` is the dealer. */
-  houseWon: boolean;
-  history: RoundResult[];
+  houseWon: z.boolean(),
+  history: z.array(RoundResult),
   /** Ticket keys the dealer skipped this session. */
-  skipped: string[];
-  jiraEnabled: boolean;
-  dealerPlays: boolean;
+  skipped: z.array(z.string()),
+  jiraEnabled: z.boolean(),
+  settings: TableSettings,
   /** Set when the dealer loaded an epic; its children become the queue. */
-  epic: { key: string; summary: string; url: string } | null;
-  queue: TicketSummary[];
-  queueLabel: string;
-}
+  epic: Epic.nullable(),
+  queue: z.array(TicketSummary),
+  queueLabel: z.string(),
+});
+export type TableView = z.infer<typeof TableView>;
 
-export type ClientMsg =
-  | { t: "join"; name: string; color: string; hat: Hat; body?: Body; token?: string; dealerKey?: string }
-  | { t: "vote"; value: number | null }
-  | { t: "look"; yaw: number; pitch: number }
-  | { t: "emote"; kind: Emote }
+const msg = <T extends string, S extends z.ZodRawShape>(t: T, shape: S) => z.object({ t: z.literal(t), ...shape });
+
+// ---------- effects: change no state, relayed and never stored ----------
+
+/** Effects a browser sends: where you look, how loud you talk, emotes. */
+export const ClientFx = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("gaze"), yaw: z.number(), pitch: z.number() }),
   /** Mic loudness 0..1 (never audio), so your bean's mouth moves while you talk. */
-  | { t: "talk"; level: number }
-  | { t: "flick"; target: string }
-  | { t: "style"; color: string; hat: Hat; body?: Body }
-  // dealer only
-  | { t: "loadTicket"; ref: string }
-  | { t: "manualTicket"; key: string; summary: string; description: string }
-  | { t: "fetchQueue"; jql?: string }
-  | { t: "dealerPlays"; plays: boolean }
-  | { t: "deal" }
-  | { t: "reveal" }
-  | { t: "settle"; finalPoints: number }
-  | { t: "nextRound" }
-  /** Drop the current round (no payout) and go back to picking a ticket. */
-  | { t: "cancelRound" }
-  /** Skip the current ticket (no payout) and deal the next one in the queue. */
-  | { t: "skip" }
-  | { t: "clearQueue" }
-  | { t: "kick"; id: string };
+  z.object({ kind: z.literal("talk"), level: z.number() }),
+  z.object({ kind: z.literal("emote"), emote: z.enum(EMOTE_IDS) }),
+]);
+export type ClientFx = z.infer<typeof ClientFx>;
 
-export type ServerMsg =
-  | { t: "welcome"; playerId: string; token: string; isDealer: boolean }
-  | { t: "state"; state: RoomState }
-  | { t: "look"; id: string; yaw: number; pitch: number }
-  | { t: "emote"; id: string; kind: Emote }
-  | { t: "talk"; id: string; level: number }
-  | { t: "flick"; from: string; to: string }
-  /** A player swapped their face-down card (others only see them fiddle with it). */
-  | { t: "adjust"; id: string }
-  | { t: "toast"; text: string; level?: "info" | "error" }
-  /** Sent to the dealer when a ticket, epic or sprint list couldn't be loaded. */
-  | { t: "loadFailed"; text: string };
+/** Effects everyone sees, including ones the server makes from commands. */
+export const Fx = z.discriminatedUnion("kind", [
+  ...ClientFx.options,
+  /** A chip flies at someone's head. */
+  z.object({ kind: z.literal("flick"), to: z.string() }),
+  /** Someone swapped their face-down card (others only see them fiddle with it). */
+  z.object({ kind: z.literal("adjust") }),
+]);
+export type Fx = z.infer<typeof Fx>;
+
+// ---------- browser → server ----------
+
+export const JoinMsg = msg("join", {
+  name: z.string().max(200),
+  look: LookInput,
+  token: z.string().max(100).optional(),
+  dealerKey: z.string().max(100).optional(),
+});
+export type JoinMsg = z.infer<typeof JoinMsg>;
+
+export const FxMsg = msg("fx", { fx: ClientFx });
+
+/**
+ * A command in its envelope; the server answers each one with a `result`. The
+ * commands themselves are defined in server/table/commands.ts, and the table
+ * checks each one against its own definition, so here it only needs a name.
+ */
+export const CommandMsg = msg("cmd", { id: z.number(), cmd: z.looseObject({ t: z.string() }) });
+export type CommandMsg = z.infer<typeof CommandMsg>;
+
+export const ClientMsg = z.discriminatedUnion("t", [JoinMsg, FxMsg, CommandMsg]);
+export type ClientMsg = z.infer<typeof ClientMsg>;
+
+// ---------- HTTP ----------
+
+/** POST /api/rooms: a new table, and the key that makes you its dealer. */
+export const OpenedTable = z.object({ code: z.string(), dealerKey: z.string() });
+export type OpenedTable = z.infer<typeof OpenedTable>;
+
+/** GET /api/rooms/:code (a 404 when `exists` is false). */
+export const TableInfo = z.object({ exists: z.boolean(), jiraEnabled: z.boolean(), needsPasscode: z.boolean() });
+export type TableInfo = z.infer<typeof TableInfo>;
+
+// ---------- server → browser ----------
+
+export const ServerMsg = z.discriminatedUnion("t", [
+  msg("welcome", { playerId: z.string(), token: z.string() }),
+  msg("view", { view: TableView }),
+  msg("fx", { from: z.string(), fx: Fx }),
+  /** The answer to a command: no error means it worked. */
+  msg("result", { id: z.number(), error: z.string().optional() }),
+  /** Something the table should hear about (a skip, a kick…). */
+  msg("toast", { text: z.string(), level: z.enum(["info", "error"]).optional() }),
+]);
+export type ServerMsg = z.infer<typeof ServerMsg>;

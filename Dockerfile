@@ -15,4 +15,4 @@ COPY --from=build /app/dist ./dist
 COPY server ./server
 COPY shared ./shared
 EXPOSE 8080
-CMD ["node", "server/index.ts"]
+CMD ["node", "server/main.ts"]

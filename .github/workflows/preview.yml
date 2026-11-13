@@ -46,13 +46,13 @@ jobs:
         run: |
           body="$MARKER
           🃏 **Preview:** https://$APP.fly.dev
-          Updated for \`${GITHUB_SHA::7}\`. It sleeps when idle and is deleted when this PR closes. No Jira here, so type tickets in by hand."
+          Updated for \`${HEAD_SHA::7}\`. It sleeps when idle and is deleted when this PR closes. No Jira here, so type tickets in by hand."
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
           if [ -n "$id" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" >/dev/null
           else gh pr comment ${{ github.event.number }} --body "$body"; fi
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   destroy:
     if: github.event.action == 'closed'

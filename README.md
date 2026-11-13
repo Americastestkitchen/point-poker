@@ -61,9 +61,34 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 ### Where to go next
 
 - [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets.
-- [TODO.md](TODO.md): what we're thinking about next.
-- The code: `server/` (game rules, Jira, rooms), `client/` (3D table and UI), and
-  `shared/protocol.ts` (the messages between them, which is the best place to start reading).
+- [GitHub issues](https://github.com/JaiiR320/point-poker/issues): what we're thinking about next.
+- The code: `shared/protocol.ts` (the messages between server and browser, as Zod schemas)
+  is the best place to start reading. Next to it, `shared/rules.ts` has the rules both sides
+  use, `shared/look.ts` what a bean looks like, and `shared/catalog/` the content (decks,
+  colours, bodies, hats, emotes, environments). Then:
+  - `server/main.ts` reads the environment and wires everything together.
+  - `server/table/` is one poker table: its state, rules, commands, payouts (`coins.ts`) and
+    the round's state machine (`round.ts`: which moves each phase allows).
+    It's plain logic with unit tests, no sockets. Every command a player can send is one
+    `defineCommand()` in `commands.ts`; the client imports their types from there.
+  - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
+    (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
+  - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
+    store, the event stream (`diff`), `actions`, the session (socket + reconnect) and storage.
+    The 3D scene (`scene/`) and the UI (`hud.ts`, `lobby.ts`) only read the store and call
+    `actions`; they never import each other.
+  - `client/src/scene/layout.ts` says where everything goes (seats, cards, the ticket, the pot,
+    props). `client/src/environments/` says how it looks: the Backlog Basement lives in
+    `environments/basement/`, and a new place is a new folder there.
+  - `client/src/avatar/` is the bean: one file per body shape in `bodies/`, one per hat in
+    `cosmetics/`, the parts every bean has (face, arms, labels, chair) in `parts/`, and an
+    `animator` that works out every pose. `createAvatar(look)` puts it all together.
+  - `client/src/scene/` is grouped by job: `engine/` (renderer, picking, input, camera),
+    `layout/`, `table/` (seats, cards, chips, the pot, the ticket) and `art/` (materials,
+    canvas textures).
+  - `test/session.test.ts` plays a whole game against the real server.
+  - `*.types.test.ts` files check what the types infer (`npm run typecheck` runs them), with
+    the helpers in `test/types.ts`.
 
 ## How to play
 
