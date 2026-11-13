@@ -74,7 +74,7 @@ function Action({ action }: { action: DockAction }) {
   switch (action.t) {
     case "reveal":
       return (
-        <Button variant="primary" size="lg" className={cx(action.everyone && s.pulse)} disabled={action.voted === 0}
+        <Button variant="primary" size="lg" className={cx(s.big, action.everyone && s.pulse)} disabled={action.voted === 0}
           sub={`${action.voted} of ${action.of} in`} onPress={() => dealerDo(actions.dealer.reveal())}>
           Reveal cards
         </Button>
@@ -84,7 +84,7 @@ function Action({ action }: { action: DockAction }) {
     case "next": {
       const busy = load.status === "loading";
       return (
-        <Button variant="primary" size="lg" className={s.next} disabled={busy} sub={busy ? "Dealing…" : action.key}
+        <Button variant="primary" size="lg" className={s.big} disabled={busy} sub={busy ? "Dealing…" : action.key}
           onPress={() => ticketLoad.run(actions.dealer.next(), "Dealing the next ticket…")}>
           Next ticket →
         </Button>
@@ -92,7 +92,7 @@ function Action({ action }: { action: DockAction }) {
     }
     case "picker":
       return action.main
-        ? <Button variant="primary" size="lg" className={s.next} onPress={picker.show}>＋ Next ticket</Button>
+        ? <Button variant="primary" size="lg" className={s.big} onPress={picker.show}>＋ Next ticket</Button>
         : <Button variant="link" size="sm" className={s.link} onPress={picker.show}>Choose a different one</Button>;
     case "jira":
       return <ButtonLink href={action.url} variant="link" size="sm" className={s.link}>Open in Jira ↗</ButtonLink>;

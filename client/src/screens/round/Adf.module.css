@@ -23,8 +23,13 @@
 .preWrap pre code { background: none; padding: 0; }
 
 .tableWrap { margin-bottom: 10px; }
-.adf table { border-collapse: collapse; font-size: 13px; }
-.adf :is(th, td) { border: 1px solid var(--pp-color-sheet-line); padding: 6px 10px; text-align: left; vertical-align: top; overflow-wrap: normal; }
+/* a table keeps its columns readable and scrolls sideways on a narrow sheet */
+.adf table { width: max-content; border-collapse: collapse; font-size: 13px; }
+.adf :is(th, td) {
+  min-width: 64px; max-width: 280px; padding: 6px 10px; text-align: left; vertical-align: top;
+  border: 1px solid var(--pp-color-sheet-line); overflow-wrap: break-word;
+}
+.adf :is(th, td) > :last-child { margin-bottom: 0; }
 .adf th { background: var(--pp-color-sheet-well); }
 
 .mention { padding: 0 6px; border-radius: 12px; background: var(--pp-color-note-info); color: var(--pp-color-status-progress-ink); }

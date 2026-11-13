@@ -45,10 +45,14 @@
   font-size: 53cqw; font-weight: var(--pp-weight-display); letter-spacing: -1px;
 }
 
-/* lifted when it's the one you're on (mouse or keys), straightened up */
-.card:hover, .card:focus-visible {
+/* lifted when it's the one you're on (mouse or keys), straightened up; a finger doesn't hover */
+.card:focus-visible {
   transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) * -1));
   filter: brightness(1.04);
+}
+@media (hover: hover) {
+  .card:hover { transform: translateY(-14px) rotate(calc(var(--tilt, 0deg) * -1)); filter: brightness(1.04); }
+  .dimmed:hover { opacity: 1; }
 }
 .card:focus-visible { box-shadow: var(--pp-shadow-card), var(--pp-glow-focus); }
 
@@ -58,7 +62,7 @@
   box-shadow: 0 0 0 3px var(--pp-color-highlight), 0 0 28px color-mix(in srgb, var(--pp-color-highlight) 65%, transparent), var(--pp-shadow-card);
 }
 .dimmed { opacity: .62; }
-.dimmed:hover, .dimmed:focus-visible { opacity: 1; }
+.dimmed:focus-visible { opacity: 1; }
 .suggested { box-shadow: 0 0 0 3px var(--pp-color-success), var(--pp-shadow-card); }
 .suggested:focus-visible { box-shadow: 0 0 0 3px var(--pp-color-success), var(--pp-shadow-card), var(--pp-glow-focus); }
 
