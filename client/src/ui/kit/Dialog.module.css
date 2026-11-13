@@ -39,7 +39,10 @@
 }
 .x:hover { color: var(--pp-color-ink); background: var(--pp-color-panel-raised); }
 
-.body { flex: 0 1 auto; }
+/* square, so the scrolling body does not clip its first heading or focus glows with the panel's corners */
+.body { flex: 0 1 auto; border-radius: 0; }
+/* a finger needs a bigger ✕ */
+@media (pointer: coarse) { .x { width: 40px; height: 40px; } }
 .actions { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--pp-space-2); margin-top: var(--pp-space-5); }
 
 @media (max-height: 520px) {

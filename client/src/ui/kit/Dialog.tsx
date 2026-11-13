@@ -2,6 +2,7 @@ import { createContext, useContext, useId, useLayoutEffect, useRef, type Keyboar
 import { createPortal } from "react-dom";
 import { useBack, useUi } from "../context.tsx";
 import { cx } from "./cx.ts";
+import { hoverFocused } from "../focus.ts";
 import { Panel } from "./Panel.tsx";
 import { ScrollArea } from "./ScrollArea.tsx";
 import s from "./Dialog.module.css";
@@ -50,10 +51,16 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   useLayoutEffect(() => {
     if (!open) return;
     const before = document.activeElement as HTMLElement | null;
+    // focus goes back where it was, unless it was only there because the mouse was (see focus.ts):
+    // then it goes back to the page, like the mouse moving off would have sent it
+    const restore = hoverFocused(before) ? null : before;
     // `data-autofocus` first, wherever it is; a field with autoFocus takes over after this
     const firstStop = box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
     (firstStop ?? box.current)?.focus({ preventScroll: true });
-    return () => before?.focus?.({ preventScroll: true });
+    return () => {
+      if (restore) restore.focus?.({ preventScroll: true });
+      else if (box.current?.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+    };
   }, [open]);
 
   if (!open) return null;

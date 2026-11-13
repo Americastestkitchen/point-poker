@@ -8,15 +8,32 @@ import { first, step } from "./input/roving.ts";
 /** Forces how a control looks, for the dev gallery only. */
 export type DemoState = "hover" | "focus" | "pressed";
 
+/** Marks an element whose focus came from the mouse resting on it, not from a key or a press. */
+const HOVER_FOCUS = "data-hover-focus";
+
+/** Was `el` focused only because the mouse was over it? A popup doesn't hand focus back to one. */
+export const hoverFocused = (el: Element | null) => el?.hasAttribute(HOVER_FOCUS) ?? false;
+
 /** Props that make an element share the one focus and tick when it gets it. */
 export function useFocusable(disabled = false) {
   const { sounds } = useUi();
   return {
     onPointerEnter: (e: PointerEvent<HTMLElement>) => {
       if (e.pointerType === "mouse" && !disabled && document.activeElement !== e.currentTarget) {
+        e.currentTarget.setAttribute(HOVER_FOCUS, "");
         e.currentTarget.focus({ preventScroll: true });
       }
     },
+    // The mouse moved on: focus it only borrowed goes back to the page, so it doesn't linger on
+    // a control nobody chose. Inside a dialog it stays, so the arrow keys keep working there.
+    onPointerLeave: (e: PointerEvent<HTMLElement>) => {
+      const el = e.currentTarget;
+      if (e.pointerType !== "mouse" || !hoverFocused(el)) return;
+      el.removeAttribute(HOVER_FOCUS);
+      if (document.activeElement === el && !el.closest("[role='dialog']")) el.blur();
+    },
+    // a key means the keyboard has it now: it keeps focus when the mouse leaves
+    onKeyDownCapture: (e: KeyboardEvent<HTMLElement>) => e.currentTarget.removeAttribute(HOVER_FOCUS),
     onFocus: (_e: FocusEvent<HTMLElement>) => {
       if (!disabled) sounds.hover();
     },
@@ -45,7 +62,10 @@ export function useRoving(count: number, { orientation = "vertical", wrap = true
     const next = step(current, count, dir, { wrap, disabled });
     if (next >= 0) {
       e.preventDefault();
-      items.current[next]?.focus({ preventScroll: true });
+      const item = items.current[next];
+      item?.focus({ preventScroll: true });
+      // only as far as needed, so a list inside a scroll area follows the arrow keys
+      item?.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [count, orientation, wrap, disabled]);
 
