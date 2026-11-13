@@ -22,10 +22,11 @@ const jira =
     : noTickets();
 
 // Saving is on when DATA_DIR is set (production mounts a Fly volume there).
-const persist = !!env.DATA_DIR;
+const dataDir = env.DATA_DIR;
+const persist = !!dataDir;
 
 const app = createApp({
-  store: persist ? fileStore(env.DATA_DIR!, log) : memoryStore(),
+  store: dataDir ? fileStore(dataDir, log) : memoryStore(),
   // Opening a table (and so using the Jira token) needs this when set. Players only need the invite link.
   auth: passcodeAuth(env.HOST_PASSCODE ?? ""),
   ticketsFor: () => jira,

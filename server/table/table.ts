@@ -222,7 +222,7 @@ export class Table {
       startRound(s, ticket);
       this.ctx.changed();
     } catch (e) {
-      if (current()) return `${label}: ${(e as Error).message}`;
+      if (current()) return `${label}: ${e instanceof Error ? e.message : String(e)}`;
     }
   }
 }

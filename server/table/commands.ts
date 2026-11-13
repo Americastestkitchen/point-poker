@@ -144,7 +144,7 @@ export const COMMANDS = [
         s.epic = null;
         changed();
       } catch (e) {
-        if (current()) return `Couldn't load the sprint: ${(e as Error).message}`;
+        if (current()) return `Couldn't load the sprint: ${e instanceof Error ? e.message : String(e)}`;
       }
     },
   }),

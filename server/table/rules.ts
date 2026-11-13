@@ -8,11 +8,10 @@ export const isDealer = (s: TableState, p: PlayerState) => p.id === s.dealerId;
 export const isVoter = (s: TableState, p: PlayerState) => plays(isDealer(s, p), s.settings.dealerPlays);
 export const findPlayer = (s: TableState, id: string) => s.players.find((p) => p.id === id);
 
-export const clean = (v: unknown, max: number) =>
-  String(v ?? "")
-    .replace(/[\u0000-\u001f]/g, "")
-    .trim()
-    .slice(0, max);
+// oxlint-disable-next-line eslint/no-control-regex -- stripping control characters is the point
+const CONTROL_CHARS = /[\u0000-\u001f]/g;
+
+export const clean = (v: string, max: number) => v.replace(CONTROL_CHARS, "").trim().slice(0, max);
 
 /** A playable card value from this table's deck, or null. */
 export const pickVote = (s: TableState, v: number | null) =>

@@ -51,11 +51,11 @@ export function payOut(
   const dealer = s.players.find((p) => p.id === s.dealerId);
   const houseWon = !result.winners.length && result.pot > 0 && !!dealer;
   if (houseWon) {
-    result.winners = [dealer!.id];
+    result.winners = [dealer.id];
     result.share = result.pot;
   }
-  for (const id of result.winners) {
-    const w = s.players.find((p) => p.id === id)!;
+  for (const w of s.players) {
+    if (!result.winners.includes(w.id)) continue;
     w.chips = round2(w.chips + result.share);
     w.lastWin = result.share;
   }
