@@ -18,7 +18,7 @@ export interface PlayerCtx {
   log(line: string): void;
   changed(): void;
   notice(text: string, opts?: { level?: "error"; except?: string }): void;
-  fx(fx: TableFx, except?: string): void;
+  fx(from: string, fx: TableFx, opts?: { except?: string }): void;
   /** True (and starts the clock) when `what` is off cooldown for this player. */
   ready(playerId: string, what: string, cooldownMs: number): boolean;
 }
@@ -61,7 +61,7 @@ export const COMMANDS = [
       if (s.phase !== "voting" || !isVoter(s, me)) return;
       const before = me.vote;
       me.vote = pickVote(s, value);
-      if (before !== null && me.vote !== null && before !== me.vote) fx({ kind: "adjust", id: me.id }, me.id);
+      if (before !== null && me.vote !== null && before !== me.vote) fx(me.id, { kind: "adjust" }, { except: me.id });
       changed();
     },
   }),
@@ -71,7 +71,7 @@ export const COMMANDS = [
     run({ s, fx, ready }, me, { target }) {
       if (target === me.id || !s.players.some((p) => p.id === target)) return;
       if (!ready(me.id, "flick", FLICK_COOLDOWN_MS)) return "Not so fast";
-      fx({ kind: "flick", from: me.id, to: target });
+      fx(me.id, { kind: "flick", to: target });
     },
   }),
   defineCommand({

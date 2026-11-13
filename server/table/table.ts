@@ -2,7 +2,7 @@
 // messages in and out, and adapters (tickets, clock, log) come in as deps.
 import { randomUUID } from "node:crypto";
 import { validateLook } from "../../shared/look.ts";
-import type { JoinMsg, TableView } from "../../shared/protocol.ts";
+import type { Fx, JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { findCommand, type DealerCtx } from "./commands.ts";
 import { clean, findPlayer, freeSeat, startRound } from "./rules.ts";
@@ -21,16 +21,15 @@ export interface TableDeps {
   log: Log;
 }
 
-/** Effects that change no state; the transport plays them to everyone at the table. */
-export type TableFx =
-  | { kind: "adjust"; id: string }
-  | { kind: "flick"; from: string; to: string };
+/** The effects commands make (browsers send the rest themselves). They change no state. */
+export type TableFx = Extract<Fx, { kind: "flick" | "adjust" }>;
 
 export type TableEvent =
   /** The state changed: send everyone a fresh view. */
   | { t: "changed" }
   | { t: "notice"; text: string; level?: "error"; except?: string }
-  | { t: "fx"; fx: TableFx; except?: string }
+  /** An effect from `from`, for the transport to play to everyone at the table. */
+  | { t: "fx"; from: string; fx: TableFx; except?: string }
   /** A player was removed (kicked); close their connection. */
   | { t: "removed"; playerId: string; reason: string };
 
@@ -65,7 +64,7 @@ export class Table {
       log: (line) => deps.log.info(line),
       changed: () => emit({ t: "changed" }),
       notice: (text, opts = {}) => emit({ t: "notice", text, ...opts }),
-      fx: (fx, except) => emit({ t: "fx", fx, except }),
+      fx: (from, fx, opts = {}) => emit({ t: "fx", from, fx, ...opts }),
       remove: (p, reason) => {
         this.s.players = this.s.players.filter((x) => x !== p);
         this.online.delete(p.id);

@@ -73,7 +73,7 @@ test("changing a face-down card shows others a fiddle, not the card", async () =
   await deal();
   await run(ann, { t: "vote", value: 2 });
   await run(ann, { t: "vote", value: 3 });
-  assert.deepEqual(events.filter((e) => e.t === "fx"), [{ t: "fx", fx: { kind: "adjust", id: ann.playerId }, except: ann.playerId }]);
+  assert.deepEqual(events.filter((e) => e.t === "fx"), [{ t: "fx", from: ann.playerId, fx: { kind: "adjust" }, except: ann.playerId }]);
 });
 
 test("re-settling takes back the last payout", async () => {

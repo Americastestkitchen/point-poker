@@ -103,9 +103,7 @@ class Hub {
         if (!this.pushQueued) { this.pushQueued = true; queueMicrotask(() => this.push()); }
         return;
       case "notice": return this.broadcast({ t: "toast", text: e.text, level: e.level }, e.except);
-      case "fx":
-        if (e.fx.kind === "adjust") return this.broadcast({ t: "fx", from: e.fx.id, fx: { kind: "adjust" } }, e.except);
-        return this.broadcast({ t: "fx", from: e.fx.from, fx: { kind: "flick", to: e.fx.to } }, e.except);
+      case "fx": return this.broadcast({ t: "fx", from: e.from, fx: e.fx }, e.except);
       case "removed": {
         const ws = this.sockets.get(e.playerId);
         this.sockets.delete(e.playerId);
