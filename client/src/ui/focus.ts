@@ -49,8 +49,13 @@ export function useFocusable(disabled = false) {
       if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS);
     },
     onBlur: (e: FocusEvent<HTMLElement>) => e.currentTarget.removeAttribute(HOVER_FOCUS),
-    onFocus: (_e: FocusEvent<HTMLElement>) => {
-      if (!disabled) sounds.hover();
+    // a tick when the control itself gains focus; focus moving between the parts inside it
+    // (a carousel's arrows) is still the same control, so it stays quiet
+    onFocus: (e: FocusEvent<HTMLElement>) => {
+      if (disabled || e.target !== e.currentTarget) return;
+      const from = e.relatedTarget;
+      if (from instanceof Node && e.currentTarget.contains(from)) return;
+      sounds.hover();
     },
   };
 }

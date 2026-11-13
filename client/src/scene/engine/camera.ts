@@ -1,5 +1,6 @@
 // Your eyes: the camera sits behind your seat and you drag to look around.
 // Where you look is shared (throttled) so your bean turns its head for others.
+// Until you sit down it drifts slowly round the room for the title screens instead.
 import * as THREE from "three";
 import type { Layout } from "../layout/layout.ts";
 
@@ -11,19 +12,26 @@ export function createCameraRig(
   const pos = new THREE.Vector3(0, 1.3, 3);
   const target = new THREE.Vector3(0, 1.3, 3);
   const view = { yaw: 0, pitch: 0, sentYaw: 0, sentPitch: 0 };
-  const { lookAt: l } = layout.cameras;
+  const { lookAt: l, title } = layout.cameras;
   const lookAt = new THREE.Vector3(l.x, l.y, l.z);
+  const titleLookAt = new THREE.Vector3(title.lookAt.x, title.lookAt.y, title.lookAt.z);
+  /** Drifting for the title screens until the first seat(). */
+  let drifting = true;
+  let driftTime = 0;
   const d = new THREE.Vector3();
   let gazeTimer = 0;
 
   return {
-    /** Sit behind the seat at (x, z). `snap` skips the glide (first view of the table). */
+    /** Sit behind the seat at (x, z). `snap` skips the glide (first view of the table), except from the title drift. */
     seat(x: number, z: number, dealer: boolean, snap: boolean) {
       const p = layout.cameras.seat(x, z, dealer);
       target.set(p.x, p.y, p.z);
-      if (snap) pos.copy(target);
+      // from the title screens, glide down into the seat rather than jump
+      if (snap && !drifting) pos.copy(target);
+      drifting = false;
     },
     drag(dx: number, dy: number) {
+      if (drifting) return;
       view.yaw = THREE.MathUtils.clamp(view.yaw - dx * 0.003, -1.9, 1.9);
       view.pitch = THREE.MathUtils.clamp(view.pitch - dy * 0.00225, -0.55, 0.9);
     },
@@ -32,6 +40,15 @@ export function createCameraRig(
       view.pitch = 0;
     },
     update(dt: number) {
+      if (drifting) {
+        driftTime += dt;
+        const a = title.angle + Math.sin(driftTime * title.swaySpeed) * title.sway;
+        const y = title.height + Math.sin(driftTime * title.bobSpeed) * title.bob;
+        pos.set(Math.cos(a) * title.radius, y, Math.sin(a) * title.radius);
+        camera.position.copy(pos);
+        camera.lookAt(titleLookAt);
+        return;
+      }
       pos.lerp(target, Math.min(1, dt * 3));
       camera.position.copy(pos);
       d.copy(lookAt).sub(pos);

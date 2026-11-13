@@ -1,24 +1,34 @@
-// The game UI's root. It owns what happens once for the whole screen: the one toast adapter
-// (event-stream toasts, joins, leaves, being removed), opening the ticket when the 3D paper is
-// clicked, the window title, and Esc opening the game menu. Everything else lives in the
-// components GameScreen lays out.
+// The game UI's root. Before you sit down it shows the title screens; at the table, the HUD
+// (GameScreen) and the look editor when it's open. It owns what happens once for the whole
+// screen: the one toast adapter (event-stream toasts, joins, leaves, being removed), opening
+// the ticket when the 3D paper is clicked, the window title, and Esc opening the game menu.
+// Options and How to play open from the title menu and the game menu alike.
 import { useEffect, useSyncExternalStore } from "react";
 import { useBack } from "../ui/index.ts";
+import { HowToPlayDialog } from "./chrome/HowToPlayDialog.tsx";
+import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
 import { useAppState, useGame } from "./game.tsx";
 import { focusOf, menuKeyAllowed } from "./keys.ts";
 import { useGameEvents, useViewChanges } from "./moments.ts";
 import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notices.ts";
 import { CopyFallback } from "./parts/CopyFallback.tsx";
 import { GameScreen } from "./GameScreen.tsx";
+import { LookEditor } from "./character/LookEditor.tsx";
+import type { Title } from "./title/runner.ts";
+import { TitleScreen } from "./title/TitleScreen.tsx";
 
-export function GameRoot() {
+export function GameRoot({ title }: { title: Title }) {
   useNotices();
   useOpenTicket();
   useWindowTitle();
   useMenuKey();
+  const atTable = useAppState((st) => st.screen === "table");
   return (
     <>
-      <GameScreen />
+      {atTable ? <GameScreen /> : <TitleScreen title={title} />}
+      <LookEditor />
+      <OptionsDialog />
+      <HowToPlayDialog />
       {/* after the popups, so it opens over whichever one asked to copy */}
       <CopyFallback />
     </>

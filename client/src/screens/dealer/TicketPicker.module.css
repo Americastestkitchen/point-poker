@@ -48,6 +48,9 @@
 /* a long queue scrolls on its own; on a short screen the whole picker scrolls instead */
 .queue {
   border-radius: var(--pp-radius-md);
+  /* a scroller clips its rows' focus glows: it reaches into the room at its sides, like the dialog's body */
+  padding: var(--pp-space-2) var(--pp-space-5);
+  margin: calc(-1 * var(--pp-space-2)) calc(-1 * var(--pp-space-5));
   max-height: min(260px, 34dvh);
 }
 @media (max-height: 520px) {
@@ -59,7 +62,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--pp-space-1);
-  padding-right: var(--pp-space-1);
 }
 .rowWrap {
   display: flex;

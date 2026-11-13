@@ -23,8 +23,8 @@ interface Rule {
 }
 
 const WORLD = ["client/src/scene/", "client/src/avatar/", "client/src/environments/"];
-// UI paths: app-aware game screens, the legacy lobby (#4) and the independent ui/ kit.
-const UI = ["client/src/screens/", "client/src/lobby.ts", "client/src/ui/"];
+// UI paths: app-aware game screens (title screens and HUD) and the independent ui/ kit.
+const UI = ["client/src/screens/", "client/src/ui/"];
 
 const RULES: Rule[] = [
   {
@@ -63,7 +63,7 @@ const RULES: Rule[] = [
   {
     name: "app is not visual",
     files: ["client/src/app/"],
-    forbid: [...WORLD, "client/src/ui/", "client/src/screens/", "client/src/lobby.ts", "three"],
+    forbid: [...WORLD, "client/src/ui/", "client/src/screens/", "three"],
     why: "client/src/app/ is the store, events, actions and session; the 3D world and the UI read it, never the other way round.",
   },
   {
@@ -88,7 +88,7 @@ const RULES: Rule[] = [
   {
     name: "screens are the game UI, not its wiring",
     files: ["client/src/screens/"],
-    forbid: ["client/src/main.ts", "client/src/lobby.ts", "client/src/app/session.ts"],
+    forbid: ["client/src/main.ts", "client/src/app/session.ts"],
     why: "screens get the store, actions and services injected through useGame(); commands go through actions, never the session or socket.",
   },
   {
@@ -170,14 +170,7 @@ const TEXT_RULES: TextRule[] = [
 ];
 
 /** Known breaks, each with the issue that removes it. The test fails when one is no longer needed. */
-const EXCEPTIONS = [
-  {
-    file: "client/src/lobby.ts",
-    imports: "client/src/scene/turntable.ts",
-    why: "the look editor's preview keeps its own renderer until the title screen moves it onto the main stage",
-    issue: 4,
-  },
-];
+const EXCEPTIONS: { file: string; imports: string; why: string; issue: number }[] = [];
 
 // ---------------------------------------------------------------- reading the code
 

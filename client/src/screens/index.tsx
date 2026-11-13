@@ -13,6 +13,7 @@ import { GameRoot } from "./GameRoot.tsx";
 import { focusOf, worldKeysAllowed } from "./keys.ts";
 import { createMicControl } from "./mic.ts";
 import { createTicketLoad } from "./ticket-load.ts";
+import type { Title } from "./title/runner.ts";
 
 export interface GameUiDeps {
   store: Store;
@@ -22,9 +23,9 @@ export interface GameUiDeps {
   mic: Mic;
   /** The same instance mountUi() gets as `toasts`, so <Toaster> draws what screens show. */
   toasts: Toasts;
-  /** Opens the look editor over the table. */
-  openLook(): void;
-  /** Leaves the table for the start screen. */
+  /** The title screens' links to the page: the invite, opening tables, sitting down. */
+  title: Title;
+  /** Leaves the table for the title screens. */
   leaveTable(): void;
   /** This table's invite link. */
   inviteUrl(): string;
@@ -49,6 +50,12 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     return () => clearTimeout(timer);
   };
   const mic = createMicControl({ mic: deps.mic, storage, actions, toasts, after });
+  // the mic (or its tip) waits until you sit down, not the title screens
+  const stopWatching = store.subscribe((s) => {
+    if (s.screen !== "table") return;
+    mic.seated();
+    stopWatching();
+  });
   const ticketLoad = createTicketLoad({ openPicker: () => store.popupOpened("picker"), bonk: () => audio.bonk() });
   const copy = createCopy({ clipboard: deps.clipboard ?? (() => navigator.clipboard), toasts });
 
@@ -61,7 +68,6 @@ export function createGameUi(deps: GameUiDeps): GameUi {
     mic,
     ticketLoad,
     copy,
-    openLook: deps.openLook,
     leaveTable: deps.leaveTable,
     invite: () =>
       void copy.copy(deps.inviteUrl(), {
@@ -78,7 +84,7 @@ export function createGameUi(deps: GameUiDeps): GameUi {
   return {
     ui: (
       <GameProvider value={game}>
-        <GameRoot />
+        <GameRoot title={deps.title} />
       </GameProvider>
     ),
     allowsWorldKeys() {
@@ -91,6 +97,9 @@ export function createGameUi(deps: GameUiDeps): GameUi {
         focus: focusOf(document.activeElement),
       });
     },
-    dispose: () => mic.dispose(),
+    dispose() {
+      stopWatching();
+      mic.dispose();
+    },
   };
 }

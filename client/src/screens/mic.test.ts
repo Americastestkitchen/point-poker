@@ -38,8 +38,17 @@ function setup({ savedOn = false, allow = true } = {}) {
   return { storage, mic, control, toasts, talked, timers, asks: () => asks };
 }
 
+test("nothing happens until you sit down", () => {
+  const { control, timers, asks } = setup({ savedOn: true });
+  assert.equal(asks(), 0, "the title screens don't ask for the mic");
+  assert.equal(timers.length, 0, "or tip you off about it");
+  assert.equal(control.status(), "off");
+});
+
 test("no mic last time: a tip after a few seconds, and nothing asked for", () => {
   const { control, toasts, timers, asks } = setup();
+  control.seated();
+  control.seated();
   assert.equal(asks(), 0);
   assert.equal(control.status(), "off");
   assert.equal(timers.length, 1);
@@ -50,6 +59,7 @@ test("no mic last time: a tip after a few seconds, and nothing asked for", () =>
 
 test("mic on last time: it starts by itself, with no tip", async () => {
   const { control, timers, asks } = setup({ savedOn: true });
+  control.seated();
   assert.equal(asks(), 1);
   assert.equal(timers.length, 0);
   await settle();
@@ -101,6 +111,7 @@ test("loudness goes to the table, and the meter onto the element", async () => {
 
 test("dispose lets the mic go, cancels the tip, and keeps 'on' for next time", async () => {
   const { control, timers, storage } = setup();
+  control.seated();
   control.toggle();
   await settle();
   control.dispose();

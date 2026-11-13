@@ -77,11 +77,12 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
   - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
     store, view diffing and the event stream (`events.ts`), `actions`, the session
     (socket + reconnect) and storage.
-    The 3D world (`scene/`, `avatar/`, `environments/`) and the UI (`screens/`, `lobby.ts`,
-    `ui/`) have separate roles: world, game screens and the legacy lobby read the store, call
-    `actions` and use the event stream. `screens/` is the in-game HUD, built with the kit. The generic React kit in `ui/` takes props and injected
+    The 3D world (`scene/`, `avatar/`, `environments/`) and the UI (`screens/`, `ui/`) have
+    separate roles: both read the store, call `actions` and use the event stream. `screens/`
+    is the title screens (`screens/title/`) and the in-game HUD, built with the kit. The generic React kit in `ui/` takes props and injected
     services; it imports no app/game code. Its gallery alone wires app storage and audio.
-    World and UI do not import each other (bar the lobby's preview, until #4).
+    World and UI do not import each other: your bean on the title screens is drawn by the
+    world (`scene/showcase.ts`) into a box the screen reports through the store.
     `test/boundaries.test.ts` checks these import rules.
   - `client/src/scene/layout/layout.ts` says where everything goes (seats, cards,
     the ticket, the pot, props). `client/src/environments/` says how it looks: the Backlog Basement lives in

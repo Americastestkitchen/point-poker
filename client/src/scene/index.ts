@@ -1,4 +1,6 @@
-// The 3D scene: the room, the table and everyone at it, read from the store.
+// The 3D scene: the room, the table and everyone at it, read from the store, and your bean on
+// show for the title screens and the look editor. Until you sit down the camera drifts round
+// the room behind the title screens.
 import type { Actions } from "../app/actions.ts";
 import type { Store } from "../app/store.ts";
 import type { Audio } from "../audio/sfx.ts";
@@ -8,6 +10,7 @@ import { bindInput } from "./engine/input.ts";
 import type { Stage } from "./engine/stage.ts";
 import { layout } from "./layout/layout.ts";
 import { createFlights } from "./table/flights.ts";
+import { mountShowcase } from "./showcase.ts";
 import { buildTable } from "./table/furniture.ts";
 import { createPot } from "./table/pot.ts";
 import { mountTableView } from "./table/table-view.ts";
@@ -23,6 +26,7 @@ export interface SceneDeps {
 
 export async function mountScene(stage: Stage, deps: SceneDeps) {
   const { store, actions, audio } = deps;
+  mountShowcase(stage, store);
   // The Basement for now; switching on settings.environment comes with #10.
   const env = await (await loadEnvironment("basement")).build({ layout, audio, picking: stage.picking });
   stage.scene.background = env.background;

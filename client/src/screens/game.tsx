@@ -28,9 +28,7 @@ export interface Game {
   ticketLoad: TicketLoad;
   /** Clipboard with an in-game fallback dialog. */
   copy: Copy;
-  /** Opens the look editor over the table. */
-  openLook(): void;
-  /** Leaves this table for the start screen. */
+  /** Leaves this table for the title screens. */
   leaveTable(): void;
   /** Copies the invite link ("🔗 Invite link copied…"), or shows it to copy by hand. */
   invite(): void;

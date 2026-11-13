@@ -1,5 +1,6 @@
 // The open tables, by code.
 import { randomBytes, randomUUID } from "node:crypto";
+import { TABLE_CODE } from "../shared/rules.ts";
 import { newTableState, type TableState } from "./table/state.ts";
 import { Table, type TableDeps } from "./table/table.ts";
 
@@ -20,9 +21,9 @@ export class Rooms {
   }
 
   create(): Table {
-    const letters = "BCDFGHJKLMNPQRSTVWXZ";
+    const { letters, length } = TABLE_CODE;
     let code;
-    do code = Array.from(randomBytes(4), (b) => letters[b % letters.length]).join("");
+    do code = Array.from(randomBytes(length), (b) => letters[b % letters.length]).join("");
     while (this.tables.has(code));
     const table = new Table(newTableState(code, randomUUID(), this.deps.now()), this.deps);
     this.tables.set(code, table);

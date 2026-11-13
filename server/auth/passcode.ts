@@ -3,7 +3,7 @@
 import type { IncomingMessage } from "node:http";
 
 export interface DealerAuth {
-  /** Whether opening a table asks for a passcode; the lobby uses this to prompt. */
+  /** Whether opening a table asks for a passcode (the title screen asks for one on a 401). */
   readonly needsPasscode: boolean;
   canOpenTable(req: IncomingMessage): boolean;
 }

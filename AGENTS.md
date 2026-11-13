@@ -12,7 +12,7 @@ for running, releasing and secrets. Keep changes focused; Jira is read-only.
   session and storage, without visual dependencies. World (`scene/`, `avatar/`,
   `environments/`) and UI communicate through that layer, without mutual imports.
 - Read `store.getState()` / `store.subscribe()`. Write through named methods such as
-  `receive`, `connectionChanged`, `creatorOpened`, `seated`, `vote` and `setUi`;
+  `receive`, `connectionChanged`, `seated`, `vote`, `lookOpened`, `popupOpened` and `showcased`;
   add a purpose-specific method in `app/store.ts` when needed. The public `Store`
   type omits `setState`. Server views remain authoritative; `app/vote.ts` owns
   the existing optimistic vote reconciliation.
@@ -62,23 +62,30 @@ other consumers take injected `Layout` and use type-only imports (tests are exem
   `ui/gallery/Gallery.tsx`; keep game-specific content out of the kit. Kit CSS
   uses `--pp-*` tokens from `ui/tokens.ts` (see `ui/tokens.test.ts`).
 
-## Screen contract (#4 title/creator, #11 HUD)
+## Screen contract (title screens, HUD)
 
-The in-game screen layer is in place: `main.ts` makes one `mountUi` call with
-`screens/index.tsx`'s `createGameUi(...).ui`. `GameScreen.tsx` lays out the HUD
-regions (top, ticket, status, announce, dock, flash) and popups (`ui.popup`);
-each region's component lives in its slice folder (`screens/chrome/`, `round/`,
-`dealer/`). Use `useGame()`, `useAppState`, `usePopup`, `useViewChanges` /
-`useGameEvents` (`screens/moments.ts`) and the shared helpers there. `main.ts`
-still mounts the legacy `mountLobby`; #4 owns it and its `scene/turntable.ts`
-renderer/import exception.
+`main.ts` starts the 3D stage and makes one `mountUi` call with `screens/index.tsx`'s
+`createGameUi(...).ui` at page load. `GameRoot.tsx` shows the title screens
+(`screens/title/`: menu, join, invite, table gone; character select and the in-game
+look editor are `screens/character/`) until you sit
+down, then the HUD: `GameScreen.tsx` lays out its regions (top, ticket, status,
+announce, dock, flash) and popups (`ui.popup`); each region's component lives in its
+slice folder (`screens/chrome/`, `round/`, `dealer/`). Use `useGame()`, `useAppState`,
+`usePopup`, `useViewChanges` / `useGameEvents` (`screens/moments.ts`) and the shared
+helpers there. The title screens are the pure reducer `screens/title/flow.ts`: each
+request is a view (an open request also carries a number), its answer counts only while
+you're still on it, and what to do outside the screen comes back as effects.
+`screens/title/runner.ts` runs them through the `title` that `createGameUi` hands down (opening a table, checking a
+code, sitting down) and feeds the answers back; `TitleScreen` reads it with
+`useSyncExternalStore`.
 
 - Put app-aware React screens in **`client/src/screens/`**, outside `ui/` and
-  `app/`. When introducing that folder, add it to `UI` and the app visual-import
-  prohibition in `test/boundaries.test.ts`, so the existing world/UI rules cover
-  it. Screens may import app types/helpers and the kit, never world modules.
-  The composition root injects any preview controls; #4 moves the preview onto
-  the main stage rather than importing a renderer from a screen.
+  `app/`. The folder is in `UI` and the app visual-import prohibition in
+  `test/boundaries.test.ts`, so the world/UI rules cover everything in it.
+  Screens may import app types/helpers and the kit, never world modules.
+  To show your bean, a screen leaves an empty box and calls `useShowcase`
+  (`screens/character/showcase.ts`): it reports the box and look through
+  `store.showcased`, and `scene/showcase.ts` draws the bean there on the main stage.
 - Add one game `mountUi` call in `main.ts` for the screen tree, with injected
   `Store`, `Actions` and explicit dependencies (storage, audio, room/navigation
   callbacks as needed). Pass audio via `sounds` and a shared `createToasts()`
@@ -99,9 +106,10 @@ renderer/import exception.
 - Use existing `Dialog` for focus capture/restore and Tab trapping, `useBack`
   for menus, and `useFocusable`/`useRoving` for controls. Dialogs register deeper
   back handlers; equal-depth handlers resolve newest first. A non-dismissable
-  dialog already consumes Escape. The #11 table menu should register at depth 0,
-  active only at the table with no focused form; deeper popups take Escape first.
-- #4/#11 must wire explicit keyboard ownership: inject an `allowsWorldKeys()`
+  dialog already consumes Escape. The table menu registers at depth 0, active
+  only at the table with no focused form; the title screens' panels (join, character
+  select, table gone) register at depth 1; deeper popups take Escape first.
+- Keyboard ownership is explicit: `main.ts` injects an `allowsWorldKeys()`
   predicate into scene input from the composition root. It should deny world
   shortcuts while a dialog/menu is open or focus is in a UI control/form (including
   buttons, selects and contenteditable); scene input should also respect consumed
@@ -119,7 +127,7 @@ a domain (`t` for messages/actions, `kind` for effects, `status` for connections
 `state` for pointer input). There is no universal tag or class ban enforced by tests.
 At new boundaries use readable explicit success/failure types and human-readable
 refusal reasons; preserve existing wire/result contracts unless the feature needs
-an intentional protocol change. Legacy lobby/HUD migration belongs to #4/#11.
+an intentional protocol change.
 
 Run `npm run format` (oxfmt; layout is the formatter's, never hand-tuned), then
 **`npm run check`**: the format check, lint, TypeScript (including `*.test-d.ts`), runtime tests,

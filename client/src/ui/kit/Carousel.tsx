@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useUi } from "../context.tsx";
 import { useFocusable, type DemoState } from "../focus.ts";
 import { direction, intentOf } from "../input/intent.ts";
@@ -22,6 +22,12 @@ export interface CarouselProps<T extends Option> {
   disabled?: boolean;
   demoState?: DemoState;
 }
+
+/**
+ * The arrows are part of the carousel, not focus stops of their own: pressing one leaves focus
+ * on the carousel, so it doesn't blink out of its focused look or tick again.
+ */
+const keepFocus = (e: MouseEvent) => e.preventDefault();
 
 /** Pick one of a few options with ←/→, the arrow buttons, or a tap on either side. */
 export function Carousel<T extends Option>({
@@ -72,6 +78,7 @@ export function Carousel<T extends Option>({
           className={s.arrow}
           aria-label={`Previous ${label}`}
           disabled={disabled}
+          onMouseDown={keepFocus}
           onClick={() => go(-1)}
         >
           ◀
@@ -87,6 +94,7 @@ export function Carousel<T extends Option>({
           className={s.arrow}
           aria-label={`Next ${label}`}
           disabled={disabled}
+          onMouseDown={keepFocus}
           onClick={() => go(1)}
         >
           ▶

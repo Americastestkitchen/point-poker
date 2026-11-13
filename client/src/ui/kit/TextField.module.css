@@ -16,10 +16,17 @@
   white-space: nowrap;
 }
 
+/* the box you type in, and whatever goes with it (a submit button) beside it, as tall as the box */
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--pp-space-2);
+  min-width: 0;
+}
 .box {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--pp-space-2);
   min-width: 0;
   background: var(--pp-color-well);
   border: 2px solid var(--pp-color-edge);
@@ -31,7 +38,6 @@
 .trailing {
   display: flex;
   flex: none;
-  padding-right: var(--pp-space-1);
 }
 
 .input {
@@ -69,8 +75,9 @@
 .box:focus-within,
 .field[data-demo="focus"] .box,
 .field[data-demo="pressed"] .box {
+  /* the border itself turns gold: a second ring round it would leave a seam in the corners */
   border-color: var(--pp-color-gold);
-  box-shadow: var(--pp-glow-focus);
+  box-shadow: var(--pp-glow-gold);
 }
 
 .hint {

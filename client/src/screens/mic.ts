@@ -24,8 +24,8 @@ export const MIC_FAILED = "Couldn't use the mic. Check your browser's permission
 const TIP_AFTER_MS = 4000;
 
 /**
- * Takes over `mic`'s callbacks. Starts listening straight away if you had the mic on last
- * time; otherwise tips you off about it after a few seconds.
+ * Takes over `mic`'s callbacks. Once you sit down (seated()) it starts listening if you had
+ * the mic on last time; otherwise it tips you off about it after a few seconds.
  */
 export function createMicControl({ mic, storage, actions, toasts, after }: MicControlDeps) {
   const listeners = new Set<() => void>();
@@ -40,7 +40,7 @@ export function createMicControl({ mic, storage, actions, toasts, after }: MicCo
   };
 
   const start = () => mic.start().catch(() => void toasts.show(MIC_FAILED, { tone: "error" }));
-  const cancelTip = storage.mic() ? (void start(), () => {}) : after(TIP_AFTER_MS, () => void toasts.show(MIC_TIP));
+  let cancelTip: (() => void) | null = null;
 
   return {
     /** For useSyncExternalStore. */
@@ -48,6 +48,13 @@ export function createMicControl({ mic, storage, actions, toasts, after }: MicCo
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => void listeners.delete(listener);
+    },
+    /** You sat down at a table: the mic comes back on if it was on, or the tip shows. Once only. */
+    seated() {
+      if (cancelTip) return;
+      cancelTip = () => {};
+      if (storage.mic()) void start();
+      else cancelTip = after(TIP_AFTER_MS, () => void toasts.show(MIC_TIP));
     },
     /** On, or off. A press while the browser is still asking means "never mind". */
     toggle() {
@@ -60,7 +67,7 @@ export function createMicControl({ mic, storage, actions, toasts, after }: MicCo
     },
     /** Lets go of the mic and the tip, without forgetting that you had it on. */
     dispose() {
-      cancelTip();
+      cancelTip?.();
       mic.onLevel = mic.onMeter = () => {};
       mic.onStatus = () => {};
       listeners.clear();
