@@ -1,5 +1,100 @@
-.bar { display: flex; align-items: center; gap: var(--pp-space-2); }
-.placeholder {
-  padding: var(--pp-space-1) var(--pp-space-3); font-size: var(--pp-size-sm); color: var(--pp-color-dim);
-  background: var(--pp-color-panel); border: 1px dashed var(--pp-color-edge); border-radius: var(--pp-radius-pill);
+/*
+ * The top bar: chunky chips in a row, hugging the top-right corner. It measures its own region
+ * (a container query), so where it's narrow (phones, short landscape, a busy desktop) the
+ * Dealer and Menu chips drop their words and the bar stays one row.
+ */
+.bar.bar {
+  container-type: inline-size;
+  width: 100%;
+  /* the bar spans its region; only the chips in it take the pointer, the rest stays the room's */
+  pointer-events: none;
+}
+.row {
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--pp-space-2);
+  min-width: 0;
+}
+.row > * { pointer-events: auto; flex: none; }
+
+/* every chip is the same height, a comfortable thumb */
+.dealer.dealer, .menu.menu { min-height: 44px; }
+.dealer { font-family: var(--pp-font-display); letter-spacing: .5px; }
+.menu { gap: var(--pp-space-2); padding-right: var(--pp-space-2); }
+.burger { font-size: var(--pp-size-lg); line-height: 1; margin-right: var(--pp-space-2); vertical-align: -1px; }
+.keycap { margin-left: var(--pp-space-2); }
+.menu kbd { min-width: 30px; }
+
+/* the coins are the chip: the button around them adds only the focus ring and the press */
+.wallet.wallet {
+  padding: 0; min-height: 44px;
+  background: none; border: none; box-shadow: none;
+}
+.wallet.wallet:focus { box-shadow: var(--pp-glow-focus); }
+.wallet [role="status"] { min-height: 44px; padding-right: var(--pp-space-4); }
+
+/* the mic: greyed and struck through when off, green and glowing with your voice when on */
+.mic.mic { width: 44px; position: relative; }
+.micIcon { filter: grayscale(1); opacity: .55; transition: filter var(--pp-motion-base), opacity var(--pp-motion-base); }
+.mic::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 24px; height: 3px; border-radius: 2px;
+  background: var(--pp-color-error); box-shadow: 0 0 0 1.5px var(--pp-color-panel-solid);
+  transform: translate(-50%, -50%) rotate(-45deg);
+  transition: transform var(--pp-motion-base) var(--pp-motion-spring), opacity var(--pp-motion-base);
+}
+.mic[aria-pressed="true"] .micIcon { filter: none; opacity: 1; }
+.mic[aria-pressed="true"]::after { opacity: 0; transform: translate(-50%, -50%) rotate(-45deg) scaleX(0); }
+.mic.live.live {
+  border-color: var(--pp-color-success);
+  background: linear-gradient(color-mix(in srgb, var(--pp-color-success) 22%, var(--pp-color-button)), var(--pp-color-button-low));
+  /* --mic-level (0..1) is your voice's loudness, written each frame by the mic */
+  box-shadow: var(--pp-shadow-button),
+    0 0 0 calc(var(--mic-level, 0) * 8px) color-mix(in srgb, var(--pp-color-success) 40%, transparent);
+}
+.mic.live.live:focus {
+  box-shadow: var(--pp-shadow-button), var(--pp-glow-focus),
+    0 0 0 calc(2px + var(--mic-level, 0) * 8px) color-mix(in srgb, var(--pp-color-success) 40%, transparent);
+}
+.mic.asking .micIcon { animation: asking 1s ease-in-out infinite alternate; }
+@keyframes asking { to { opacity: .45; } }
+
+/* the line about the connection: only there while it's down */
+.row > .conn {
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  display: inline-flex; align-items: center; gap: var(--pp-space-2);
+  min-height: 32px; padding: 0 var(--pp-space-3);
+  font-size: var(--pp-size-sm); font-weight: var(--pp-weight-strong); color: var(--pp-color-gold-hi);
+  background: var(--pp-color-panel); border: var(--pp-border-panel); border-radius: var(--pp-radius-pill);
+  backdrop-filter: blur(8px);
+  animation: arrive var(--pp-motion-slow) var(--pp-motion-spring);
+}
+.down { color: var(--pp-color-error); border-color: color-mix(in srgb, var(--pp-color-error) 55%, transparent); box-shadow: var(--pp-glow-error); }
+.connIcon { flex: none; display: inline-flex; }
+.connText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes arrive { from { transform: translateY(-8px); opacity: 0; } }
+
+/* tooltips hang below the bar and open inwards from the screen's edge, wrapping when long */
+.bar [role="tooltip"] {
+  left: auto; right: 0; transform: none;
+  width: max-content; max-width: min(300px, calc(100vw - 2 * var(--pp-space-4)));
+  white-space: normal; text-align: left; line-height: 1.35;
+}
+.tipStart [role="tooltip"] { left: 0; right: auto; }
+
+/* the coins that fly into the wallet after a win (made and removed by wallet.ts) */
+.flyCoin {
+  position: fixed; left: -14px; top: -14px; z-index: var(--pp-layer-burst);
+  width: 28px; height: 28px; border-radius: var(--pp-radius-pill);
+  pointer-events: none; will-change: transform, opacity;
+  background: radial-gradient(circle at 35% 30%, var(--pp-color-gold-hi), var(--pp-color-gold-mid) 45%, var(--pp-color-gold-low));
+  box-shadow: inset 0 -3px 0 var(--pp-color-gold-shadow), var(--pp-glow-gold);
+}
+
+/* narrow: words off, icons only */
+@container (max-width: 440px) {
+  .wide { display: none; }
+  .dealer.dealer, .menu.menu { width: 44px; padding: 0; justify-content: center; }
+  .dealer { font-size: var(--pp-size-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic.asking .micIcon, .conn { animation: none; }
 }
