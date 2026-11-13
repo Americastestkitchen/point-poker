@@ -33,25 +33,29 @@ export function buildFace(shape: BodyShape, parent: THREE.Object3D): Face {
   const left = buildEye(A.eyeL);
   const right = buildEye(A.eyeR);
   const { mouth } = A;
+  // the smile and the talking mouth share one spot, leaned back to lie flush on the body
+  const lips = new THREE.Group();
+  lips.position.set(mouth.x, mouth.y, mouth.z);
+  lips.rotation.x = -shape.mouth.tilt;
+  parent.add(lips);
   const smile = mesh(
     new THREE.TorusGeometry(0.055, 0.013, 6, 16, Math.PI),
     new THREE.MeshBasicMaterial({ color: "#2a1414" }),
     false,
   );
-  smile.position.set(mouth.x, mouth.y, mouth.z);
   smile.scale.setScalar(mouth.s);
   smile.rotation.z = Math.PI;
-  parent.add(smile);
+  lips.add(smile);
   // open mouth for talking: a dark oval with a little tongue
   const hole = mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: "#2a1414" }), false);
   const tongue = mesh(new THREE.SphereGeometry(0.55, 12, 8), new THREE.MeshBasicMaterial({ color: "#d9566a" }), false);
   tongue.position.set(0, -0.45, 0.35);
   tongue.scale.set(1, 0.6, 0.5);
   hole.add(tongue);
-  hole.position.set(0, mouth.y - 0.025 * mouth.s, mouth.z - 0.003);
+  hole.position.set(0, -0.025 * mouth.s, -0.003);
   hole.scale.set(0.05, 0.001, 0.025);
   hole.visible = false;
-  parent.add(hole);
+  lips.add(hole);
 
   return {
     eyeL: left.eye,

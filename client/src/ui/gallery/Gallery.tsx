@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { BODIES } from "../../../../shared/catalog/bodies.ts";
 import { COLORS } from "../../../../shared/catalog/colors.ts";
-import { COSMETICS } from "../../../../shared/catalog/cosmetics.ts";
+import { COSMETICS, fitting } from "../../../../shared/catalog/cosmetics.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import { useUi } from "../context.tsx";
 import type { DemoState } from "../focus.ts";
@@ -67,6 +67,8 @@ const MENU = [
   { id: "help", label: "How to play", disabled: true },
 ] as const;
 type MenuId = (typeof MENU)[number]["id"];
+
+const HATS = fitting("head");
 
 const swatch = (c: string) => <span className={s.swatch} style={{ background: c }} />;
 
@@ -322,7 +324,7 @@ export function Gallery({ audio }: { audio: Audio }) {
           render={(demo, disabled) => (
             <Carousel
               label="Hat"
-              options={COSMETICS}
+              options={HATS}
               value={hat}
               onChange={setHat}
               demoState={demo}
@@ -350,7 +352,7 @@ export function Gallery({ audio }: { audio: Audio }) {
           <Carousel label="Colour" options={COLORS} value={color} onChange={setColor} render={(c) => swatch(c)} />
           <Carousel
             label="Hat"
-            options={COSMETICS}
+            options={HATS}
             value={hat}
             onChange={setHat}
             render={(c) => (

@@ -1,5 +1,5 @@
-// Where things attach to a body: the head (hats stand here), eyes, mouth,
-// chest, shoulders and hands, plus where the name tag and bubble float.
+// Where things attach to a body: the head (hats stand here), eyes, nose, mouth,
+// chin, chest, shoulders and hands, plus where the name tag and bubble float.
 import type { BodyShape } from "./body.ts";
 
 /** Where the top of a bean's head is; hats are built standing on this point. */
@@ -19,23 +19,37 @@ export type AnchorId =
   | "eyes"
   | "eyeL"
   | "eyeR"
+  | "nose"
   | "mouth"
+  | "chin"
   | "chest"
   | "shoulderL"
   | "shoulderR"
   | "handL"
   | "handR";
 
+/** How far up from the mouth towards the eyes the nose sits. */
+const NOSE_UP = 0.42;
+
+/** A body's anchors, by name. */
+export interface Anchors extends Record<Exclude<AnchorId, "handL" | "handR">, Spot> {
+  tag: Spot;
+  bubble: Spot;
+}
+
 const spot = (x: number, y: number, z: number, s = 1): Spot => ({ x, y, z, s });
 
 /** Every fixed anchor on a body shape, plus where its name tag and speech bubble float. */
-export function anchorsFor(S: BodyShape) {
+export function anchorsFor(S: BodyShape): Anchors {
   return {
     head: spot(0, HEAD_TOP + S.hatY, 0, S.hatS),
     eyes: spot(0, S.eye.y, S.eye.z, S.eye.s),
     eyeL: spot(-S.eye.x, S.eye.y, S.eye.z, S.eye.s),
     eyeR: spot(S.eye.x, S.eye.y, S.eye.z, S.eye.s),
+    /** Between the eyes and the mouth, on the face's surface. */
+    nose: spot(0, S.mouth.y + (S.eye.y - S.mouth.y) * NOSE_UP, S.mouth.z, S.mouth.s),
     mouth: spot(0, S.mouth.y, S.mouth.z, S.mouth.s),
+    chin: spot(0, S.chin.y, S.chin.z, S.mouth.s),
     /** Bow-tie height. */
     chest: spot(0, S.mouth.y - 0.13, S.mouth.z - 0.01),
     shoulderL: spot(-S.shoulder.x, S.shoulder.y, 0.02),

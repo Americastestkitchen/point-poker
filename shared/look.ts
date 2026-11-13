@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { BODY_IDS } from "./catalog/bodies.ts";
 import { COLORS } from "./catalog/colors.ts";
-import { COSMETIC, COSMETIC_IDS, COSMETICS, type CosmeticId, type Slot } from "./catalog/cosmetics.ts";
+import { COSMETIC, COSMETIC_IDS, FACE_SLOTS, fills, fitting, type CosmeticId, type Slot } from "./catalog/cosmetics.ts";
 
 export const Look = z.object({
   color: z.enum(COLORS),
@@ -46,25 +46,26 @@ export function validateLook(input: LookInput | undefined): Look {
 
 /** The item in a slot, if any. */
 export const wornIn = (look: Look, slot: Slot): CosmeticId | null =>
-  look.cosmetics.find((id) => COSMETIC[id].slots.includes(slot)) ?? null;
+  look.cosmetics.find((id) => fills(COSMETIC[id], slot)) ?? null;
 
 /** Puts `id` on (or clears the slot when null), taking off whatever was in its slots. */
 export function wear(look: Look, slot: Slot, id: CosmeticId | null): Look {
   const slots: readonly Slot[] = id ? COSMETIC[id].slots : [slot];
-  const kept = look.cosmetics.filter((c) => !COSMETIC[c].slots.some((s) => slots.includes(s)));
+  const kept = look.cosmetics.filter((c) => !slots.some((s) => fills(COSMETIC[c], s)));
   return { ...look, cosmetics: id ? [...kept, id] : kept };
 }
 
-/** A random look for someone new: any colour and body, and a hat. */
+/** How often a random look gets something in each face slot. */
+const FACE_CHANCE = 0.35;
+
+/** A random look for someone new: any colour and body, a hat, and now and then something on the face. */
 export function randomLook(random: () => number = Math.random): Look {
   const pick = <T>(a: readonly T[]): T => {
     const value = a[Math.floor(random() * a.length)];
     if (value === undefined) throw new Error("Cannot choose a look from an empty catalog or invalid random value");
     return value;
   };
-  return {
-    color: pick(COLORS),
-    body: pick(BODY_IDS),
-    cosmetics: [pick(COSMETICS.filter((c) => c.slots.includes("head"))).id],
-  };
+  let look: Look = { color: pick(COLORS), body: pick(BODY_IDS), cosmetics: [pick(fitting("head")).id] };
+  for (const slot of FACE_SLOTS) if (random() < FACE_CHANCE) look = wear(look, slot, pick(fitting(slot)).id);
+  return look;
 }

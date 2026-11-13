@@ -22,7 +22,8 @@ export const pear: BodyShape = {
     return new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve(pts).getPoints(40), 28));
   },
   eye: { x: 0.085, y: 1.2, z: 0.13, s: 0.85 },
-  mouth: { y: 1.02, z: 0.262, s: 0.95 },
+  mouth: { y: 1.02, z: 0.262, s: 0.95, tilt: 0.5 },
+  chin: { y: 0.86, z: 0.33 },
   belly: { y: 0.72, z: 0.24, sx: 1.4, sy: 1.0 },
   shoulder: { x: 0.3, y: 0.86 },
   hatY: 0.06,

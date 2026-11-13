@@ -1,11 +1,11 @@
-// Character select: your bean on its turntable on one side, the body, colour and hat
-// carousels, a name and a randomize button on the other. The title screens use it before you
+// Character select: your bean on its turntable on one side, the body, colour, hat and
+// face (eyewear, nose, facial hair) carousels, a name and a randomize button on the other. The title screens use it before you
 // sit down, and the game menu's "Change look" opens it over the table (without the name, which
 // the table already knows you by). The draft is local until Done.
 import { useState } from "react";
 import { BODIES, BODY_IDS } from "../../../../shared/catalog/bodies.ts";
 import { COLOR_NAMES, COLORS } from "../../../../shared/catalog/colors.ts";
-import { COSMETICS, type CosmeticId } from "../../../../shared/catalog/cosmetics.ts";
+import { COSMETICS, fitting, type CosmeticId, type Slot } from "../../../../shared/catalog/cosmetics.ts";
 import { byId } from "../../../../shared/catalog/registry.ts";
 import { randomLook, wornIn } from "../../../../shared/look.ts";
 import { editProfile, readyToSit, type ProfileAction } from "../../app/profile.ts";
@@ -16,11 +16,15 @@ import s from "./CharacterEditor.module.css";
 
 const BODY = byId(BODIES);
 const COSMETIC = byId(COSMETICS);
-/** Bare, then everything that sits on your head. */
-const HATS: readonly (CosmeticId | null)[] = [
-  null,
-  ...COSMETICS.filter((c) => c.slots.includes("head")).map((c) => c.id),
-];
+/** A carousel per slot: nothing first, then everything that fits there. */
+const WARDROBE = (
+  [
+    { slot: "head", label: "Hat", none: "no hat" },
+    { slot: "eyes", label: "Eyewear", none: "no glasses" },
+    { slot: "nose", label: "Nose", none: "just your own" },
+    { slot: "facialHair", label: "Facial hair", none: "clean shaven" },
+  ] as const satisfies readonly { slot: Slot; label: string; none: string }[]
+).map((w) => ({ ...w, options: [null, ...fitting(w.slot).map((c) => c.id)] satisfies (CosmeticId | null)[] }));
 
 export interface CharacterEditorProps {
   initial: Profile;
@@ -88,13 +92,16 @@ export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, 
               </span>
             )}
           />
-          <Carousel
-            label="Hat"
-            options={HATS}
-            value={wornIn(draft.look, "head")}
-            onChange={(id) => edit({ t: "wear", slot: "head", id })}
-            render={(h) => (h ? COSMETIC[h].label : "no hat")}
-          />
+          {WARDROBE.map(({ slot, label, none, options }) => (
+            <Carousel
+              key={slot}
+              label={label}
+              options={options}
+              value={wornIn(draft.look, slot)}
+              onChange={(id) => edit({ t: "wear", slot, id })}
+              render={(id) => (id ? COSMETIC[id].label : none)}
+            />
+          ))}
           <Button shape="pill" onPress={randomize}>
             🎲 Randomize
           </Button>
