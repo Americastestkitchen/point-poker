@@ -18,6 +18,12 @@ export type DeckId = keyof typeof DECKS;
 
 /** Every value gets a suit, so the deck reads like a real (cheap) deck of cards. */
 export const CARD_SUIT: Record<number, { glyph: string; red: boolean }> = {
-  0: { glyph: "♠", red: false }, 1: { glyph: "♥", red: true }, 2: { glyph: "♣", red: false }, 3: { glyph: "♦", red: true },
-  5: { glyph: "♠", red: false }, 8: { glyph: "♥", red: true }, 13: { glyph: "♣", red: false }, 21: { glyph: "♦", red: true },
+  0: { glyph: "♠", red: false },
+  1: { glyph: "♥", red: true },
+  2: { glyph: "♣", red: false },
+  3: { glyph: "♦", red: true },
+  5: { glyph: "♠", red: false },
+  8: { glyph: "♥", red: true },
+  13: { glyph: "♣", red: false },
+  21: { glyph: "♦", red: true },
 };

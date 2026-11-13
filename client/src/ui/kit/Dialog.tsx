@@ -35,7 +35,16 @@ const Depth = createContext(0);
  * A popup over the game. It takes focus when it opens, keeps Tab inside, closes on Esc
  * (only the topmost one, if they stack) and hands focus back to where it was.
  */
-export function Dialog({ open, onClose, title, children, actions, dismissable = true, width = "md", variant = "default" }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  children,
+  actions,
+  dismissable = true,
+  width = "md",
+  variant = "default",
+}: DialogProps) {
   const { sounds, layer } = useUi();
   const box = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -57,7 +66,8 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
     // (inside another dialog it does go back: focus has to stay in the one still open)
     const restore = hoverFocused(before) && !before?.closest("[role='dialog']") ? null : before;
     // `data-autofocus` first, wherever it is; a field with autoFocus takes over after this
-    const firstStop = box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
+    const firstStop =
+      box.current?.querySelector<HTMLElement>("[data-autofocus]") ?? box.current?.querySelector<HTMLElement>(FOCUSABLE);
     (firstStop ?? box.current)?.focus({ preventScroll: true });
     return () => {
       if (restore) restore.focus?.({ preventScroll: true });
@@ -74,7 +84,7 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
     const stops = [...box.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
     if (stops.length === 0) return;
     const i = stops.indexOf(document.activeElement as HTMLElement);
-    const next = e.shiftKey ? (i <= 0 ? stops.length - 1 : i - 1) : (i === stops.length - 1 ? 0 : i + 1);
+    const next = e.shiftKey ? (i <= 0 ? stops.length - 1 : i - 1) : i === stops.length - 1 ? 0 : i + 1;
     e.preventDefault();
     stops[next]!.focus();
   };
@@ -85,22 +95,42 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
       style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }}
       // a press that starts and ends on the backdrop closes it; it closes on the click, once the
       // press is over, so nothing of that press lands on the page underneath and takes focus
-      onPointerDown={(e) => { pressedOutside.current = e.target === e.currentTarget; }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      onPointerDown={(e) => {
+        pressedOutside.current = e.target === e.currentTarget;
+      }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
       onClick={(e) => {
         const outside = pressedOutside.current && e.target === e.currentTarget;
         pressedOutside.current = false;
         if (dismissable && outside) close();
       }}
     >
-      <div ref={box} role="dialog" aria-modal aria-labelledby={titleId} tabIndex={-1} className={cx(s.box, s[width])} onKeyDown={trapTab}>
+      <div
+        ref={box}
+        role="dialog"
+        aria-modal
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={cx(s.box, s[width])}
+        onKeyDown={trapTab}
+      >
         <Panel padding="lg" variant={variant} className={cx(s.panel, s[variant])}>
           <header className={s.head}>
-            <h2 id={titleId} className={s.title}>{title}</h2>
-            {dismissable && <button type="button" tabIndex={-1} className={s.x} aria-label="Close" onClick={close}>✕</button>}
+            <h2 id={titleId} className={s.title}>
+              {title}
+            </h2>
+            {dismissable && (
+              <button type="button" tabIndex={-1} className={s.x} aria-label="Close" onClick={close}>
+                ✕
+              </button>
+            )}
           </header>
           {/* only the body scrolls: the title and the buttons stay put on a short phone */}
-          <ScrollArea className={s.body}><Depth value={depth}>{children}</Depth></ScrollArea>
+          <ScrollArea className={s.body}>
+            <Depth value={depth}>{children}</Depth>
+          </ScrollArea>
           {actions && <footer className={s.actions}>{actions}</footer>}
         </Panel>
       </div>

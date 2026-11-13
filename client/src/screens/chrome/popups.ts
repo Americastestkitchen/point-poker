@@ -11,9 +11,13 @@ export function usePopupWithBack(popup: Popup) {
   const own = usePopup(popup);
   // which popup this one replaced when it opened: a temporary note, not a copy of the store
   const [from, setFrom] = useState<Popup | null>(null);
-  useEffect(() => store.subscribe((s, prev) => {
-    if (s.ui.popup === popup && prev.ui.popup !== popup) setFrom(prev.ui.popup);
-  }), [store, popup]);
+  useEffect(
+    () =>
+      store.subscribe((s, prev) => {
+        if (s.ui.popup === popup && prev.ui.popup !== popup) setFrom(prev.ui.popup);
+      }),
+    [store, popup],
+  );
 
   const back = backTo(from);
   return {

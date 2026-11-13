@@ -63,10 +63,14 @@ test("a view from before your vote arrived doesn't take your card back", async (
   let answer!: (error?: string) => void;
   const { store, events } = setup();
   // a session whose reply we hold back until we say so
-  const held = createActions({
-    request: () => new Promise<void>((resolve, reject) => (answer = (error) => (error ? reject(new Error(error)) : resolve()))),
-    fx: () => {},
-  }, store);
+  const held = createActions(
+    {
+      request: () =>
+        new Promise<void>((resolve, reject) => (answer = (error) => (error ? reject(new Error(error)) : resolve()))),
+      fx: () => {},
+    },
+    store,
+  );
   const voting = view({ phase: "voting", round: 1, ticket: ticket("SD-1") });
   held.vote(3);
   store.receive(voting); // sent before the server got the vote
@@ -84,7 +88,9 @@ test("a view from before your vote arrived doesn't take your card back", async (
 });
 
 test("dealer actions resolve when the server says yes and reject with its reason", async () => {
-  const { sent, actions } = setup("deb", (cmd) => (cmd.t === "loadTicket" && cmd.ref === "SD-404" ? "SD-404: Ticket not found (or no access)" : undefined));
+  const { sent, actions } = setup("deb", (cmd) =>
+    cmd.t === "loadTicket" && cmd.ref === "SD-404" ? "SD-404: Ticket not found (or no access)" : undefined,
+  );
   await actions.dealer.load("SD-7");
   await assert.rejects(actions.dealer.load("SD-404"), { message: "SD-404: Ticket not found (or no access)" });
   await actions.dealer.reveal();
@@ -102,7 +108,9 @@ test("dealer actions resolve when the server says yes and reject with its reason
 });
 
 test("a failed action nobody waits on becomes a toast; a flick that's too soon stays quiet", async () => {
-  const { events, actions } = setup("ann", (cmd) => (cmd.t === "flick" ? "Not so fast" : cmd.t === "setLook" ? "Nope" : undefined));
+  const { events, actions } = setup("ann", (cmd) =>
+    cmd.t === "flick" ? "Not so fast" : cmd.t === "setLook" ? "Nope" : undefined,
+  );
   actions.flick("bob");
   actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: [] });
   await new Promise((r) => setTimeout(r, 0));
@@ -115,6 +123,10 @@ test("small talk goes out as effects", () => {
   actions.gaze(0.2, -0.1);
   actions.talk(0.5);
   actions.openTicket();
-  assert.deepEqual(sent, [{ kind: "emote", emote: "wave" }, { kind: "gaze", yaw: 0.2, pitch: -0.1 }, { kind: "talk", level: 0.5 }]);
+  assert.deepEqual(sent, [
+    { kind: "emote", emote: "wave" },
+    { kind: "gaze", yaw: 0.2, pitch: -0.1 },
+    { kind: "talk", level: 0.5 },
+  ]);
   assert.deepEqual(events, [{ t: "openTicket" }]);
 });

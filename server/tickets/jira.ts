@@ -33,15 +33,20 @@ const Issue = z.object({
     /** Atlassian Document Format. */
     description: z.json().catch(null),
     issuetype: named,
-    status: z.object({
-      name: text,
-      statusCategory: z.object({ key: Ticket.shape.statusCategory.catch("") }).catch({ key: "" }),
-    }).catch({ name: "", statusCategory: { key: "" } }),
+    status: z
+      .object({
+        name: text,
+        statusCategory: z.object({ key: Ticket.shape.statusCategory.catch("") }).catch({ key: "" }),
+      })
+      .catch({ name: "", statusCategory: { key: "" } }),
     priority: named,
     assignee: person,
     reporter: person,
     labels: z.array(z.string()).catch([]),
-    parent: z.object({ key: z.string(), fields: z.object({ summary: text }).catch({ summary: "" }) }).nullable().catch(null),
+    parent: z
+      .object({ key: z.string(), fields: z.object({ summary: text }).catch({ summary: "" }) })
+      .nullable()
+      .catch(null),
   }),
 });
 
@@ -55,19 +60,37 @@ export function adfToText(node: any): string {
   if (typeof node === "string") return node;
   const kids = () => (node.content ?? []).map(adfToText).join("");
   switch (node.type) {
-    case "text": return node.text ?? "";
-    case "hardBreak": return "\n";
-    case "mention": return node.attrs?.text ?? "@someone";
-    case "emoji": return node.attrs?.text ?? node.attrs?.shortName ?? "";
-    case "inlineCard": case "blockCard": return node.attrs?.url ?? "";
-    case "paragraph": case "heading": return kids() + "\n\n";
-    case "listItem": return "• " + kids().trim() + "\n";
-    case "bulletList": case "orderedList": return kids() + "\n";
-    case "codeBlock": return kids() + "\n\n";
-    case "rule": return "———\n";
-    case "tableRow": return (node.content ?? []).map((c: any) => adfToText(c).trim()).join(" | ") + "\n";
-    case "mediaSingle": case "mediaGroup": case "media": return "[attachment]\n";
-    default: return kids();
+    case "text":
+      return node.text ?? "";
+    case "hardBreak":
+      return "\n";
+    case "mention":
+      return node.attrs?.text ?? "@someone";
+    case "emoji":
+      return node.attrs?.text ?? node.attrs?.shortName ?? "";
+    case "inlineCard":
+    case "blockCard":
+      return node.attrs?.url ?? "";
+    case "paragraph":
+    case "heading":
+      return kids() + "\n\n";
+    case "listItem":
+      return "• " + kids().trim() + "\n";
+    case "bulletList":
+    case "orderedList":
+      return kids() + "\n";
+    case "codeBlock":
+      return kids() + "\n\n";
+    case "rule":
+      return "———\n";
+    case "tableRow":
+      return (node.content ?? []).map((c: any) => adfToText(c).trim()).join(" | ") + "\n";
+    case "mediaSingle":
+    case "mediaGroup":
+    case "media":
+      return "[attachment]\n";
+    default:
+      return kids();
   }
 }
 
@@ -82,7 +105,11 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
   const fetch = cfg.fetch ?? globalThis.fetch;
 
   /** GETs a Jira endpoint and checks the reply against `schema`. */
-  async function get<S extends z.ZodType>(schema: S, path: string, params: Record<string, string> = {}): Promise<z.infer<S>> {
+  async function get<S extends z.ZodType>(
+    schema: S,
+    path: string,
+    params: Record<string, string> = {},
+  ): Promise<z.infer<S>> {
     const url = new URL(base + path);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     const res = await fetch(url, {
@@ -98,8 +125,17 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
   }
 
   async function search(jql: string): Promise<TicketSummary[]> {
-    const j = await get(Search, "/rest/api/3/search/jql", { jql, fields: `summary,status,${pointsField}`, maxResults: "50" });
-    return j.issues.map(({ key, fields: f }) => ({ key, summary: f.summary, status: f.status.name, points: points.parse(f[pointsField]) }));
+    const j = await get(Search, "/rest/api/3/search/jql", {
+      jql,
+      fields: `summary,status,${pointsField}`,
+      maxResults: "50",
+    });
+    return j.issues.map(({ key, fields: f }) => ({
+      key,
+      summary: f.summary,
+      status: f.status.name,
+      points: points.parse(f[pointsField]),
+    }));
   }
 
   return {
@@ -107,12 +143,28 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
     async get(ref) {
       const key = parseIssueKey(ref);
       if (!key) throw new Error("That doesn't look like a ticket link or key");
-      const fields = ["summary", "description", "issuetype", "status", "priority", "assignee", "reporter", "labels", "parent", pointsField];
-      const { key: issueKey, fields: f } = await get(Issue, `/rest/api/3/issue/${encodeURIComponent(key)}`, { fields: fields.join(",") });
+      const fields = [
+        "summary",
+        "description",
+        "issuetype",
+        "status",
+        "priority",
+        "assignee",
+        "reporter",
+        "labels",
+        "parent",
+        pointsField,
+      ];
+      const { key: issueKey, fields: f } = await get(Issue, `/rest/api/3/issue/${encodeURIComponent(key)}`, {
+        fields: fields.join(","),
+      });
       return {
         key: issueKey,
         summary: f.summary,
-        description: adfToText(f.description).replace(/\n{3,}/g, "\n\n").trim().slice(0, 6000),
+        description: adfToText(f.description)
+          .replace(/\n{3,}/g, "\n\n")
+          .trim()
+          .slice(0, 6000),
         type: f.issuetype.name,
         status: f.status.name,
         priority: f.priority.name,
@@ -128,8 +180,13 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
     },
     async find(q: TicketQuery) {
       switch (q.kind) {
-        case "epic": return { label: `Epic ${q.key}`, tickets: await search(epicChildrenJql(q.key)) };
-        case "upcoming": return { label: "Current & upcoming sprints", tickets: await search(upcomingJql(q.project ?? cfg.defaultProject ?? "SD")) };
+        case "epic":
+          return { label: `Epic ${q.key}`, tickets: await search(epicChildrenJql(q.key)) };
+        case "upcoming":
+          return {
+            label: "Current & upcoming sprints",
+            tickets: await search(upcomingJql(q.project ?? cfg.defaultProject ?? "SD")),
+          };
       }
     },
   };

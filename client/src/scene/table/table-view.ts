@@ -23,10 +23,20 @@ export interface TableView {
 
 const chipColors = ["#c0392b", "#2d6cdf", "#151515", "#e6be5a"];
 
-export function mountTableView(stage: Stage, deps: {
-  store: Store; actions: Actions; audio: Audio; layout: Layout; flights: Flights; rig: CameraRig;
-  ticket: TicketPaper; pot: Pot; screen: StatusScreen;
-}): TableView {
+export function mountTableView(
+  stage: Stage,
+  deps: {
+    store: Store;
+    actions: Actions;
+    audio: Audio;
+    layout: Layout;
+    flights: Flights;
+    rig: CameraRig;
+    ticket: TicketPaper;
+    pot: Pot;
+    screen: StatusScreen;
+  },
+): TableView {
   const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;
   const { scene, camera } = stage;
   const seats = new Map<string, Seat>();
@@ -49,8 +59,10 @@ export function mountTableView(stage: Stage, deps: {
     const me = meId();
     const settled = changes.find((c) => c.t === "settled");
     const potDoes = potMove(pot.state, {
-      phase: st.phase, revealedNow: happened("revealed"),
-      settledNow: !!settled, resettled: settled?.t === "settled" && settled.resettled,
+      phase: st.phase,
+      revealedNow: happened("revealed"),
+      settledNow: !!settled,
+      resettled: settled?.t === "settled" && settled.resettled,
     });
     const payingOut = potDoes === "payOut";
 
@@ -116,7 +128,10 @@ export function mountTableView(stage: Stage, deps: {
         if (!card.isFaceUp) {
           // on the reveal, cards turn one after another
           const stagger = happened("revealed");
-          card.turnUp(p.vote, { delay: stagger ? 0.25 * flipIndex++ : 0, onTurn: stagger ? () => audio.flip() : undefined });
+          card.turnUp(p.vote, {
+            delay: stagger ? 0.25 * flipIndex++ : 0,
+            onTurn: stagger ? () => audio.flip() : undefined,
+          });
         }
       } else card.hide();
 
@@ -138,7 +153,8 @@ export function mountTableView(stage: Stage, deps: {
     }
     if (settled) {
       for (const id of st.winners) seats.get(id)?.avatar.play("celebrate");
-      if (st.winners.includes(me)) audio.win(); else audio.chip();
+      if (st.winners.includes(me)) audio.win();
+      else audio.chip();
     }
 
     // people arriving wave; people who changed shape gasp
@@ -151,13 +167,25 @@ export function mountTableView(stage: Stage, deps: {
 
     // the ticket on the table and on the status screen
     const t = st.ticket;
-    ticket.set(t ? {
-      key: t.key, type: t.type, summary: t.summary,
-      points: st.finalPoints !== null && st.phase === "settled" ? `${st.finalPoints} PTS` : "",
-    } : null);
+    ticket.set(
+      t
+        ? {
+            key: t.key,
+            type: t.type,
+            summary: t.summary,
+            points: st.finalPoints !== null && st.phase === "settled" ? `${st.finalPoints} PTS` : "",
+          }
+        : null,
+    );
     const playing = voters(st.players);
-    const status = st.phase === "voting" ? `${playing.filter((p) => p.hasVoted).length}/${playing.length} BETS IN`
-      : st.phase === "revealed" ? `POT ${st.pot}` : st.phase === "settled" ? `FINAL ${st.finalPoints} PTS` : "";
+    const status =
+      st.phase === "voting"
+        ? `${playing.filter((p) => p.hasVoted).length}/${playing.length} BETS IN`
+        : st.phase === "revealed"
+          ? `POT ${st.pot}`
+          : st.phase === "settled"
+            ? `FINAL ${st.finalPoints} PTS`
+            : "";
     screen.show(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", status);
   }
 
@@ -175,15 +203,33 @@ export function mountTableView(stage: Stage, deps: {
     chip.position.copy(start);
     scene.add(chip);
     flights.add({
-      obj: chip, from: start, to: () => headOf(to), t: 0, dur: 0.55, arc: 0.35, spin: 25,
+      obj: chip,
+      from: start,
+      to: () => headOf(to),
+      t: 0,
+      dur: 0.55,
+      arc: 0.35,
+      spin: 25,
       done: () => {
         audio.bonk();
         if (to === meId()) store.events.emit({ t: "bonked" });
         else seats.get(to)?.avatar.play("bonked");
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
-        const away = bounce.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)).setY(layout.table.y + 0.01);
-        flights.add({ obj: chip, from: bounce, to: away, t: 0, dur: 0.5, arc: 0.25, spin: 12, done: () => stage.after(1.5, () => scene.remove(chip)) });
+        const away = bounce
+          .clone()
+          .add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8))
+          .setY(layout.table.y + 0.01);
+        flights.add({
+          obj: chip,
+          from: bounce,
+          to: away,
+          t: 0,
+          dur: 0.5,
+          arc: 0.25,
+          spin: 12,
+          done: () => stage.after(1.5, () => scene.remove(chip)),
+        });
       },
     });
   }
@@ -192,22 +238,37 @@ export function mountTableView(stage: Stage, deps: {
   function play(from: string, fx: Fx) {
     const seat = seats.get(from);
     switch (fx.kind) {
-      case "gaze": seat?.avatar.setGaze(fx.yaw, fx.pitch); return;
-      case "talk": seat?.avatar.setTalk(fx.level); return;
-      case "emote": seat?.avatar.play(fx.emote); audio.pop(); return;
-      case "flick": flick(from, fx.to); return;
+      case "gaze":
+        seat?.avatar.setGaze(fx.yaw, fx.pitch);
+        return;
+      case "talk":
+        seat?.avatar.setTalk(fx.level);
+        return;
+      case "emote":
+        seat?.avatar.play(fx.emote);
+        audio.pop();
+        return;
+      case "flick":
+        flick(from, fx.to);
+        return;
       case "adjust":
         // someone swapped their card: they reach in and fiddle with it
-        if (seat && seat.card.group.visible) { seat.avatar.play("adjustCard"); seat.card.nudge(0.2); }
+        if (seat && seat.card.group.visible) {
+          seat.avatar.play("adjustCard");
+          seat.card.nudge(0.2);
+        }
         return;
-      default: fx satisfies never;
+      default:
+        fx satisfies never;
     }
   }
 
   /** Effects that don't wait for a redraw. */
   function react(e: GameEvent) {
     switch (e.t) {
-      case "fx": play(e.from, e.fx); return;
+      case "fx":
+        play(e.from, e.fx);
+        return;
       case "played": {
         // your card flies from your hand to the felt
         const seat = seats.get(meId());

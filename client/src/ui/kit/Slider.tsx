@@ -20,7 +20,17 @@ export interface SliderProps {
 }
 
 /** A value along a track: ←/→ step it, dragging or tapping the track sets it. */
-export function Slider({ label, value, onChange, min = 0, max = 1, step = 0.1, format = String, disabled, demoState }: SliderProps) {
+export function Slider({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 1,
+  step = 0.1,
+  format = String,
+  disabled,
+  demoState,
+}: SliderProps) {
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
   const track = useRef<HTMLSpanElement>(null);

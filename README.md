@@ -13,12 +13,12 @@ calls the final points. The closest guess wins the pot.
 
 ### Where things live
 
-| Thing | Where | You need access? |
-|---|---|---|
-| Code | this GitHub repo | Yes: ask Jair to add you |
-| Live and dev sites | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you |
-| Tickets | Jira (the game only **reads** it) | Only to show real tickets locally |
-| Secrets (Jira token, host passcode) | Fly, plus `.env.local` on your machine | Ask Jair if you need them |
+| Thing                               | Where                                       | You need access?                  |
+| ----------------------------------- | ------------------------------------------- | --------------------------------- |
+| Code                                | this GitHub repo                            | Yes: ask Jair to add you          |
+| Live and dev sites                  | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you        |
+| Tickets                             | Jira (the game only **reads** it)           | Only to show real tickets locally |
+| Secrets (Jira token, host passcode) | Fly, plus `.env.local` on your machine      | Ask Jair if you need them         |
 
 ### How a change reaches people
 

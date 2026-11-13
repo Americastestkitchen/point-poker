@@ -62,7 +62,9 @@ export function useWallet(target: RefObject<HTMLElement | null>, coinClass: stri
   const [held, setHeld] = useState<number | null>(null);
   const shown = held ?? chips ?? null;
   const lastShown = useRef(shown);
-  useLayoutEffect(() => { lastShown.current = shown; });
+  useLayoutEffect(() => {
+    lastShown.current = shown;
+  });
 
   const stop = useRef<() => void>(() => {});
   useEffect(() => () => stop.current(), []);
@@ -79,28 +81,30 @@ export function useWallet(target: RefObject<HTMLElement | null>, coinClass: stri
     const timers: ReturnType<typeof setTimeout>[] = [];
     let cancelFlight = () => {};
     const release = () => setHeld(null);
-    timers.push(setTimeout(() => {
-      audio.win();
-      const el = target.current;
-      if (!el || reducedMotion()) return release();
-      const r = el.getBoundingClientRect();
-      const doc = el.ownerDocument;
-      const view = doc.defaultView;
-      cancelFlight = coinBurst({
-        parent: layer ?? doc.body,
-        className: coinClass,
-        from: { x: (view?.innerWidth ?? 0) / 2, y: (view?.innerHeight ?? 0) * 0.42 },
-        // the coin sits at the counter's left end
-        to: { x: r.left + 17, y: r.top + r.height / 2 },
-        amount,
-        onLand(landed) {
-          if (landed === 1) release();
-          if (clinks(landed)) audio.chip();
-        },
-      });
-      // if the coins never get there (a hidden tab), the wallet still catches up
-      timers.push(setTimeout(release, 2500));
-    }, BURST_DELAY_MS));
+    timers.push(
+      setTimeout(() => {
+        audio.win();
+        const el = target.current;
+        if (!el || reducedMotion()) return release();
+        const r = el.getBoundingClientRect();
+        const doc = el.ownerDocument;
+        const view = doc.defaultView;
+        cancelFlight = coinBurst({
+          parent: layer ?? doc.body,
+          className: coinClass,
+          from: { x: (view?.innerWidth ?? 0) / 2, y: (view?.innerHeight ?? 0) * 0.42 },
+          // the coin sits at the counter's left end
+          to: { x: r.left + 17, y: r.top + r.height / 2 },
+          amount,
+          onLand(landed) {
+            if (landed === 1) release();
+            if (clinks(landed)) audio.chip();
+          },
+        });
+        // if the coins never get there (a hidden tab), the wallet still catches up
+        timers.push(setTimeout(release, 2500));
+      }, BURST_DELAY_MS),
+    );
     stop.current = () => {
       for (const t of timers) clearTimeout(t);
       cancelFlight();

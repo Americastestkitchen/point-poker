@@ -14,10 +14,12 @@ export const Profile = z.object({ name: z.string(), look: Look });
 export type Profile = z.infer<typeof Profile>;
 
 /** A saved profile, keeping whichever parts still read: a bad look doesn't lose your name. */
-const SavedProfile = z.object({
-  name: Profile.shape.name.optional().catch(undefined),
-  look: Profile.shape.look.optional().catch(undefined),
-}).catch({});
+const SavedProfile = z
+  .object({
+    name: Profile.shape.name.optional().catch(undefined),
+    look: Profile.shape.look.optional().catch(undefined),
+  })
+  .catch({});
 
 export function memoryStorage(): StorageLike {
   const m = new Map<string, string>();
@@ -33,7 +35,11 @@ export function createStorage(s: StorageLike) {
     /** What we remember about you: name and look. Missing or unreadable parts come back undefined. */
     profile(): Partial<Profile> {
       let saved: unknown;
-      try { saved = JSON.parse(s.getItem("pp-me") ?? "{}"); } catch { /* start over */ }
+      try {
+        saved = JSON.parse(s.getItem("pp-me") ?? "{}");
+      } catch {
+        /* start over */
+      }
       return SavedProfile.parse(saved);
     },
     setProfile: (p: Profile) => s.setItem("pp-me", JSON.stringify(p)),

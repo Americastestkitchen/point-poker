@@ -17,8 +17,14 @@ export function Tooltip({ text, children, side = "top", open }: TooltipProps) {
   const id = useId();
   const [shown, setShown] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const show = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setShown(true), DELAY_MS); };
-  const hide = () => { clearTimeout(timer.current); setShown(false); };
+  const show = () => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setShown(true), DELAY_MS);
+  };
+  const hide = () => {
+    clearTimeout(timer.current);
+    setShown(false);
+  };
   useEffect(() => () => clearTimeout(timer.current), []);
 
   return (
@@ -31,7 +37,9 @@ export function Tooltip({ text, children, side = "top", open }: TooltipProps) {
       onBlur={hide}
     >
       {children}
-      <span id={id} role="tooltip" className={cx(s.tip, s[side], (open ?? shown) && s.shown)}>{text}</span>
+      <span id={id} role="tooltip" className={cx(s.tip, s[side], (open ?? shown) && s.shown)}>
+        {text}
+      </span>
     </span>
   );
 }

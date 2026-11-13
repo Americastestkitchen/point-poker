@@ -16,17 +16,22 @@ test("waiting: no step yet, and the line depends on who you are", () => {
 });
 
 test("voting: Pick is current; a voter without a card is told to pick, everyone else sees the count", () => {
-  const room = withPlayers(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }), (p) => (p.id === "bob" ? { hasVoted: true } : {}));
+  const room = withPlayers(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }), (p) =>
+    p.id === "bob" ? { hasVoted: true } : {},
+  );
   const s = statusModel(room, "ann", null);
   assert.equal(steps(s), "Pick:current Reveal:idle Settle:idle");
   assert.equal(s.idle, false);
   assert.equal(s.line, "Pick a card below");
   assert.equal(statusModel(room, "ann", 3).line, "1 of 2 picked", "your optimistic card counts as picked for the line");
   assert.equal(statusModel(room, "deb", null).line, "1 of 2 picked", "a dealer who sits out isn't asked to pick");
-  assert.deepEqual(s.voters?.map((v) => [v.player.id, v.voted, v.label]), [
-    ["ann", false, "ANN is thinking…"],
-    ["bob", true, "BOB ✓"],
-  ]);
+  assert.deepEqual(
+    s.voters?.map((v) => [v.player.id, v.voted, v.label]),
+    [
+      ["ann", false, "ANN is thinking…"],
+      ["bob", true, "BOB ✓"],
+    ],
+  );
 });
 
 test("revealed: Pick done, Reveal current; the dealer chooses, players wait", () => {

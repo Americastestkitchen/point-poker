@@ -59,7 +59,9 @@ export function createLabels(parent: THREE.Object3D): Labels {
     },
     showEmoji(text) {
       if (emoji) parent.remove(emoji);
-      emoji = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTexture(text), depthTest: false, transparent: true }));
+      emoji = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: bubbleTexture(text), depthTest: false, transparent: true }),
+      );
       emoji.scale.set(0.4, 0.4, 1);
       emoji.position.y = 1.6;
       emoji.renderOrder = 11;
@@ -106,11 +108,16 @@ function bubbleTexture(text: string) {
     g.arc(64, 58, 50, 0, Math.PI * 2);
     g.fill();
     g.beginPath();
-    g.moveTo(40, 96); g.lineTo(30, 124); g.lineTo(66, 104);
+    g.moveTo(40, 96);
+    g.lineTo(30, 124);
+    g.lineTo(66, 104);
     g.fill();
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.font = text.length > 1 && !/\p{Extended_Pictographic}/u.test(text) ? `bold 48px ${FONT}` : `60px "Noto Color Emoji", sans-serif`;
+    g.font =
+      text.length > 1 && !/\p{Extended_Pictographic}/u.test(text)
+        ? `bold 48px ${FONT}`
+        : `60px "Noto Color Emoji", sans-serif`;
     g.fillStyle = "#2a1d17";
     g.fillText(text, 64, 62);
   });

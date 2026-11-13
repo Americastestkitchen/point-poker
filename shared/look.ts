@@ -13,11 +13,13 @@ export const Look = z.object({
 export type Look = z.infer<typeof Look>;
 
 /** What a browser may send: anything look-shaped. validateLook() makes it a Look. */
-export const LookInput = z.object({
-  color: z.string().max(32),
-  body: z.string().max(32),
-  cosmetics: z.array(z.string().max(32)).max(16),
-}).partial();
+export const LookInput = z
+  .object({
+    color: z.string().max(32),
+    body: z.string().max(32),
+    cosmetics: z.array(z.string().max(32)).max(16),
+  })
+  .partial();
 export type LookInput = z.infer<typeof LookInput>;
 
 export const DEFAULT_LOOK: Look = { color: COLORS[0], body: "bean", cosmetics: [] };
@@ -55,10 +57,14 @@ export function wear(look: Look, slot: Slot, id: CosmeticId | null): Look {
 
 /** A random look for someone new: any colour and body, and a hat. */
 export function randomLook(random: () => number = Math.random): Look {
-  const pick = <T,>(a: readonly T[]): T => {
+  const pick = <T>(a: readonly T[]): T => {
     const value = a[Math.floor(random() * a.length)];
     if (value === undefined) throw new Error("Cannot choose a look from an empty catalog or invalid random value");
     return value;
   };
-  return { color: pick(COLORS), body: pick(BODY_IDS), cosmetics: [pick(COSMETICS.filter((c) => c.slots.includes("head"))).id] };
+  return {
+    color: pick(COLORS),
+    body: pick(BODY_IDS),
+    cosmetics: [pick(COSMETICS.filter((c) => c.slots.includes("head"))).id],
+  };
 }

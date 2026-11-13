@@ -6,10 +6,25 @@ import type { BodyShape } from "./body.ts";
 export const HEAD_TOP = 1.36;
 
 /** A spot on the body: position (body space) and how much to scale what goes there. */
-export interface Spot { x: number; y: number; z: number; s: number }
+export interface Spot {
+  x: number;
+  y: number;
+  z: number;
+  s: number;
+}
 
 /** Things you can attach to a bean. Hands are animated, so they come from the rig rather than this table. */
-export type AnchorId = "head" | "eyes" | "eyeL" | "eyeR" | "mouth" | "chest" | "shoulderL" | "shoulderR" | "handL" | "handR";
+export type AnchorId =
+  | "head"
+  | "eyes"
+  | "eyeL"
+  | "eyeR"
+  | "mouth"
+  | "chest"
+  | "shoulderL"
+  | "shoulderR"
+  | "handL"
+  | "handR";
 
 const spot = (x: number, y: number, z: number, s = 1): Spot => ({ x, y, z, s });
 

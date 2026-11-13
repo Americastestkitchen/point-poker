@@ -35,7 +35,20 @@ const classes = ({ variant = "default", size = "md", shape = "rect" }: Look, cla
 /**
  * Something to press. `aria-pressed` (a switch-like button such as mute) lights it up while on.
  */
-export function Button({ variant, size, shape, sub, onPress, sound = true, demoState, className, children, disabled, ref, ...rest }: ButtonProps) {
+export function Button({
+  variant,
+  size,
+  shape,
+  sub,
+  onPress,
+  sound = true,
+  demoState,
+  className,
+  children,
+  disabled,
+  ref,
+  ...rest
+}: ButtonProps) {
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
   return (
@@ -66,7 +79,14 @@ export interface ButtonLinkProps extends Look, Omit<AnchorHTMLAttributes<HTMLAnc
 export function ButtonLink({ variant, size, shape, sub, demoState, className, children, ...rest }: ButtonLinkProps) {
   const focus = useFocusable();
   return (
-    <a {...rest} {...focus} target="_blank" rel="noreferrer" data-demo={demoState} className={classes({ variant, size, shape }, className)}>
+    <a
+      {...rest}
+      {...focus}
+      target="_blank"
+      rel="noreferrer"
+      data-demo={demoState}
+      className={classes({ variant, size, shape }, className)}
+    >
       <span className={s.label}>{children}</span>
       {sub && <small className={s.sub}>{sub}</small>}
     </a>

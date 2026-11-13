@@ -50,7 +50,12 @@ export function MenuList<Id extends string>({ items, onSelect, label, autoFocus,
   );
 }
 
-function Item({ item, roving, demoState, onPick }: {
+function Item({
+  item,
+  roving,
+  demoState,
+  onPick,
+}: {
   item: MenuItem;
   roving: ReturnType<ReturnType<typeof useRoving>["item"]>;
   demoState?: DemoState;
@@ -69,7 +74,9 @@ function Item({ item, roving, demoState, onPick }: {
       className={cx(s.item)}
       onClick={onPick}
     >
-      <span className={s.marker} aria-hidden>▸</span>
+      <span className={s.marker} aria-hidden>
+        ▸
+      </span>
       <span className={s.text}>
         <span className={s.label}>{item.label}</span>
         {item.hint && <span className={s.hint}>{item.hint}</span>}

@@ -14,9 +14,21 @@ export interface FakeTicketsOptions {
 
 export function ticket(key: string, extra: Partial<Ticket> = {}): Ticket {
   return {
-    key, summary: `Summary of ${key}`, description: "", type: "Story", status: "To Do", priority: "", assignee: "Unassigned",
-    reporter: "", labels: [], currentPoints: null, url: `https://jira.example/browse/${key}`, adf: null,
-    statusCategory: "new", parent: null, ...extra,
+    key,
+    summary: `Summary of ${key}`,
+    description: "",
+    type: "Story",
+    status: "To Do",
+    priority: "",
+    assignee: "Unassigned",
+    reporter: "",
+    labels: [],
+    currentPoints: null,
+    url: `https://jira.example/browse/${key}`,
+    adf: null,
+    statusCategory: "new",
+    parent: null,
+    ...extra,
   };
 }
 

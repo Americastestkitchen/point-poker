@@ -39,10 +39,12 @@ export function Announcements() {
     clear();
     const id = ++seq.current;
     setShown({ id, a, leaving: false });
-    timers.current.push(setTimeout(() => {
-      setShown((cur) => (cur?.id === id ? { ...cur, leaving: true } : cur));
-      timers.current.push(setTimeout(() => setShown((cur) => (cur?.id === id ? null : cur)), LEAVE_MS));
-    }, a.ms));
+    timers.current.push(
+      setTimeout(() => {
+        setShown((cur) => (cur?.id === id ? { ...cur, leaving: true } : cur));
+        timers.current.push(setTimeout(() => setShown((cur) => (cur?.id === id ? null : cur)), LEAVE_MS));
+      }, a.ms),
+    );
   });
 
   return (
@@ -58,7 +60,12 @@ function Card({ a, leaving }: { a: Announcement; leaving: boolean }) {
       {a.kicker && <div className={s.kicker}>{a.kicker}</div>}
       <div className={cx(s.title, a.amount !== null && s.win)}>
         {a.title}
-        {a.amount !== null && <> <span className={s.amount}>+{a.amount}</span></>}
+        {a.amount !== null && (
+          <>
+            {" "}
+            <span className={s.amount}>+{a.amount}</span>
+          </>
+        )}
       </div>
       <div className={s.sub}>{a.sub}</div>
     </div>

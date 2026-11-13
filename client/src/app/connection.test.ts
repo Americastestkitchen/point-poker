@@ -35,13 +35,26 @@ test("a dropped line redials, backing off until it's open again", () => {
 });
 
 test("being kicked (or a full or missing table) is final", () => {
-  const { c, steps } = run({ t: "join", room: "ABCD" }, { t: "opened" }, drop(4001, "Removed by the dealer"), drop(), { t: "opened" });
+  const { c, steps } = run({ t: "join", room: "ABCD" }, { t: "opened" }, drop(4001, "Removed by the dealer"), drop(), {
+    t: "opened",
+  });
   assert.deepEqual(c, { status: "closed", room: "ABCD", reason: "Removed by the dealer" });
-  assert.deepEqual(steps.slice(3), [["closed", "-", null], ["closed", "-", null]], "nothing brings it back");
+  assert.deepEqual(
+    steps.slice(3),
+    [
+      ["closed", "-", null],
+      ["closed", "-", null],
+    ],
+    "nothing brings it back",
+  );
 });
 
 test("leaving hangs up, even while waiting to redial", () => {
-  assert.deepEqual(run({ t: "join", room: "ABCD" }, { t: "opened" }, { t: "leave" }).c, { status: "closed", room: "ABCD", reason: "" });
+  assert.deepEqual(run({ t: "join", room: "ABCD" }, { t: "opened" }, { t: "leave" }).c, {
+    status: "closed",
+    room: "ABCD",
+    reason: "",
+  });
   const waiting = run({ t: "join", room: "ABCD" }, drop(), { t: "leave" });
   assert.deepEqual(waiting.steps.at(-1), ["closed", "-", { t: "hangUp" }]);
   assert.deepEqual(run({ t: "leave" }).steps, [["idle", "-", null]], "nothing to hang up before joining");

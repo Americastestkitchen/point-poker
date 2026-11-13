@@ -1,6 +1,10 @@
 // Slider and CoinCounter maths.
 
-export interface Range { min: number; max: number; step: number }
+export interface Range {
+  min: number;
+  max: number;
+  step: number;
+}
 
 /** `value` clamped into the range and snapped to its step. */
 export function snap(value: number, { min, max, step }: Range): number {

@@ -6,7 +6,10 @@ const settle = () => new Promise((r) => setImmediate(r));
 
 function deferred() {
   let resolve!: () => void, reject!: (e: Error) => void;
-  const promise = new Promise<void>((y, n) => { resolve = y; reject = n; });
+  const promise = new Promise<void>((y, n) => {
+    resolve = y;
+    reject = n;
+  });
   return { promise, resolve, reject };
 }
 
@@ -39,7 +42,8 @@ test("a failure opens the picker with the reason, and bonks", async () => {
 
 test("the latest load wins: an older one finishing later changes nothing", async () => {
   const { load, calls } = setup();
-  const first = deferred(), second = deferred();
+  const first = deferred(),
+    second = deferred();
   load.run(first.promise, "Fetching SD-1…");
   load.run(second.promise, "Fetching SD-2…");
   first.reject(new Error("too slow"));

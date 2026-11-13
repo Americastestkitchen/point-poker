@@ -15,10 +15,14 @@ export type SheetMove = "open" | "openSoon" | "close" | null;
  */
 export function sheetMove(change: ViewChange, room: TableView): SheetMove {
   switch (change.t) {
-    case "synced": return room.ticket && room.phase === "voting" ? "open" : null;
-    case "dealt": return room.ticket ? "openSoon" : null;
-    case "revealed": return "close";
-    default: return null;
+    case "synced":
+      return room.ticket && room.phase === "voting" ? "open" : null;
+    case "dealt":
+      return room.ticket ? "openSoon" : null;
+    case "revealed":
+      return "close";
+    default:
+      return null;
   }
 }
 
@@ -42,7 +46,12 @@ export function crumbs(ticket: Ticket, epic: Epic | null): Crumb[] {
 
 /** "Ada Lovelace" → "AL"; at most two letters. */
 export function initials(name: string): string {
-  return name.split(/\s+/).flatMap((w) => [...w].slice(0, 1)).join("").slice(0, 2).toUpperCase();
+  return name
+    .split(/\s+/)
+    .flatMap((w) => [...w].slice(0, 1))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 /** The status lozenge's colour: Jira's category, "new" when it doesn't say. */

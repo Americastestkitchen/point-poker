@@ -12,7 +12,10 @@ import { BODY_SHAPES } from "./index.ts";
 test("every body shape keeps its anchors where they are (x, y, z, scale)", async (t) => {
   for (const body of BODY_IDS) {
     await t.test(body, (t) => {
-      const anchors = Object.entries(anchorsFor(BODY_SHAPES[body])).map(([name, { x, y, z, s }]) => [name, [x, y, z, s]]);
+      const anchors = Object.entries(anchorsFor(BODY_SHAPES[body])).map(([name, { x, y, z, s }]) => [
+        name,
+        [x, y, z, s],
+      ]);
       pin(t, Object.fromEntries(anchors));
     });
   }

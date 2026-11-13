@@ -9,7 +9,14 @@ export function names(list: readonly string[]): string {
 /** The kinds of ticket with their own icon; everything else is `other`. */
 export type TicketKind = "bug" | "story" | "epic" | "task" | "other";
 
-const KINDS: Record<string, TicketKind> = { bug: "bug", story: "story", epic: "epic", task: "task", subtask: "task", "sub-task": "task" };
+const KINDS: Record<string, TicketKind> = {
+  bug: "bug",
+  story: "story",
+  epic: "epic",
+  task: "task",
+  subtask: "task",
+  "sub-task": "task",
+};
 const GLYPHS: Record<TicketKind, string> = { bug: "●", story: "▮", epic: "⚡", task: "✓", other: "◆" };
 
 /** The icon for a Jira issue type ("Bug", "Sub-task", "" for a typed-in ticket). */

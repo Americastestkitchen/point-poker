@@ -35,7 +35,10 @@ export interface Pose {
 }
 
 const REST_ARM_X = -1.15;
-const ease = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+const ease = (x: number) => {
+  const c = Math.min(1, Math.max(0, x));
+  return c * c * (3 - 2 * c);
+};
 
 export interface Animator {
   play(clip: ClipId): void;
@@ -54,14 +57,23 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
   const random = deps.random ?? Math.random;
   const now = deps.now ?? (() => performance.now());
   const phase = random() * 10;
-  let yaw = 0, pitch = 0, targetYaw = 0, targetPitch = 0;
-  let bonkT = 0, celebrateT = 0;
+  let yaw = 0,
+    pitch = 0,
+    targetYaw = 0,
+    targetPitch = 0;
+  let bonkT = 0,
+    celebrateT = 0;
   /** The emote playing, and how many seconds in. */
   let emote: { id: EmoteId; t: number } | null = null;
   /** What the hands are doing with the card, and how many seconds in. */
   let hands: { kind: "idle" } | { kind: "placing"; t: number } | { kind: "adjusting"; t: number } = { kind: "idle" };
-  let talkTarget = 0, talkAt = 0, talk = 0;
-  const arms: [ArmPose, ArmPose] = [{ x: REST_ARM_X, z: -0.25, stretch: 1 }, { x: REST_ARM_X, z: 0.25, stretch: 1 }];
+  let talkTarget = 0,
+    talkAt = 0,
+    talk = 0;
+  const arms: [ArmPose, ArmPose] = [
+    { x: REST_ARM_X, z: -0.25, stretch: 1 },
+    { x: REST_ARM_X, z: 0.25, stretch: 1 },
+  ];
   const pupils = [0, 1].map(() => ({ off: { x: 0, y: 0 }, vel: { x: 0, y: 0 } }));
 
   return {
@@ -71,7 +83,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       switch (clip) {
         case "bonked":
           bonkT = 1;
-          for (const p of pupils) { p.vel.x = (random() - 0.5) * 40; p.vel.y = (random() - 0.5) * 40; }
+          for (const p of pupils) {
+            p.vel.x = (random() - 0.5) * 40;
+            p.vel.y = (random() - 0.5) * 40;
+          }
           return;
         case "celebrate":
           celebrateT = 2.2;
@@ -98,7 +113,9 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       talkAt = now();
     },
 
-    get busyWithCard() { return hands.kind !== "idle"; },
+    get busyWithCard() {
+      return hands.kind !== "idle";
+    },
 
     update(dt, t) {
       yaw += (targetYaw - yaw) * Math.min(1, dt * 8);
@@ -121,22 +138,41 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       }
       let rotZ = 0;
       let eyeScale = 1;
-      let armL = REST_ARM_X, armR = REST_ARM_X;
-      if (celebrateT > 0) { armL = armR = -2.9 + Math.sin(tt * 18) * 0.3; }
+      let armL = REST_ARM_X,
+        armR = REST_ARM_X;
+      if (celebrateT > 0) {
+        armL = armR = -2.9 + Math.sin(tt * 18) * 0.3;
+      }
       let playing: Pose["emote"] = null;
       if (emote) {
         emote.t += dt;
         const { id, t: e } = emote;
         if (id === "wave") armR = -2.6 + Math.sin(e * 16) * 0.5;
-        if (id === "laugh") { rotZ = Math.sin(e * 30) * 0.06; y += Math.abs(Math.sin(e * 20)) * 0.04; }
-        if (id === "think") { rotZ = 0.2 * Math.min(1, e * 4); armL = -2.4; }
-        if (id === "shock") { y += Math.max(0, 0.15 - e * 0.4); eyeScale = 1.3; }
-        if (e > 2) { emote = null; eyeScale = 1; }
-        else playing = { id, t: e };
+        if (id === "laugh") {
+          rotZ = Math.sin(e * 30) * 0.06;
+          y += Math.abs(Math.sin(e * 20)) * 0.04;
+        }
+        if (id === "think") {
+          rotZ = 0.2 * Math.min(1, e * 4);
+          armL = -2.4;
+        }
+        if (id === "shock") {
+          y += Math.max(0, 0.15 - e * 0.4);
+          eyeScale = 1.3;
+        }
+        if (e > 2) {
+          emote = null;
+          eyeScale = 1;
+        } else playing = { id, t: e };
       }
 
       // ---- arms layer: card handling (reach out with the right arm, let go, both hands square it up)
-      let stretchL = 1, stretchR = 1, lean = 0, zL = -0.25, zR = 0.25, armSpeed = 12;
+      let stretchL = 1,
+        stretchR = 1,
+        lean = 0,
+        zL = -0.25,
+        zR = 0.25,
+        armSpeed = 12;
       const fiddle = (e: number, len: number) => {
         // e: 0..len. In, wiggle, out.
         const k = ease(e / 0.18) * (1 - ease((e - (len - 0.2)) / 0.2));
@@ -189,7 +225,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         p.off.x += p.vel.x * dt;
         p.off.y += p.vel.y * dt;
         const len = Math.hypot(p.off.x, p.off.y);
-        if (len > 0.75) { p.off.x *= 0.75 / len; p.off.y *= 0.75 / len; }
+        if (len > 0.75) {
+          p.off.x *= 0.75 / len;
+          p.off.y *= 0.75 / len;
+        }
         const z = Math.sqrt(Math.max(0, 1 - (p.off.x ** 2 + p.off.y ** 2)));
         return { x: p.off.x, y: p.off.y, z };
       }) as Pose["face"]["pupils"];

@@ -29,7 +29,10 @@ test("no frames, no time: a delay waits for the frame loop", () => {
 test("a delay scheduled by another starts counting on the next frame", () => {
   const delays = createDelays();
   const ran: string[] = [];
-  delays.after(0, () => { ran.push("first"); delays.after(0, () => ran.push("second")); });
+  delays.after(0, () => {
+    ran.push("first");
+    delays.after(0, () => ran.push("second"));
+  });
   delays.update(0.016);
   assert.deepEqual(ran, ["first"]);
   delays.update(0.016);

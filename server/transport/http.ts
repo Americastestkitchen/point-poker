@@ -7,8 +7,13 @@ import type { DealerAuth } from "../auth/passcode.ts";
 import type { Rooms } from "../rooms.ts";
 
 const MIME: Record<string, string> = {
-  ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
-  ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".json": "application/json",
 };
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -28,13 +33,18 @@ export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: str
     if (url.pathname.startsWith("/api/rooms/") && req.method === "GET") {
       const table = rooms.get(url.pathname.split("/").pop()!);
       return json(res, table ? 200 : 404, {
-        exists: !!table, jiraEnabled: table?.viewFor(null).jiraEnabled ?? false, needsPasscode: auth.needsPasscode,
+        exists: !!table,
+        jiraEnabled: table?.viewFor(null).jiraEnabled ?? false,
+        needsPasscode: auth.needsPasscode,
       } satisfies TableInfo);
     }
     // static files from dist/, falling back to index.html
     const path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
     let file = join(distDir, path);
-    if (!file.startsWith(distDir)) { res.writeHead(403); return res.end(); }
+    if (!file.startsWith(distDir)) {
+      res.writeHead(403);
+      return res.end();
+    }
     try {
       if (!(await stat(file)).isFile()) throw 0;
     } catch {

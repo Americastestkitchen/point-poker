@@ -12,7 +12,8 @@ export interface Notice {
 
 /** A toast for a change in the view: someone else sat down, or someone left. */
 export function viewNotice(c: ViewChange, meId: string | undefined): Notice | null {
-  if (c.t === "joined" && c.player.id !== meId) return { text: `👋 ${c.player.name} sat down`, tone: "info", bonk: false };
+  if (c.t === "joined" && c.player.id !== meId)
+    return { text: `👋 ${c.player.name} sat down`, tone: "info", bonk: false };
   if (c.t === "left") return { text: `🚪 ${c.player.name} left`, tone: "info", bonk: false };
   return null;
 }

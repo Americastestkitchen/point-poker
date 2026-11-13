@@ -89,22 +89,36 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
       let title: Words | null = null;
       let body: DockBody | null = null;
       if (amVoter) {
-        title = myVote === null ? ["How big is it? Pick a card"] : ["You picked ", { strong: String(myVote) }, " · tap another card to change"];
+        title =
+          myVote === null
+            ? ["How big is it? Pick a card"]
+            : ["You picked ", { strong: String(myVote) }, " · tap another card to change"];
         body = {
           t: "vote",
           cards: deck.map((value) => ({
-            value, selected: value === myVote, dimmed: myVote !== null && value !== myVote, suggested: false,
-            voters: [], press: { t: "vote", value },
+            value,
+            selected: value === myVote,
+            dimmed: myVote !== null && value !== myVote,
+            suggested: false,
+            voters: [],
+            press: { t: "vote", value },
           })),
         };
       } else if (dealer) {
         const waiting = playing.filter((p) => !p.hasVoted).map((p) => p.name);
-        title = [everyone ? "Everyone's in!"
-          : waiting.length ? `Waiting on ${names(waiting.slice(0, 4))}${waiting.length > 4 ? "…" : ""}`
-          : "Nobody's at the table yet"];
+        title = [
+          everyone
+            ? "Everyone's in!"
+            : waiting.length
+              ? `Waiting on ${names(waiting.slice(0, 4))}${waiting.length > 4 ? "…" : ""}`
+              : "Nobody's at the table yet",
+        ];
       }
       const actions: DockAction[] = dealer
-        ? [{ t: "reveal", voted, of: playing.length, everyone }, { t: "restart", label: "Restart vote" }]
+        ? [
+            { t: "reveal", voted, of: playing.length, everyone },
+            { t: "restart", label: "Restart vote" },
+          ]
         : [];
       return { key, title, body, actions };
     }
@@ -119,7 +133,9 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
           .map((value) => ({ value, voters: counts.get(value) ?? [], final: settled && value === final }));
         return {
           key,
-          title: settled ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)}`] : ["Here's how everyone voted"],
+          title: settled
+            ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)}`]
+            : ["Here's how everyone voted"],
           body: { t: "spread", cards },
           actions: [],
         };
@@ -145,7 +161,9 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
       }
       return {
         key,
-        title: settled ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)} · tap a card to change it`] : ["Tap the final points"],
+        title: settled
+          ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)} · tap a card to change it`]
+          : ["Tap the final points"],
         body: { t: "settle", cards },
         actions,
       };

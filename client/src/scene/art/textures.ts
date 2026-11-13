@@ -29,7 +29,7 @@ export function cardFront(value: number): THREE.CanvasTexture {
   const suit = CARD_SUIT[value] ?? { glyph: "♠", red: false };
   const ink = suit.red ? "#a8242c" : "#1d1a1a";
   let seed = value * 9301 + 49297;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   t = canvasTex(256, 368, (g) => {
     g.fillStyle = "#1b1410";
     g.fillRect(0, 0, 256, 368);
@@ -58,7 +58,8 @@ export function cardFront(value: number): THREE.CanvasTexture {
     g.strokeRect(14, 14, 228, 340);
     g.restore();
     // slightly misregistered print
-    const ox = (rnd() - 0.5) * 6, oy = (rnd() - 0.5) * 6;
+    const ox = (rnd() - 0.5) * 6,
+      oy = (rnd() - 0.5) * 6;
     g.fillStyle = ink;
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -102,8 +103,14 @@ export function cardBack(): THREE.CanvasTexture {
     g.strokeStyle = "rgba(255,170,150,0.3)";
     g.lineWidth = 3;
     for (let i = -400; i < 400; i += 22) {
-      g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 368, 368); g.stroke();
-      g.beginPath(); g.moveTo(i + 368, 0); g.lineTo(i, 368); g.stroke();
+      g.beginPath();
+      g.moveTo(i, 0);
+      g.lineTo(i + 368, 368);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(i + 368, 0);
+      g.lineTo(i, 368);
+      g.stroke();
     }
     g.restore();
     roundRect(g, 18, 18, 220, 332, 14);
@@ -123,7 +130,6 @@ export function cardBack(): THREE.CanvasTexture {
   });
   return back;
 }
-
 
 export function woodTexture(base = "#3b2416", lines = "#24140b", repeat = 4): THREE.CanvasTexture {
   const t = canvasTex(512, 512, (g) => {
@@ -149,8 +155,12 @@ export function woodTexture(base = "#3b2416", lines = "#24140b", repeat = 4): TH
   return t;
 }
 
-
-export function wrapText(g: { measureText(text: string): { width: number } }, text: string, maxW: number, maxLines: number): string[] {
+export function wrapText(
+  g: { measureText(text: string): { width: number } },
+  text: string,
+  maxW: number,
+  maxLines: number,
+): string[] {
   if (maxLines <= 0) return [];
   const words = text.split(/\s+/);
   const lines: string[] = [];
@@ -172,7 +182,8 @@ export function wrapText(g: { measureText(text: string): { width: number } }, te
 }
 
 export function drawTicket(g: CanvasRenderingContext2D, key: string, type: string, summary: string, points: string) {
-  const W = g.canvas.width, H = g.canvas.height;
+  const W = g.canvas.width,
+    H = g.canvas.height;
   g.clearRect(0, 0, W, H);
   g.fillStyle = "#efe4c8";
   g.fillRect(0, 0, W, H);
@@ -205,5 +216,3 @@ export function drawTicket(g: CanvasRenderingContext2D, key: string, type: strin
     g.restore();
   }
 }
-
-

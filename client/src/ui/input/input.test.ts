@@ -32,7 +32,10 @@ test("focus steps through a list, wrapping and skipping what's disabled", () => 
   assert.equal(step(-1, 3, -1), 2, "nothing focused: up starts at the bottom");
   assert.equal(step(1, 3, 1, { disabled: () => true }), 1, "nowhere to go");
   assert.equal(step(0, 0, 1), -1);
-  assert.equal(first(3, (i) => i === 0), 1);
+  assert.equal(
+    first(3, (i) => i === 0),
+    1,
+  );
 });
 
 test("Esc closes whatever opened last, and nothing when nothing's open", () => {

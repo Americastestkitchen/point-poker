@@ -43,8 +43,13 @@ export interface Events {
 export function createEvents(): Events {
   const listeners = new Set<(e: GameEvent) => void>();
   return {
-    on(l) { listeners.add(l); return () => listeners.delete(l); },
-    emit(e) { for (const l of [...listeners]) l(e); },
+    on(l) {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    emit(e) {
+      for (const l of [...listeners]) l(e);
+    },
   };
 }
 
@@ -65,9 +70,11 @@ export function diff(prev: TableView | null, next: TableView): ViewChange[] {
 
   const newRound = prev.phase !== next.phase || prev.round !== next.round;
   if (newRound && next.phase === "voting") out.push({ t: "dealt" });
-  if (next.ticket && (prev.ticket?.key !== next.ticket.key || (newRound && next.phase === "voting"))) out.push({ t: "ticketChanged" });
+  if (next.ticket && (prev.ticket?.key !== next.ticket.key || (newRound && next.phase === "voting")))
+    out.push({ t: "ticketChanged" });
   if (everyoneIn(next) && (newRound || !everyoneIn(prev))) out.push({ t: "allIn" });
   if (newRound && next.phase === "revealed") out.push({ t: "revealed" });
-  if (next.phase === "settled" && (newRound || prev.finalPoints !== next.finalPoints)) out.push({ t: "settled", resettled: !newRound });
+  if (next.phase === "settled" && (newRound || prev.finalPoints !== next.finalPoints))
+    out.push({ t: "settled", resettled: !newRound });
   return out;
 }

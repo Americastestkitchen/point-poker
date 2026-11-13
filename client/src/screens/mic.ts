@@ -18,7 +18,8 @@ export interface MicControlDeps {
 /** The CSS variable the meter writes (0..1) on the element given to `meter()`. */
 export const MIC_LEVEL_VAR = "--mic-level";
 
-export const MIC_TIP = "🎙️ Tip: turn on your mic (top right) and your bean's mouth moves when you talk. No audio is sent.";
+export const MIC_TIP =
+  "🎙️ Tip: turn on your mic (top right) and your bean's mouth moves when you talk. No audio is sent.";
 export const MIC_FAILED = "Couldn't use the mic. Check your browser's permission for this site.";
 const TIP_AFTER_MS = 4000;
 

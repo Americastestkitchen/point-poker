@@ -5,9 +5,20 @@ import { createMic, nextMicStatus, type MicInput } from "./mic.ts";
 /** A microphone that answers when we say so, at a loudness we set. */
 function fakeMic() {
   const asks: { grant(): void; refuse(): void }[] = [];
-  const input = { loudness: 0, closed: 0, rms() { return this.loudness; }, close() { this.closed++; } };
-  const open = () => new Promise<MicInput>((resolve, reject) =>
-    asks.push({ grant: () => resolve(input), refuse: () => reject(new Error("NotAllowedError")) }));
+  const input = {
+    loudness: 0,
+    closed: 0,
+    rms() {
+      return this.loudness;
+    },
+    close() {
+      this.closed++;
+    },
+  };
+  const open = () =>
+    new Promise<MicInput>((resolve, reject) =>
+      asks.push({ grant: () => resolve(input), refuse: () => reject(new Error("NotAllowedError")) }),
+    );
   return { asks, input, open };
 }
 
@@ -88,7 +99,9 @@ test("after start, stop, start, only the newest request counts", async () => {
 test("stopping from the status callback when it turns on stops it", async () => {
   const { asks, input, open } = fakeMic();
   const mic = createMic(open);
-  mic.onStatus = (s) => { if (s === "on") mic.stop(); };
+  mic.onStatus = (s) => {
+    if (s === "on") mic.stop();
+  };
   void mic.start();
   assert.ok(asks[0]);
   asks[0].grant();
@@ -100,7 +113,9 @@ test("stopping from the status callback when it turns on stops it", async () => 
 test("stopping from the status callback while it starts never asks the browser", async () => {
   const { asks, open } = fakeMic();
   const mic = createMic(open);
-  mic.onStatus = (s) => { if (s === "starting") mic.stop(); };
+  mic.onStatus = (s) => {
+    if (s === "starting") mic.stop();
+  };
   await mic.start();
   assert.equal(asks.length, 0);
   assert.equal(mic.status, "off");

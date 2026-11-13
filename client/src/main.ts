@@ -34,7 +34,11 @@ async function startGame() {
   store.seated();
   const stage = createStage($("scene") as HTMLCanvasElement, { audio });
   const game = createGameUi({
-    store, actions, storage, audio, toasts,
+    store,
+    actions,
+    storage,
+    audio,
+    toasts,
     mic: createMic(),
     openLook: lobby.openCreator,
     leaveTable: () => location.assign(location.pathname),
@@ -55,4 +59,7 @@ async function startGame() {
   stage.start();
 }
 
-document.fonts.load("700 40px Fredoka").catch(() => {}).finally(() => void lobby.boot());
+document.fonts
+  .load("700 40px Fredoka")
+  .catch(() => {})
+  .finally(() => void lobby.boot());

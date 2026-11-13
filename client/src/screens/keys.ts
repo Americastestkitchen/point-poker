@@ -34,7 +34,8 @@ export function menuKeyAllowed(k: Omit<KeyState, "dialogOpen">): boolean {
 const HOVER_FOCUS = "data-hover-focus";
 
 const FIELD = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
-const CONTROL = "button, a[href], summary, [tabindex], [role='button'], [role='switch'], [role='slider'], [role='menuitem'], [role='tab'], [role='option']";
+const CONTROL =
+  "button, a[href], summary, [tabindex], [role='button'], [role='switch'], [role='slider'], [role='menuitem'], [role='tab'], [role='option']";
 
 /** Where `el` (usually document.activeElement) is, as far as keys go. */
 export function focusOf(el: Element | null): Focus {

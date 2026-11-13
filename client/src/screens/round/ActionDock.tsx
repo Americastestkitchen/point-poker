@@ -18,11 +18,19 @@ export function ActionDock() {
   return (
     // a new phase or round deals the dock in again
     <section key={dock.key} className={s.dock} aria-label="Your move">
-      {dock.title && <p className={s.title}><Said words={dock.title} /></p>}
+      {dock.title && (
+        <p className={s.title}>
+          <Said words={dock.title} />
+        </p>
+      )}
       <div className={s.row}>
         {dock.body && <Body body={dock.body} />}
         {dock.actions.length > 0 && (
-          <div className={s.side}>{dock.actions.map((a) => <Action key={a.t} action={a} />)}</div>
+          <div className={s.side}>
+            {dock.actions.map((a) => (
+              <Action key={a.t} action={a} />
+            ))}
+          </div>
         )}
       </div>
     </section>
@@ -30,7 +38,15 @@ export function ActionDock() {
 }
 
 function Said({ words }: { words: Words }) {
-  return words.map((w, i) => (typeof w === "string" ? w : <b key={i} className={s.strong}>{w.strong}</b>));
+  return words.map((w, i) =>
+    typeof w === "string" ? (
+      w
+    ) : (
+      <b key={i} className={s.strong}>
+        {w.strong}
+      </b>
+    ),
+  );
 }
 
 function Body({ body }: { body: DockBody }) {
@@ -42,27 +58,44 @@ function Body({ body }: { body: DockBody }) {
   };
   switch (body.t) {
     case "addTicket":
-      return <Button variant="primary" size="lg" className={s.add} onPress={picker.show}>＋ Add a Jira ticket</Button>;
+      return (
+        <Button variant="primary" size="lg" className={s.add} onPress={picker.show}>
+          ＋ Add a Jira ticket
+        </Button>
+      );
     case "waiting":
-      return <div className={s.waiting}><Spinner label={body.text} /></div>;
+      return (
+        <div className={s.waiting}>
+          <Spinner label={body.text} />
+        </div>
+      );
     case "vote":
       return <Hand cards={body.cards} label="Your cards" onPress={press} />;
     case "settle":
       return <Hand cards={body.cards} label="Final points" settle onPress={press} />;
     case "spread":
-      return body.cards.length
-        ? (
-          <ul className={s.spread} aria-label="Votes">
-            {body.cards.map((c) => (
-              <li key={c.value} className={cx(s.mini, c.final && s.final)}
-                aria-label={`${c.value} points: ${c.voters.length ? c.voters.map((p) => p.name).join(", ") : "nobody"}${c.final ? " (final)" : ""}`}>
-                <span className={s.miniValue} aria-hidden>{c.value}</span>
-                <span className={s.miniDots} aria-hidden>{c.voters.map((p) => <PlayerDot key={p.id} player={p} size="sm" />)}</span>
-              </li>
-            ))}
-          </ul>
-        )
-        : <div className={s.waiting}>Nobody voted</div>;
+      return body.cards.length ? (
+        <ul className={s.spread} aria-label="Votes">
+          {body.cards.map((c) => (
+            <li
+              key={c.value}
+              className={cx(s.mini, c.final && s.final)}
+              aria-label={`${c.value} points: ${c.voters.length ? c.voters.map((p) => p.name).join(", ") : "nobody"}${c.final ? " (final)" : ""}`}
+            >
+              <span className={s.miniValue} aria-hidden>
+                {c.value}
+              </span>
+              <span className={s.miniDots} aria-hidden>
+                {c.voters.map((p) => (
+                  <PlayerDot key={p.id} player={p} size="sm" />
+                ))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className={s.waiting}>Nobody voted</div>
+      );
   }
 }
 
@@ -73,27 +106,53 @@ function Action({ action }: { action: DockAction }) {
   switch (action.t) {
     case "reveal":
       return (
-        <Button variant="primary" size="lg" className={cx(s.big, action.everyone && s.pulse)} disabled={action.voted === 0}
-          sub={`${action.voted} of ${action.of} in`} onPress={() => dealerDo(actions.dealer.reveal())}>
+        <Button
+          variant="primary"
+          size="lg"
+          className={cx(s.big, action.everyone && s.pulse)}
+          disabled={action.voted === 0}
+          sub={`${action.voted} of ${action.of} in`}
+          onPress={() => dealerDo(actions.dealer.reveal())}
+        >
           Reveal cards
         </Button>
       );
     case "restart":
-      return <Button variant="link" size="sm" className={s.link} onPress={() => dealerDo(actions.dealer.deal())}>{action.label}</Button>;
+      return (
+        <Button variant="link" size="sm" className={s.link} onPress={() => dealerDo(actions.dealer.deal())}>
+          {action.label}
+        </Button>
+      );
     case "next": {
       const busy = load.status === "loading";
       return (
-        <Button variant="primary" size="lg" className={s.big} disabled={busy} sub={busy ? "Dealing…" : action.key}
-          onPress={() => ticketLoad.run(actions.dealer.next(), "Dealing the next ticket…")}>
+        <Button
+          variant="primary"
+          size="lg"
+          className={s.big}
+          disabled={busy}
+          sub={busy ? "Dealing…" : action.key}
+          onPress={() => ticketLoad.run(actions.dealer.next(), "Dealing the next ticket…")}
+        >
           Next ticket →
         </Button>
       );
     }
     case "picker":
-      return action.main
-        ? <Button variant="primary" size="lg" className={s.big} onPress={picker.show}>＋ Next ticket</Button>
-        : <Button variant="link" size="sm" className={s.link} onPress={picker.show}>Choose a different one</Button>;
+      return action.main ? (
+        <Button variant="primary" size="lg" className={s.big} onPress={picker.show}>
+          ＋ Next ticket
+        </Button>
+      ) : (
+        <Button variant="link" size="sm" className={s.link} onPress={picker.show}>
+          Choose a different one
+        </Button>
+      );
     case "jira":
-      return <ButtonLink href={action.url} variant="link" size="sm" className={s.link}>Open in Jira ↗</ButtonLink>;
+      return (
+        <ButtonLink href={action.url} variant="link" size="sm" className={s.link}>
+          Open in Jira ↗
+        </ButtonLink>
+      );
   }
 }

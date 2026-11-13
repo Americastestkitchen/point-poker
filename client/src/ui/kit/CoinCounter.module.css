@@ -1,24 +1,63 @@
 .counter {
-  display: inline-flex; align-items: center; gap: var(--pp-space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pp-space-2);
   padding: var(--pp-space-1) var(--pp-space-3) var(--pp-space-1) var(--pp-space-1);
-  background: var(--pp-color-panel); border: var(--pp-border-panel); border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-panel);
+  border-radius: var(--pp-radius-pill);
   backdrop-filter: blur(8px);
 }
 .coin {
-  width: 26px; height: 26px; border-radius: var(--pp-radius-pill); flex: none;
-  background: radial-gradient(circle at 35% 30%, var(--pp-color-gold-hi), var(--pp-color-gold-mid) 45%, var(--pp-color-gold-low));
+  width: 26px;
+  height: 26px;
+  border-radius: var(--pp-radius-pill);
+  flex: none;
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--pp-color-gold-hi),
+    var(--pp-color-gold-mid) 45%,
+    var(--pp-color-gold-low)
+  );
   box-shadow: inset 0 -2px 0 var(--pp-color-gold-shadow);
 }
 .amount {
-  font-family: var(--pp-font-display); font-weight: var(--pp-weight-strong); font-size: var(--pp-size-lg);
-  color: var(--pp-color-gold-hi); font-variant-numeric: tabular-nums;
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-strong);
+  font-size: var(--pp-size-lg);
+  color: var(--pp-color-gold-hi);
+  font-variant-numeric: tabular-nums;
 }
-.lg .coin { width: 40px; height: 40px; }
-.lg .amount { font-size: var(--pp-size-xxl); }
+.lg .coin {
+  width: 40px;
+  height: 40px;
+}
+.lg .amount {
+  font-size: var(--pp-size-xxl);
+}
 
-.bump .coin { animation: bump .5s cubic-bezier(.2, 2, .4, 1); }
-.bump .amount { animation: glow .7s ease-out; }
-.drop .coin { animation: drop .4s ease-out; }
-@keyframes bump { 30% { transform: scale(1.3) rotate(-12deg); box-shadow: var(--pp-glow-gold); } }
-@keyframes glow { 20% { text-shadow: var(--pp-glow-gold); } }
-@keyframes drop { 40% { transform: translateY(3px) scale(.9); } }
+.bump .coin {
+  animation: bump 0.5s cubic-bezier(0.2, 2, 0.4, 1);
+}
+.bump .amount {
+  animation: glow 0.7s ease-out;
+}
+.drop .coin {
+  animation: drop 0.4s ease-out;
+}
+@keyframes bump {
+  30% {
+    transform: scale(1.3) rotate(-12deg);
+    box-shadow: var(--pp-glow-gold);
+  }
+}
+@keyframes glow {
+  20% {
+    text-shadow: var(--pp-glow-gold);
+  }
+}
+@keyframes drop {
+  40% {
+    transform: translateY(3px) scale(0.9);
+  }
+}

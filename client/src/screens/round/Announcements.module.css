@@ -1,58 +1,128 @@
 /* The announcement card: pops in with a little spin, drops away. This region never takes the pointer. */
-.layer { display: flex; justify-content: center; max-width: 100%; pointer-events: none; }
+.layer {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  pointer-events: none;
+}
 
 .card {
-  box-sizing: border-box; min-width: min(300px, 100%); max-width: min(620px, 100%);
-  padding: 18px 34px 20px; border-radius: 18px; text-align: center;
+  box-sizing: border-box;
+  min-width: min(300px, 100%);
+  max-width: min(620px, 100%);
+  padding: 18px 34px 20px;
+  border-radius: 18px;
+  text-align: center;
   background: color-mix(in srgb, var(--pp-color-panel-solid) 92%, transparent);
   border: var(--pp-border-panel);
-  box-shadow: var(--pp-shadow-panel), 0 0 0 6px color-mix(in srgb, var(--pp-color-gold) 6%, transparent);
+  box-shadow:
+    var(--pp-shadow-panel),
+    0 0 0 6px color-mix(in srgb, var(--pp-color-gold) 6%, transparent);
   backdrop-filter: blur(10px);
   animation: pop-in 450ms var(--pp-motion-spring) both;
 }
-.leaving { animation: drop-out 400ms ease-in both; }
-@keyframes pop-in { from { transform: scale(.6) rotate(-3deg); opacity: 0; } }
-@keyframes drop-out { to { transform: scale(.85) translateY(-12px); opacity: 0; } }
+.leaving {
+  animation: drop-out 400ms ease-in both;
+}
+@keyframes pop-in {
+  from {
+    transform: scale(0.6) rotate(-3deg);
+    opacity: 0;
+  }
+}
+@keyframes drop-out {
+  to {
+    transform: scale(0.85) translateY(-12px);
+    opacity: 0;
+  }
+}
 
 .kicker {
-  margin-bottom: 4px; font-size: var(--pp-size-xs); letter-spacing: 3px; text-transform: uppercase;
+  margin-bottom: 4px;
+  font-size: var(--pp-size-xs);
+  letter-spacing: 3px;
+  text-transform: uppercase;
   color: var(--pp-color-gold);
 }
 .title {
-  font-family: var(--pp-font-display); font-size: clamp(26px, 4.2vw, 40px); font-weight: var(--pp-weight-display);
-  line-height: 1.1; color: var(--pp-color-ink); overflow-wrap: anywhere;
+  font-family: var(--pp-font-display);
+  font-size: clamp(26px, 4.2vw, 40px);
+  font-weight: var(--pp-weight-display);
+  line-height: 1.1;
+  color: var(--pp-color-ink);
+  overflow-wrap: anywhere;
 }
 .sub {
-  margin-top: 6px; font-size: var(--pp-size-md); color: var(--pp-color-dim);
+  margin-top: 6px;
+  font-size: var(--pp-size-md);
+  color: var(--pp-color-dim);
   /* a long ticket summary stops after two lines */
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
-.deal .title { color: var(--pp-color-info); }
+.deal .title {
+  color: var(--pp-color-info);
+}
 .mine {
   border-color: var(--pp-color-highlight);
-  box-shadow: var(--pp-shadow-panel), 0 0 80px color-mix(in srgb, var(--pp-color-highlight) 33%, transparent);
+  box-shadow:
+    var(--pp-shadow-panel),
+    0 0 80px color-mix(in srgb, var(--pp-color-highlight) 33%, transparent);
 }
-.win { color: var(--pp-color-gold-hi); }
+.win {
+  color: var(--pp-color-gold-hi);
+}
 .amount {
-  display: inline-block; color: var(--pp-color-success);
-  animation: amount 600ms 250ms backwards cubic-bezier(.2, 2, .4, 1);
+  display: inline-block;
+  color: var(--pp-color-success);
+  animation: amount 600ms 250ms backwards cubic-bezier(0.2, 2, 0.4, 1);
 }
-@keyframes amount { from { transform: scale(0); } }
+@keyframes amount {
+  from {
+    transform: scale(0);
+  }
+}
 
 @media (max-width: 760px) {
-  .card { padding: 12px 20px 14px; border-radius: var(--pp-radius-lg); }
-  .sub { font-size: var(--pp-size-sm); }
+  .card {
+    padding: 12px 20px 14px;
+    border-radius: var(--pp-radius-lg);
+  }
+  .sub {
+    font-size: var(--pp-size-sm);
+  }
 }
 @media (max-height: 520px) {
-  .card { padding: 10px 22px 12px; }
-  .title { font-size: 26px; }
+  .card {
+    padding: 10px 22px 12px;
+  }
+  .title {
+    font-size: 26px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card { animation: fade-in var(--pp-motion-base) ease-out both; }
-  .leaving { animation: fade-out var(--pp-motion-slow) ease-in both; }
-  .amount { animation: none; }
+  .card {
+    animation: fade-in var(--pp-motion-base) ease-out both;
+  }
+  .leaving {
+    animation: fade-out var(--pp-motion-slow) ease-in both;
+  }
+  .amount {
+    animation: none;
+  }
 }
-@keyframes fade-in { from { opacity: 0; } }
-@keyframes fade-out { to { opacity: 0; } }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}

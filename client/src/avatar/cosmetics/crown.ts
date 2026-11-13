@@ -5,7 +5,10 @@ import { mesh, toon } from "../../scene/art/materials.ts";
 /** Built standing on the top of the head (the head anchor's origin). */
 export function crown(): THREE.Group {
   const g = new THREE.Group();
-  const ring = mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.08, 20, 1, true), toon("#e6be5a", { side: THREE.DoubleSide }));
+  const ring = mesh(
+    new THREE.CylinderGeometry(0.16, 0.16, 0.08, 20, 1, true),
+    toon("#e6be5a", { side: THREE.DoubleSide }),
+  );
   ring.position.y = 0;
   g.add(ring);
   for (let i = 0; i < 6; i++) {

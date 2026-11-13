@@ -21,7 +21,10 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       store.vote({ t: "played", value });
       store.events.emit({ t: "played", value, changed });
       const answered = () => store.vote({ t: "answered" });
-      run({ t: "vote", value }).then(answered, (e: Error) => { answered(); report(e); });
+      run({ t: "vote", value }).then(answered, (e: Error) => {
+        answered();
+        report(e);
+      });
     },
     /** Flick a chip at someone's head. Too soon after the last one and nothing happens. */
     flick(target: string) {
@@ -32,7 +35,9 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
     gaze: (yaw: number, pitch: number) => session.fx({ kind: "gaze", yaw, pitch }),
     /** Mic loudness 0..1 (never audio). */
     talk: (level: number) => session.fx({ kind: "talk", level }),
-    setLook: (look: Look) => { run({ t: "setLook", look }).catch(report); },
+    setLook: (look: Look) => {
+      run({ t: "setLook", look }).catch(report);
+    },
     openTicket: () => store.events.emit({ t: "openTicket" }),
 
     dealer: {

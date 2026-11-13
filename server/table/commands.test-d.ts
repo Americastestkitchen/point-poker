@@ -14,7 +14,10 @@ export const badVote: Command = { t: "vote", value: "3" };
 
 // A command's input becomes its typed `cmd`, and a dealer command gets the dealer's abilities.
 defineCommand({
-  t: "probe", role: "dealer", move: "anytime", input: { n: z.number() },
+  t: "probe",
+  role: "dealer",
+  move: "anytime",
+  input: { n: z.number() },
   run: (ctx, _me, cmd) => {
     assertType<Equal<typeof cmd, { t: "probe"; n: number }>>();
     return ctx.load(String(cmd.n), "probe");
@@ -23,7 +26,10 @@ defineCommand({
 
 // A player command can't reach them.
 defineCommand({
-  t: "probe", role: "player", move: "anytime", input: {},
+  t: "probe",
+  role: "player",
+  move: "anytime",
+  input: {},
   // @ts-expect-error players can't load tickets
   run: (ctx) => ctx.load("SD-1", "SD-1"),
 });

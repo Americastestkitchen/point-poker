@@ -15,14 +15,34 @@ import type { TableState } from "./state.ts";
 
 /** For every move and every phase: allowed, or why not. */
 const RULES = {
-  vote: { waiting: "There's nothing to vote on yet", voting: true, revealed: "Voting is over", settled: "Voting is over" },
+  vote: {
+    waiting: "There's nothing to vote on yet",
+    voting: true,
+    revealed: "Voting is over",
+    settled: "Voting is over",
+  },
   /** Deals the ticket that's out again: everyone votes from scratch. */
   deal: { waiting: "Load a ticket first", voting: true, revealed: true, settled: true },
-  reveal: { waiting: "There's no vote to reveal", voting: true, revealed: "The cards are already up", settled: "The cards are already up" },
+  reveal: {
+    waiting: "There's no vote to reveal",
+    voting: true,
+    revealed: "The cards are already up",
+    settled: "The cards are already up",
+  },
   /** Settling again replaces the last call. */
   settle: { waiting: "Reveal the cards first", voting: "Reveal the cards first", revealed: true, settled: true },
-  cancel: { waiting: "There's no round to cancel", voting: true, revealed: true, settled: "This round is already paid out" },
-  skip: { waiting: "There's no ticket to skip", voting: true, revealed: true, settled: "This round is already paid out" },
+  cancel: {
+    waiting: "There's no round to cancel",
+    voting: true,
+    revealed: true,
+    settled: "This round is already paid out",
+  },
+  skip: {
+    waiting: "There's no ticket to skip",
+    voting: true,
+    revealed: true,
+    settled: "This round is already paid out",
+  },
 } as const satisfies Record<string, Record<Phase, true | string>>;
 
 export type Move = keyof typeof RULES;
@@ -48,7 +68,11 @@ export function reveal(s: TableState) {
 }
 
 /** The dealer's call, and who it paid. */
-export function settleRound(s: TableState, finalPoints: number, result: { pot: number; winners: string[]; share: number; houseWon: boolean }) {
+export function settleRound(
+  s: TableState,
+  finalPoints: number,
+  result: { pot: number; winners: string[]; share: number; houseWon: boolean },
+) {
   s.phase = "settled";
   s.finalPoints = finalPoints;
   s.pot = result.pot;
@@ -70,5 +94,8 @@ function clearRound(s: TableState) {
   s.share = 0;
   s.houseWon = false;
   s.pot = 0;
-  for (const p of s.players) { p.vote = null; p.lastWin = 0; }
+  for (const p of s.players) {
+    p.vote = null;
+    p.lastWin = 0;
+  }
 }

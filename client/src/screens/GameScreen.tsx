@@ -36,12 +36,24 @@ export function GameScreen() {
   if (!atTable) return null;
   return (
     <div className={s.screen} data-screen="table">
-      <div className={cx(s.region, s.ticket, s.interactive)} data-region="ticket"><TicketTab /></div>
-      <div className={cx(s.region, s.status)} data-region="status"><StatusLine /></div>
-      <div className={cx(s.region, s.top, s.interactive)} data-region="top"><TopBar /></div>
-      <div className={cx(s.region, s.announce)} data-region="announce"><Announcements /></div>
-      <div className={cx(s.region, s.dock, s.interactive)} data-region="dock"><ActionDock /></div>
-      <div className={cx(s.region, s.flash)} data-region="flash"><BonkFlash /></div>
+      <div className={cx(s.region, s.ticket, s.interactive)} data-region="ticket">
+        <TicketTab />
+      </div>
+      <div className={cx(s.region, s.status)} data-region="status">
+        <StatusLine />
+      </div>
+      <div className={cx(s.region, s.top, s.interactive)} data-region="top">
+        <TopBar />
+      </div>
+      <div className={cx(s.region, s.announce)} data-region="announce">
+        <Announcements />
+      </div>
+      <div className={cx(s.region, s.dock, s.interactive)} data-region="dock">
+        <ActionDock />
+      </div>
+      <div className={cx(s.region, s.flash)} data-region="flash">
+        <BonkFlash />
+      </div>
 
       {/* popups: kit Dialogs, one open at a time (store.ui.popup) */}
       <GameMenu />

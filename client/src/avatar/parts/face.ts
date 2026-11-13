@@ -33,7 +33,11 @@ export function buildFace(shape: BodyShape, parent: THREE.Object3D): Face {
   const left = buildEye(A.eyeL);
   const right = buildEye(A.eyeR);
   const { mouth } = A;
-  const smile = mesh(new THREE.TorusGeometry(0.055, 0.013, 6, 16, Math.PI), new THREE.MeshBasicMaterial({ color: "#2a1414" }), false);
+  const smile = mesh(
+    new THREE.TorusGeometry(0.055, 0.013, 6, 16, Math.PI),
+    new THREE.MeshBasicMaterial({ color: "#2a1414" }),
+    false,
+  );
   smile.position.set(mouth.x, mouth.y, mouth.z);
   smile.scale.setScalar(mouth.s);
   smile.rotation.z = Math.PI;

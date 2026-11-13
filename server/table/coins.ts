@@ -42,11 +42,18 @@ export function takeBack(players: PlayerState[]) {
 }
 
 /** Pays the pot out. Nobody close enough means the house (the dealer) rakes it in. */
-export function payOut(s: TableState, votes: Map<string, number>, finalPoints: number): Settlement & { houseWon: boolean } {
+export function payOut(
+  s: TableState,
+  votes: Map<string, number>,
+  finalPoints: number,
+): Settlement & { houseWon: boolean } {
   const result = settle(votes, finalPoints, s.settings.deck);
   const dealer = s.players.find((p) => p.id === s.dealerId);
   const houseWon = !result.winners.length && result.pot > 0 && !!dealer;
-  if (houseWon) { result.winners = [dealer!.id]; result.share = result.pot; }
+  if (houseWon) {
+    result.winners = [dealer!.id];
+    result.share = result.pot;
+  }
   for (const id of result.winners) {
     const w = s.players.find((p) => p.id === id)!;
     w.chips = round2(w.chips + result.share);

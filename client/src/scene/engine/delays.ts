@@ -10,7 +10,9 @@ export interface Delays {
 export function createDelays(): Delays {
   let waiting: { left: number; fn: () => void }[] = [];
   return {
-    after(seconds, fn) { waiting.push({ left: seconds, fn }); },
+    after(seconds, fn) {
+      waiting.push({ left: seconds, fn });
+    },
     update(dt) {
       if (!waiting.length) return;
       for (const w of waiting) w.left -= dt;

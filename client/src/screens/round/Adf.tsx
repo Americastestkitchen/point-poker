@@ -10,8 +10,18 @@ const VOID = new Set(["hr", "br"]);
 function draw(node: AdfOut, key: number): ReactNode {
   if (typeof node === "string") return node;
   const children = node.children.map(draw);
-  if (node.role === "tableWrap") return <ScrollArea key={key} className={s.tableWrap}>{children}</ScrollArea>;
-  if (node.tag === "pre") return <ScrollArea key={key} className={s.preWrap}><pre>{children}</pre></ScrollArea>;
+  if (node.role === "tableWrap")
+    return (
+      <ScrollArea key={key} className={s.tableWrap}>
+        {children}
+      </ScrollArea>
+    );
+  if (node.tag === "pre")
+    return (
+      <ScrollArea key={key} className={s.preWrap}>
+        <pre>{children}</pre>
+      </ScrollArea>
+    );
   const props = {
     key,
     className: node.role ? s[node.role] : undefined,

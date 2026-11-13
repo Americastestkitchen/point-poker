@@ -8,10 +8,15 @@ export const isDealer = (s: TableState, p: PlayerState) => p.id === s.dealerId;
 export const isVoter = (s: TableState, p: PlayerState) => plays(isDealer(s, p), s.settings.dealerPlays);
 export const findPlayer = (s: TableState, id: string) => s.players.find((p) => p.id === id);
 
-export const clean = (v: unknown, max: number) => String(v ?? "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, max);
+export const clean = (v: unknown, max: number) =>
+  String(v ?? "")
+    .replace(/[\u0000-\u001f]/g, "")
+    .trim()
+    .slice(0, max);
 
 /** A playable card value from this table's deck, or null. */
-export const pickVote = (s: TableState, v: number | null) => v !== null && cardValues(s.settings.deck).includes(v) ? v : null;
+export const pickVote = (s: TableState, v: number | null) =>
+  v !== null && cardValues(s.settings.deck).includes(v) ? v : null;
 
 /** The first free seat, or -2 when the table is full. */
 export function freeSeat(s: TableState): number {
@@ -22,8 +27,19 @@ export function freeSeat(s: TableState): number {
 
 export function manualTicket(key: string, summary: string, description: string): Ticket {
   return {
-    key: key || "TICKET", summary, description,
-    type: "", status: "", priority: "", assignee: "", reporter: "", labels: [], currentPoints: null, url: "",
-    adf: null, statusCategory: "", parent: null,
+    key: key || "TICKET",
+    summary,
+    description,
+    type: "",
+    status: "",
+    priority: "",
+    assignee: "",
+    reporter: "",
+    labels: [],
+    currentPoints: null,
+    url: "",
+    adf: null,
+    statusCategory: "",
+    parent: null,
   };
 }

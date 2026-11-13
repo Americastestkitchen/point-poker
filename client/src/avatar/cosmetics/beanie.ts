@@ -14,7 +14,10 @@ export function beanie(): THREE.Group {
   const prop = new THREE.Group();
   prop.name = "spin";
   prop.position.y = 0.21;
-  for (const [c, r] of [["#ff4757", 0], ["#ffd23f", Math.PI]] as const) {
+  for (const [c, r] of [
+    ["#ff4757", 0],
+    ["#ffd23f", Math.PI],
+  ] as const) {
     const b = mesh(new THREE.BoxGeometry(0.18, 0.01, 0.05), toon(c));
     b.position.x = 0.09;
     const piv = new THREE.Group();

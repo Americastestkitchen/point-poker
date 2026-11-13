@@ -36,7 +36,17 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
   const pot = createPot(stage, { layout, flights, audio });
 
   const rig = createCameraRig(stage.camera, layout, actions.gaze);
-  const table = mountTableView(stage, { store, actions, audio, layout, flights, rig, ticket, pot, screen: env.props.statusScreen });
+  const table = mountTableView(stage, {
+    store,
+    actions,
+    audio,
+    layout,
+    flights,
+    rig,
+    ticket,
+    pot,
+    screen: env.props.statusScreen,
+  });
   bindInput(stage, { actions, rig, allowsWorldKeys: deps.allowsWorldKeys });
   audio.ambience(env.ambience);
 

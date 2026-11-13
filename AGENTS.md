@@ -121,7 +121,8 @@ At new boundaries use readable explicit success/failure types and human-readable
 refusal reasons; preserve existing wire/result contracts unless the feature needs
 an intentional protocol change. Legacy lobby/HUD migration belongs to #4/#11.
 
-Run **`npm run check`**: TypeScript (including `*.test-d.ts`), runtime tests,
+Run `npm run format` (oxfmt; layout is the formatter's, never hand-tuned), then
+**`npm run check`**: the format check, TypeScript (including `*.test-d.ts`), runtime tests,
 game build to `dist`, then gallery build to `node_modules/.gallery`. Use the
 existing boundary, registry, snapshot and session checks rather than duplicating
 them here. `noUncheckedIndexedAccess` is enabled: narrow missing entries before use,

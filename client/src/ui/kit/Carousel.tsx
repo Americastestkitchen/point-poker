@@ -20,7 +20,16 @@ export interface CarouselProps<T> {
 }
 
 /** Pick one of a few options with ←/→, the arrow buttons, or a tap on either side. */
-export function Carousel<T>({ label, options, value, onChange, render = String, dots = true, disabled, demoState }: CarouselProps<T>) {
+export function Carousel<T>({
+  label,
+  options,
+  value,
+  onChange,
+  render = String,
+  dots = true,
+  disabled,
+  demoState,
+}: CarouselProps<T>) {
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
   const index = Math.max(0, options.indexOf(value));
@@ -42,20 +51,45 @@ export function Carousel<T>({ label, options, value, onChange, render = String, 
       className={cx(s.carousel, disabled && s.disabled)}
       onKeyDown={(e) => {
         const dir = direction(intentOf(e), "horizontal");
-        if (dir) { e.preventDefault(); go(dir); }
+        if (dir) {
+          e.preventDefault();
+          go(dir);
+        }
       }}
     >
       <span className={s.label}>{label}</span>
       <div className={s.row}>
-        <button type="button" tabIndex={-1} className={s.arrow} aria-label={`Previous ${label}`} disabled={disabled} onClick={() => go(-1)}>◀</button>
+        <button
+          type="button"
+          tabIndex={-1}
+          className={s.arrow}
+          aria-label={`Previous ${label}`}
+          disabled={disabled}
+          onClick={() => go(-1)}
+        >
+          ◀
+        </button>
         <div className={s.value} aria-live="polite">
-          <span key={index} className={s.option}>{render(options[index] as T)}</span>
+          <span key={index} className={s.option}>
+            {render(options[index] as T)}
+          </span>
         </div>
-        <button type="button" tabIndex={-1} className={s.arrow} aria-label={`Next ${label}`} disabled={disabled} onClick={() => go(1)}>▶</button>
+        <button
+          type="button"
+          tabIndex={-1}
+          className={s.arrow}
+          aria-label={`Next ${label}`}
+          disabled={disabled}
+          onClick={() => go(1)}
+        >
+          ▶
+        </button>
       </div>
       {dots && options.length > 1 && (
         <div className={s.dots} aria-hidden>
-          {options.map((_, i) => <span key={i} className={cx(s.dot, i === index && s.on)} />)}
+          {options.map((_, i) => (
+            <span key={i} className={cx(s.dot, i === index && s.on)} />
+          ))}
         </div>
       )}
     </div>

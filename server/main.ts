@@ -11,14 +11,15 @@ import { noTickets } from "./tickets/none.ts";
 const env = process.env;
 const log = console;
 
-const jira = env.JIRA_BASE_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
-  ? jiraSource({
-    baseUrl: env.JIRA_BASE_URL,
-    auth: { kind: "apiToken", email: env.JIRA_EMAIL, token: env.JIRA_API_TOKEN },
-    pointsField: env.JIRA_POINTS_FIELD,
-    defaultProject: env.JIRA_PROJECT,
-  })
-  : noTickets();
+const jira =
+  env.JIRA_BASE_URL && env.JIRA_EMAIL && env.JIRA_API_TOKEN
+    ? jiraSource({
+        baseUrl: env.JIRA_BASE_URL,
+        auth: { kind: "apiToken", email: env.JIRA_EMAIL, token: env.JIRA_API_TOKEN },
+        pointsField: env.JIRA_POINTS_FIELD,
+        defaultProject: env.JIRA_PROJECT,
+      })
+    : noTickets();
 
 // Saving is on when DATA_DIR is set (production mounts a Fly volume there).
 const persist = !!env.DATA_DIR;
@@ -50,6 +51,8 @@ if (persist) {
 
 const port = Number(env.PORT ?? 8787);
 app.server.listen(port, () => {
-  log.log(`Point Poker on http://localhost:${port} (Jira ${jira.enabled ? "connected" : "not configured"}, ` +
-    `${persist ? `${app.rooms.size} saved table(s) restored` : "tables not saved"})`);
+  log.log(
+    `Point Poker on http://localhost:${port} (Jira ${jira.enabled ? "connected" : "not configured"}, ` +
+      `${persist ? `${app.rooms.size} saved table(s) restored` : "tables not saved"})`,
+  );
 });

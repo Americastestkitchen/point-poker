@@ -35,8 +35,26 @@ export interface TextFieldProps {
 
 /** One line of text in the kit's look: label, field, and an error or hint under it. */
 export function TextField({
-  label, hideLabel, value, onChange, onSubmit, onPasted, placeholder, error, hint, disabled, autoFocus, maxLength,
-  size = "md", trailing, spellCheck = false, autoCapitalize, inputMode, enterKeyHint, ref, demoState,
+  label,
+  hideLabel,
+  value,
+  onChange,
+  onSubmit,
+  onPasted,
+  placeholder,
+  error,
+  hint,
+  disabled,
+  autoFocus,
+  maxLength,
+  size = "md",
+  trailing,
+  spellCheck = false,
+  autoCapitalize,
+  inputMode,
+  enterKeyHint,
+  ref,
+  demoState,
 }: TextFieldProps) {
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
@@ -45,11 +63,15 @@ export function TextField({
   const pasted = useRef(false);
   const message = typeof error === "string" && error ? error : null;
 
-  useEffect(() => { if (autoFocus) input.current?.focus({ preventScroll: true }); }, [autoFocus]);
+  useEffect(() => {
+    if (autoFocus) input.current?.focus({ preventScroll: true });
+  }, [autoFocus]);
 
   return (
     <div className={cx(s.field, s[size], !!error && s.error, disabled && s.disabled)} data-demo={demoState}>
-      <label htmlFor={id} className={cx(s.label, hideLabel && s.hidden)}>{label}</label>
+      <label htmlFor={id} className={cx(s.label, hideLabel && s.hidden)}>
+        {label}
+      </label>
       <div className={s.box}>
         <input
           id={id}
@@ -76,7 +98,9 @@ export function TextField({
             // the change it causes comes straight after; a paste that changes nothing must not
             // leave the flag up for the next key
             pasted.current = true;
-            setTimeout(() => { pasted.current = false; }, 0);
+            setTimeout(() => {
+              pasted.current = false;
+            }, 0);
           }}
           onChange={(e) => {
             const next = e.target.value;
@@ -95,9 +119,17 @@ export function TextField({
         />
         {trailing && <span className={s.trailing}>{trailing}</span>}
       </div>
-      {message
-        ? <span id={`${id}-note`} className={s.message} role="alert">{message}</span>
-        : hint && <span id={`${id}-note`} className={s.hint}>{hint}</span>}
+      {message ? (
+        <span id={`${id}-note`} className={s.message} role="alert">
+          {message}
+        </span>
+      ) : (
+        hint && (
+          <span id={`${id}-note`} className={s.hint}>
+            {hint}
+          </span>
+        )
+      )}
     </div>
   );
 }

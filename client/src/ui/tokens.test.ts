@@ -32,7 +32,10 @@ test("tokens become CSS variables", () => {
 test("the kit's and screens' stylesheets only use tokens that exist", () => {
   const known = new Set(Object.keys(cssVars()));
   const sheets = kitCss();
-  assert.ok(sheets.some((s) => s.file.includes("screens")), "the screens' stylesheets are checked too");
+  assert.ok(
+    sheets.some((s) => s.file.includes("screens")),
+    "the screens' stylesheets are checked too",
+  );
   for (const { file, css } of sheets) {
     for (const [, name] of css.matchAll(/var\((--pp-[\w-]+)/g)) {
       assert.ok(known.has(name!), `${file} uses ${name}, which isn't a token`);
@@ -54,7 +57,10 @@ test("toasts stack up, drop the oldest past the limit, and leave on their own", 
   toasts.subscribe(() => changes++);
   const a = toasts.show("SD-123 was updated");
   toasts.show("Couldn't reach Jira", { tone: "error" });
-  assert.deepEqual(toasts.get().map((t) => t.tone), ["info", "error"]);
+  assert.deepEqual(
+    toasts.get().map((t) => t.tone),
+    ["info", "error"],
+  );
   for (let i = 0; i < 4; i++) toasts.show(`t${i}`);
   assert.equal(toasts.get().length, 4);
   assert.ok(!toasts.get().some((t) => t.id === a), "the oldest went first");

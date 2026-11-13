@@ -28,23 +28,46 @@ export function TopBar() {
           <span className={s.tipStart}>
             <Tooltip text="Dealer controls: skip, cancel, kick" side="bottom">
               <Button shape="pill" size="md" className={s.dealer} aria-label="Dealer controls" {...tap(dealer.show)}>
-                <span aria-hidden>🎩</span><span className={s.wide} aria-hidden>Dealer</span>
+                <span aria-hidden>🎩</span>
+                <span className={s.wide} aria-hidden>
+                  Dealer
+                </span>
               </Button>
             </Tooltip>
           </span>
         )}
         {coins !== null && (
           <Tooltip text="Leaderboard" side="bottom">
-            <Button ref={wallet} shape="pill" size="md" className={s.wallet} aria-label={`${coins} coins: open the leaderboard`} {...tap(board.show)}>
+            <Button
+              ref={wallet}
+              shape="pill"
+              size="md"
+              className={s.wallet}
+              aria-label={`${coins} coins: open the leaderboard`}
+              {...tap(board.show)}
+            >
               <CoinCounter value={coins} />
             </Button>
           </Tooltip>
         )}
         <MicButton />
-        <Button shape="pill" size="md" className={s.menu} aria-label="Menu" aria-keyshortcuts="Escape" {...tap(menu.show)}>
-          <span aria-hidden className={s.burger}>☰</span>
-          <span className={s.wide} aria-hidden>Menu</span>
-          <span className={cx(s.wide, s.keycap)} aria-hidden><KeyHint keys={["Escape"]} /></span>
+        <Button
+          shape="pill"
+          size="md"
+          className={s.menu}
+          aria-label="Menu"
+          aria-keyshortcuts="Escape"
+          {...tap(menu.show)}
+        >
+          <span aria-hidden className={s.burger}>
+            ☰
+          </span>
+          <span className={s.wide} aria-hidden>
+            Menu
+          </span>
+          <span className={cx(s.wide, s.keycap)} aria-hidden>
+            <KeyHint keys={["Escape"]} />
+          </span>
         </Button>
       </div>
     </nav>
@@ -60,7 +83,9 @@ export function TopBar() {
 function useLetGoAfterTouch() {
   const touched = useRef(false);
   return (action: () => void) => ({
-    onPointerDown: (e: PointerEvent<HTMLElement>) => { touched.current = e.pointerType !== "mouse"; },
+    onPointerDown: (e: PointerEvent<HTMLElement>) => {
+      touched.current = e.pointerType !== "mouse";
+    },
     onPress() {
       action();
       if (!touched.current) return;
@@ -88,7 +113,9 @@ function MicButton() {
         aria-pressed={on}
         {...tap(mic.toggle)}
       >
-        <span className={s.micIcon} aria-hidden>🎙️</span>
+        <span className={s.micIcon} aria-hidden>
+          🎙️
+        </span>
       </Button>
     </Tooltip>
   );
@@ -102,7 +129,9 @@ function ConnectionLine() {
   const down = connection.status === "closed";
   return (
     <span className={cx(s.conn, down && s.down)} role="status" title={label}>
-      <span aria-hidden className={s.connIcon}>{down ? "⚠" : <Spinner size="sm" />}</span>
+      <span aria-hidden className={s.connIcon}>
+        {down ? "⚠" : <Spinner size="sm" />}
+      </span>
       <span className={s.connText}>{label}</span>
     </span>
   );

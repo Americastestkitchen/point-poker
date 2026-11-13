@@ -1,4 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 120
+  "printWidth": 120,
+  // Fly's config files keep Fly's own indented layout.
+  "ignorePatterns": ["fly*.toml"]
 }

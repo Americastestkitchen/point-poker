@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { potMove } from "./pot.ts";
 
-const round = (phase: "waiting" | "voting" | "revealed" | "settled", now: { revealed?: boolean; settled?: boolean; resettled?: boolean } = {}) =>
-  ({ phase, revealedNow: !!now.revealed, settledNow: !!now.settled, resettled: !!now.resettled });
+const round = (
+  phase: "waiting" | "voting" | "revealed" | "settled",
+  now: { revealed?: boolean; settled?: boolean; resettled?: boolean } = {},
+) => ({ phase, revealedNow: !!now.revealed, settledNow: !!now.settled, resettled: !!now.resettled });
 
 test("the pot fills when the cards go up, or when you arrive mid-reveal", () => {
   assert.equal(potMove("empty", round("revealed", { revealed: true })), "fill");

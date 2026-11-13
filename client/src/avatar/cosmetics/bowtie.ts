@@ -7,7 +7,7 @@ export function bowtie(): THREE.Group {
   const g = new THREE.Group();
   for (const s of [-1, 1]) {
     const w = mesh(new THREE.ConeGeometry(0.05, 0.09, 4), toon("#b3202a"));
-    w.rotation.z = s * Math.PI / 2;
+    w.rotation.z = (s * Math.PI) / 2;
     w.position.x = s * 0.045;
     g.add(w);
   }

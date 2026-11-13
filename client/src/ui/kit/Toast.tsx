@@ -20,7 +20,11 @@ export function Toaster() {
   const items = useSyncExternalStore(toasts.subscribe, toasts.get);
   return (
     <div className={s.stack} aria-live="polite">
-      {items.map((t) => <Toast key={t.id} tone={t.tone}>{t.text}</Toast>)}
+      {items.map((t) => (
+        <Toast key={t.id} tone={t.tone}>
+          {t.text}
+        </Toast>
+      ))}
     </div>
   );
 }

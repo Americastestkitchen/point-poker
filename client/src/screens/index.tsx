@@ -53,18 +53,34 @@ export function createGameUi(deps: GameUiDeps): GameUi {
   const copy = createCopy({ clipboard: deps.clipboard ?? (() => navigator.clipboard), toasts });
 
   const game: Game = {
-    store, actions, storage, audio, toasts, mic, ticketLoad, copy,
+    store,
+    actions,
+    storage,
+    audio,
+    toasts,
+    mic,
+    ticketLoad,
+    copy,
     openLook: deps.openLook,
     leaveTable: deps.leaveTable,
-    invite: () => void copy.copy(deps.inviteUrl(), { done: "🔗 Invite link copied. Paste it in Slack or Teams.", title: "Send this link to your team" }),
+    invite: () =>
+      void copy.copy(deps.inviteUrl(), {
+        done: "🔗 Invite link copied. Paste it in Slack or Teams.",
+        title: "Send this link to your team",
+      }),
     // through the event stream, so the root's one adapter shows it (and bonks)
-    dealerDo: (work) => void work.catch((e: unknown) => {
-      store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
-    }),
+    dealerDo: (work) =>
+      void work.catch((e: unknown) => {
+        store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
+      }),
   };
 
   return {
-    ui: <GameProvider value={game}><GameRoot /></GameProvider>,
+    ui: (
+      <GameProvider value={game}>
+        <GameRoot />
+      </GameProvider>
+    ),
     allowsWorldKeys() {
       const s = store.getState();
       return worldKeysAllowed({

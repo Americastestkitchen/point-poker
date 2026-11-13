@@ -7,7 +7,10 @@ import { mesh, toon } from "../../scene/art/materials.ts";
 export function party(): THREE.Group {
   const g = new THREE.Group();
   const tex = canvasTex(64, 64, (x) => {
-    for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? "#ff5fa2" : "#4ad6ff"; x.fillRect(i * 8, 0, 8, 64); }
+    for (let i = 0; i < 8; i++) {
+      x.fillStyle = i % 2 ? "#ff5fa2" : "#4ad6ff";
+      x.fillRect(i * 8, 0, 8, 64);
+    }
   });
   const c = mesh(new THREE.ConeGeometry(0.12, 0.36, 20), toon("#fff", { map: tex }));
   c.position.y = 0.14;

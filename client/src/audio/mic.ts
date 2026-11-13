@@ -8,11 +8,16 @@ export type MicEvent = "start" | "granted" | "refused" | "stop";
 /** The mic's rules: one permission request at a time, and a stop while asking wins. */
 export function nextMicStatus(s: MicStatus, e: MicEvent): MicStatus {
   switch (e) {
-    case "start": return s === "off" || s === "denied" ? "starting" : s;
-    case "granted": return s === "starting" ? "on" : s;
-    case "refused": return s === "starting" ? "denied" : s;
-    case "stop": return "off";
-    default: return e satisfies never;
+    case "start":
+      return s === "off" || s === "denied" ? "starting" : s;
+    case "granted":
+      return s === "starting" ? "on" : s;
+    case "refused":
+      return s === "starting" ? "denied" : s;
+    case "stop":
+      return "off";
+    default:
+      return e satisfies never;
   }
 }
 
@@ -69,7 +74,9 @@ export function createMic(open: () => Promise<MicInput> = browserMic): Mic {
   };
 
   const mic: Mic = {
-    get status() { return status; },
+    get status() {
+      return status;
+    },
     onLevel: () => {},
     onMeter: () => {},
     onStatus: () => {},
@@ -84,11 +91,17 @@ export function createMic(open: () => Promise<MicInput> = browserMic): Mic {
       try {
         got = await open();
       } catch (e) {
-        if (mine === asking && move("refused")) { mic.onStatus(status); throw e; }
+        if (mine === asking && move("refused")) {
+          mic.onStatus(status);
+          throw e;
+        }
         return;
       }
       // stopped (or asked again) while the browser was asking: let this one go
-      if (mine !== asking) { got.close(); return; }
+      if (mine !== asking) {
+        got.close();
+        return;
+      }
       input = got;
       timer = setInterval(tick, 80);
       move("granted");
@@ -102,7 +115,10 @@ export function createMic(open: () => Promise<MicInput> = browserMic): Mic {
       input = null;
       level = 0;
       mic.onMeter(0);
-      if (sent !== 0) { sent = 0; mic.onLevel(0); }
+      if (sent !== 0) {
+        sent = 0;
+        mic.onLevel(0);
+      }
       if (move("stop")) mic.onStatus(status);
     },
   };
@@ -117,7 +133,10 @@ async function browserMic(): Promise<MicInput> {
   const ctx = new AudioContext();
   // browsers start audio suspended until a click; resume on the next one
   if (ctx.state === "suspended") {
-    const wake = () => { ctx.resume(); window.removeEventListener("pointerdown", wake); };
+    const wake = () => {
+      ctx.resume();
+      window.removeEventListener("pointerdown", wake);
+    };
     window.addEventListener("pointerdown", wake);
     ctx.resume().catch(() => {});
   }

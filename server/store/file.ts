@@ -9,7 +9,12 @@ import type { RoomStore } from "./store.ts";
 /** Parses saved tables, dropping any that don't match today's format. */
 export function parseSaved(text: string, log: Pick<Log, "error">): TableState[] {
   let raw: unknown;
-  try { raw = JSON.parse(text); } catch (e) { log.error("saved tables aren't valid JSON, starting fresh", e); return []; }
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    log.error("saved tables aren't valid JSON, starting fresh", e);
+    return [];
+  }
   if (!Array.isArray(raw)) return [];
   const tables: TableState[] = [];
   for (const r of raw) {

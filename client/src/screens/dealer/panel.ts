@@ -24,7 +24,13 @@ export function roundActions(room: RoundView): RoundAction[] {
   const next = nextInQueue(room);
   return [
     { id: "restart", label: "🔁 Restart vote", sub: "everyone picks again", enabled: live, danger: false },
-    { id: "skip", label: "⏭️ Skip ticket", sub: next ? `no payout · next ${next.key}` : "no payout", enabled: live, danger: false },
+    {
+      id: "skip",
+      label: "⏭️ Skip ticket",
+      sub: next ? `no payout · next ${next.key}` : "no payout",
+      enabled: live,
+      danger: false,
+    },
     { id: "cancel", label: "✋ Cancel round", sub: "no payout, clear ticket", enabled: live, danger: true },
     { id: "pick", label: "🗂️ Pick a ticket", sub: "load or switch", enabled: true, danger: false },
   ];
@@ -44,9 +50,14 @@ export function playerState(p: Pick<PublicPlayer, "connected" | "hasVoted">, pha
 }
 
 /** Everyone at the table except the dealer: who can be kicked. */
-export const othersOf = <P extends Pick<PublicPlayer, "isDealer">>(players: readonly P[]): P[] => players.filter((p) => !p.isDealer);
+export const othersOf = <P extends Pick<PublicPlayer, "isDealer">>(players: readonly P[]): P[] =>
+  players.filter((p) => !p.isDealer);
 
-export const CANCEL_CONFIRM = { title: "Cancel this round?", body: "Nobody gets paid and the ticket is cleared.", confirm: "Cancel round" } as const;
+export const CANCEL_CONFIRM = {
+  title: "Cancel this round?",
+  body: "Nobody gets paid and the ticket is cleared.",
+  confirm: "Cancel round",
+} as const;
 
 export const kickConfirm = (name: string) => ({
   title: `Kick ${name} from the table?`,

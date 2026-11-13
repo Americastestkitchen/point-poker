@@ -26,7 +26,9 @@ export function createBackStack() {
       top.handler();
       return true;
     },
-    get depth() { return stack.length; },
+    get depth() {
+      return stack.length;
+    },
   };
 }
 

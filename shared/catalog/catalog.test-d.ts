@@ -9,7 +9,9 @@ import { idsOf } from "./registry.ts";
 
 // Ids stay literal unions; if one widened to string, Record<Id, …> registries would stop catching missing entries.
 type Widened<T> = string extends T ? true : false;
-assertType<Equal<Widened<BodyId> | Widened<CosmeticId> | Widened<EmoteId> | Widened<EnvironmentId> | Widened<DeckId>, false>>();
+assertType<
+  Equal<Widened<BodyId> | Widened<CosmeticId> | Widened<EmoteId> | Widened<EnvironmentId> | Widened<DeckId>, false>
+>();
 
 // idsOf gives z.enum its non-empty tuple, and refuses an empty list.
 assertType<Equal<typeof BODY_IDS, [BodyId, ...BodyId[]]>>();

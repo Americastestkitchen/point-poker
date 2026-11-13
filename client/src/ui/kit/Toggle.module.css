@@ -1,37 +1,96 @@
 .toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--pp-space-4);
-  width: 100%; padding: var(--pp-space-2) var(--pp-space-3);
-  font: inherit; color: var(--pp-color-ink); text-align: left;
-  background: transparent; border: 1px solid transparent; border-radius: var(--pp-radius-md);
-  cursor: pointer; outline: none; user-select: none;
-  transition: background var(--pp-motion-base), border-color var(--pp-motion-base);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pp-space-4);
+  width: 100%;
+  padding: var(--pp-space-2) var(--pp-space-3);
+  font: inherit;
+  color: var(--pp-color-ink);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--pp-radius-md);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  transition:
+    background var(--pp-motion-base),
+    border-color var(--pp-motion-base);
 }
-.label { font-size: var(--pp-size-md); }
+.label {
+  font-size: var(--pp-size-md);
+}
 
 .track {
-  position: relative; flex: none; width: 64px; height: 30px;
-  background: var(--pp-color-well); border: var(--pp-border-panel); border-radius: var(--pp-radius-pill);
-  transition: background var(--pp-motion-base), border-color var(--pp-motion-base);
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 30px;
+  background: var(--pp-color-well);
+  border: var(--pp-border-panel);
+  border-radius: var(--pp-radius-pill);
+  transition:
+    background var(--pp-motion-base),
+    border-color var(--pp-motion-base);
 }
 .state {
-  position: absolute; top: 50%; right: 9px; transform: translateY(-50%);
-  font-size: 10px; font-weight: var(--pp-weight-display); letter-spacing: 1px; color: var(--pp-color-faint);
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: var(--pp-weight-display);
+  letter-spacing: 1px;
+  color: var(--pp-color-faint);
 }
 .knob {
-  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: var(--pp-radius-pill);
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--pp-radius-pill);
   background: linear-gradient(var(--pp-color-button-hover), var(--pp-color-button-low));
   box-shadow: var(--pp-shadow-button);
-  transition: transform var(--pp-motion-slow) var(--pp-motion-spring), background var(--pp-motion-base);
+  transition:
+    transform var(--pp-motion-slow) var(--pp-motion-spring),
+    background var(--pp-motion-base);
 }
-.on .track { background: color-mix(in srgb, var(--pp-color-gold) 25%, var(--pp-color-well)); border-color: var(--pp-color-gold); }
-.on .state { left: 10px; right: auto; color: var(--pp-color-gold-hi); }
-.on .knob { transform: translateX(34px); background: linear-gradient(var(--pp-color-gold-hi), var(--pp-color-gold-low)); }
+.on .track {
+  background: color-mix(in srgb, var(--pp-color-gold) 25%, var(--pp-color-well));
+  border-color: var(--pp-color-gold);
+}
+.on .state {
+  left: 10px;
+  right: auto;
+  color: var(--pp-color-gold-hi);
+}
+.on .knob {
+  transform: translateX(34px);
+  background: linear-gradient(var(--pp-color-gold-hi), var(--pp-color-gold-low));
+}
 
-.toggle:focus, .toggle:hover:not(:disabled), .toggle[data-demo="hover"], .toggle[data-demo="focus"] {
+.toggle:focus,
+.toggle:hover:not(:disabled),
+.toggle[data-demo="hover"],
+.toggle[data-demo="focus"] {
   background: color-mix(in srgb, var(--pp-color-gold) 8%, transparent);
   border-color: var(--pp-color-edge);
 }
-.toggle:focus .track, .toggle[data-demo="focus"] .track { box-shadow: var(--pp-glow-focus); }
-.toggle:active:not(:disabled) .knob, .toggle[data-demo="pressed"] .knob { width: 28px; }
-.on:active:not(:disabled) .knob, .on[data-demo="pressed"] .knob { transform: translateX(28px); }
-.toggle:disabled { opacity: .45; cursor: default; }
+.toggle:focus .track,
+.toggle[data-demo="focus"] .track {
+  box-shadow: var(--pp-glow-focus);
+}
+.toggle:active:not(:disabled) .knob,
+.toggle[data-demo="pressed"] .knob {
+  width: 28px;
+}
+.on:active:not(:disabled) .knob,
+.on[data-demo="pressed"] .knob {
+  transform: translateX(28px);
+}
+.toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

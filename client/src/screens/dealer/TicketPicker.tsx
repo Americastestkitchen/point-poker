@@ -9,11 +9,33 @@
 // Dealer only: it follows the role. The decisions live in picker.ts.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TableView } from "../../../../shared/protocol.ts";
-import { Button, cx, Dialog, ScrollArea, Spinner, TextField, Toggle, useFocusable, useRoving, useUi } from "../../ui/index.ts";
+import {
+  Button,
+  cx,
+  Dialog,
+  ScrollArea,
+  Spinner,
+  TextField,
+  Toggle,
+  useFocusable,
+  useRoving,
+  useUi,
+} from "../../ui/index.ts";
 import { useAppState, useGame, useMe, usePopup, useRoom, useTicketLoad } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
-import { jiraSubmit, manualSubmit, pasteSubmits, peopleLine, pickerCue, pickerErrors, pickerSections, queueRows, type PickerCue, type QueueRow } from "./picker.ts";
+import {
+  jiraSubmit,
+  manualSubmit,
+  pasteSubmits,
+  peopleLine,
+  pickerCue,
+  pickerErrors,
+  pickerSections,
+  queueRows,
+  type PickerCue,
+  type QueueRow,
+} from "./picker.ts";
 import { Section } from "./Section.tsx";
 import s from "./TicketPicker.module.css";
 
@@ -31,7 +53,9 @@ export function TicketPicker() {
     if (next.popup === "open") store.popupOpened("picker");
     else if (next.popup === "close") store.popupClosed("picker");
   };
-  useViewChanges((c) => { if (c.t === "ticketChanged") cue(c); });
+  useViewChanges((c) => {
+    if (c.t === "ticketChanged") cue(c);
+  });
   // it waits its turn: never over the look editor, never replacing a popup you're reading
   const free = useAppState((st) => st.ui.popup === null && !st.ui.lookOpen);
   useEffect(() => {
@@ -139,32 +163,58 @@ function PickerBody() {
             value={jiraDraft}
             disabled={loading}
             error={errors.field ?? undefined}
-            hint={<>Tip: paste an <b className={s.em}>epic</b> to line up all of its tickets.</>}
+            hint={
+              <>
+                Tip: paste an <b className={s.em}>epic</b> to line up all of its tickets.
+              </>
+            }
             enterKeyHint="go"
             onChange={(v) => {
               setJiraDraft(v);
               edited();
             }}
-            onPasted={(v) => { if (pasteSubmits(v)) submitJira(v); }}
+            onPasted={(v) => {
+              if (pasteSubmits(v)) submitJira(v);
+            }}
             onSubmit={submitJira}
-            trailing={<Button variant="primary" disabled={loading} onPress={() => submitJira(jiraDraft)}>Deal it</Button>}
+            trailing={
+              <Button variant="primary" disabled={loading} onPress={() => submitJira(jiraDraft)}>
+                Deal it
+              </Button>
+            }
           />
           {status}
-          <Button variant="ghost" className={s.sprint} disabled={loading}
-            onPress={() => ticketLoad.run(actions.dealer.loadSprint(), "Loading this sprint's tickets…")}>
+          <Button
+            variant="ghost"
+            className={s.sprint}
+            disabled={loading}
+            onPress={() => ticketLoad.run(actions.dealer.loadSprint(), "Loading this sprint's tickets…")}
+          >
             📋 Or pick from this sprint
           </Button>
         </div>
       )}
       {!sections.jira && status}
-      {errors.form && <p className={s.formError} role="alert">{errors.form}</p>}
+      {errors.form && (
+        <p className={s.formError} role="alert">
+          {errors.form}
+        </p>
+      )}
 
-      <Queue room={room} disabled={loading} onPick={(key) => ticketLoad.run(actions.dealer.load(key), `Fetching ${key}…`)} />
+      <Queue
+        room={room}
+        disabled={loading}
+        onPick={(key) => ticketLoad.run(actions.dealer.load(key), `Fetching ${key}…`)}
+      />
 
       <div className={s.manual} data-open={manualShown || undefined}>
-        {sections.manual === "collapsible"
-          ? <Disclosure open={manualOpen} onToggle={() => setManualOpen(!manualOpen)}>No Jira ticket? Type it in</Disclosure>
-          : <p className={s.manualTitle}>Type in what you're estimating</p>}
+        {sections.manual === "collapsible" ? (
+          <Disclosure open={manualOpen} onToggle={() => setManualOpen(!manualOpen)}>
+            No Jira ticket? Type it in
+          </Disclosure>
+        ) : (
+          <p className={s.manualTitle}>Type in what you're estimating</p>
+        )}
         {manualShown && (
           <TextField
             ref={manualField}
@@ -179,7 +229,11 @@ function PickerBody() {
             enterKeyHint="done"
             onChange={setManualDraft}
             onSubmit={submitManual}
-            trailing={<Button variant={sections.jira ? "default" : "primary"} disabled={loading} onPress={submitManual}>Deal</Button>}
+            trailing={
+              <Button variant={sections.jira ? "default" : "primary"} disabled={loading} onPress={submitManual}>
+                Deal
+              </Button>
+            }
           />
         )}
       </div>
@@ -195,7 +249,9 @@ function Disclosure({ open, onToggle, children }: { open: boolean; onToggle: () 
   return (
     <button type="button" className={s.disclosure} aria-expanded={open} {...focus} onClick={onToggle}>
       <span>{children}</span>
-      <span className={s.chevron} aria-hidden>▾</span>
+      <span className={s.chevron} aria-hidden>
+        ▾
+      </span>
     </button>
   );
 }
@@ -209,14 +265,21 @@ function Queue({ room, disabled, onPick }: { room: TableView; disabled: boolean;
     <Section title={queue.title}>
       <ScrollArea className={s.queue}>
         <div role="list" aria-label={queue.title} className={s.rows} onKeyDown={roving.onKeyDown}>
-          {queue.rows.map((r, i) => <QueueItem key={r.key} row={r} roving={roving.item(i)} disabled={disabled} onPick={onPick} />)}
+          {queue.rows.map((r, i) => (
+            <QueueItem key={r.key} row={r} roving={roving.item(i)} disabled={disabled} onPick={onPick} />
+          ))}
         </div>
       </ScrollArea>
     </Section>
   );
 }
 
-function QueueItem({ row, roving, disabled, onPick }: {
+function QueueItem({
+  row,
+  roving,
+  disabled,
+  onPick,
+}: {
   row: QueueRow;
   roving: ReturnType<ReturnType<typeof useRoving>["item"]>;
   disabled: boolean;
@@ -226,14 +289,19 @@ function QueueItem({ row, roving, disabled, onPick }: {
   const focus = useFocusable(disabled);
   return (
     <div role="listitem" className={s.rowWrap}>
-      <button type="button" {...roving} {...focus} disabled={disabled}
+      <button
+        type="button"
+        {...roving}
+        {...focus}
+        disabled={disabled}
         className={cx(s.row, row.played && s.played, row.current && s.current)}
         aria-current={row.current || undefined}
         aria-label={`${row.key}: ${row.summary}${row.note ? ` (${row.note})` : ""}${row.current ? ", on the table now" : ""}`}
         onClick={() => {
           sounds.confirm();
           onPick(row.key);
-        }}>
+        }}
+      >
         <span className={s.key}>{row.key}</span>
         <span className={s.summary}>{row.summary}</span>
         {row.note && <span className={s.note}>{row.note}</span>}
@@ -250,14 +318,20 @@ function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
     <footer className={s.foot}>
       <div className={s.people}>
         <span className={s.dots} aria-hidden={people.nobody || undefined}>
-          {people.dots.map((p) => <PlayerDot key={p.id} player={p} filled={p.connected} />)}
+          {people.dots.map((p) => (
+            <PlayerDot key={p.id} player={p} filled={p.connected} />
+          ))}
         </span>
         <span className={s.count}>{people.text}</span>
         <Button variant={people.nobody ? "primary" : "default"} shape="pill" className={s.invite} onPress={onInvite}>
           🔗 Copy invite link
         </Button>
       </div>
-      <Toggle label="🃏 I play a card too" checked={room.settings.dealerPlays} onChange={(on) => dealerDo(actions.dealer.setPlays(on))} />
+      <Toggle
+        label="🃏 I play a card too"
+        checked={room.settings.dealerPlays}
+        onChange={(on) => dealerDo(actions.dealer.setPlays(on))}
+      />
     </footer>
   );
 }

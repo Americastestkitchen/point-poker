@@ -16,17 +16,33 @@ const STEPS = [
 ] as const;
 
 /** What each emote's key does, in the help's words. */
-const EMOTE_WORDS: Record<(typeof EMOTES)[number]["id"], string> = { wave: "wave", laugh: "laugh", think: "think", shock: "gasp" };
+const EMOTE_WORDS: Record<(typeof EMOTES)[number]["id"], string> = {
+  wave: "wave",
+  laugh: "laugh",
+  think: "think",
+  shock: "gasp",
+};
 
 export function HowToPlayDialog() {
   const popup = usePopupWithBack("help");
   return (
-    <Dialog open={popup.open} onClose={popup.close} title="How it works" width="md"
-      actions={<Button variant="primary" onPress={popup.close}>{popup.back ? "◂ Back" : "Got it"}</Button>}>
+    <Dialog
+      open={popup.open}
+      onClose={popup.close}
+      title="How it works"
+      width="md"
+      actions={
+        <Button variant="primary" onPress={popup.close}>
+          {popup.back ? "◂ Back" : "Got it"}
+        </Button>
+      }
+    >
       <ol className={s.steps}>
         {STEPS.map((step, i) => (
           <li key={i} className={s.step}>
-            <span className={s.num} aria-hidden>{i + 1}</span>
+            <span className={s.num} aria-hidden>
+              {i + 1}
+            </span>
             <span>{step}</span>
           </li>
         ))}
@@ -34,9 +50,24 @@ export function HowToPlayDialog() {
 
       <h3 className={s.heading}>Just for fun</h3>
       <ul className={s.fun}>
-        <li><span className={s.icon} aria-hidden>👀</span>Drag the room to look around</li>
-        <li><span className={s.icon} aria-hidden>🪙</span>Click or tap someone to flick a chip at them</li>
-        <li><span className={s.icon} aria-hidden>🦆</span>Click the duck</li>
+        <li>
+          <span className={s.icon} aria-hidden>
+            👀
+          </span>
+          Drag the room to look around
+        </li>
+        <li>
+          <span className={s.icon} aria-hidden>
+            🪙
+          </span>
+          Click or tap someone to flick a chip at them
+        </li>
+        <li>
+          <span className={s.icon} aria-hidden>
+            🦆
+          </span>
+          Click the duck
+        </li>
         <li className={s.keys}>
           <KeyHint keys={EMOTES.map((e) => e.key)} />
           <span>{EMOTES.map((e) => EMOTE_WORDS[e.id]).join(", ")}</span>

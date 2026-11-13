@@ -16,11 +16,16 @@ export type ProfileAction =
 
 export function editProfile(p: Profile, a: ProfileAction): Profile {
   switch (a.t) {
-    case "name": return { ...p, name: a.name };
-    case "color": return { ...p, look: { ...p.look, color: a.color } };
-    case "body": return { ...p, look: { ...p.look, body: a.body } };
-    case "wear": return { ...p, look: wear(p.look, a.slot, a.id) };
-    default: return a satisfies never;
+    case "name":
+      return { ...p, name: a.name };
+    case "color":
+      return { ...p, look: { ...p.look, color: a.color } };
+    case "body":
+      return { ...p, look: { ...p.look, body: a.body } };
+    case "wear":
+      return { ...p, look: wear(p.look, a.slot, a.id) };
+    default:
+      return a satisfies never;
   }
 }
 

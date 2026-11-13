@@ -3,7 +3,11 @@
 import * as THREE from "three";
 import type { Layout } from "../layout/layout.ts";
 
-export function createCameraRig(camera: THREE.PerspectiveCamera, layout: Layout, onGaze: (yaw: number, pitch: number) => void) {
+export function createCameraRig(
+  camera: THREE.PerspectiveCamera,
+  layout: Layout,
+  onGaze: (yaw: number, pitch: number) => void,
+) {
   const pos = new THREE.Vector3(0, 1.3, 3);
   const target = new THREE.Vector3(0, 1.3, 3);
   const view = { yaw: 0, pitch: 0, sentYaw: 0, sentPitch: 0 };
@@ -23,7 +27,10 @@ export function createCameraRig(camera: THREE.PerspectiveCamera, layout: Layout,
       view.yaw = THREE.MathUtils.clamp(view.yaw - dx * 0.003, -1.9, 1.9);
       view.pitch = THREE.MathUtils.clamp(view.pitch - dy * 0.00225, -0.55, 0.9);
     },
-    recenter() { view.yaw = 0; view.pitch = 0; },
+    recenter() {
+      view.yaw = 0;
+      view.pitch = 0;
+    },
     update(dt: number) {
       pos.lerp(target, Math.min(1, dt * 3));
       camera.position.copy(pos);
@@ -32,7 +39,10 @@ export function createCameraRig(camera: THREE.PerspectiveCamera, layout: Layout,
       const basePitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
       camera.rotation.set(basePitch - view.pitch, baseYaw - view.yaw, 0, "YXZ");
       gazeTimer += dt;
-      if (gazeTimer > 0.1 && (Math.abs(view.yaw - view.sentYaw) > 0.01 || Math.abs(view.pitch - view.sentPitch) > 0.01)) {
+      if (
+        gazeTimer > 0.1 &&
+        (Math.abs(view.yaw - view.sentYaw) > 0.01 || Math.abs(view.pitch - view.sentPitch) > 0.01)
+      ) {
         gazeTimer = 0;
         view.sentYaw = view.yaw;
         view.sentPitch = view.pitch;

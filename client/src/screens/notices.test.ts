@@ -11,8 +11,16 @@ test("others sitting down and anyone leaving get a toast; you sitting down doesn
 });
 
 test("toasts from the event stream keep their level; errors bonk", () => {
-  assert.deepEqual(eventNotice({ t: "toast", text: "SD-1 was updated" }), { text: "SD-1 was updated", tone: "info", bonk: false });
-  assert.deepEqual(eventNotice({ t: "toast", text: "Jira said no", level: "error" }), { text: "Jira said no", tone: "error", bonk: true });
+  assert.deepEqual(eventNotice({ t: "toast", text: "SD-1 was updated" }), {
+    text: "SD-1 was updated",
+    tone: "info",
+    bonk: false,
+  });
+  assert.deepEqual(eventNotice({ t: "toast", text: "Jira said no", level: "error" }), {
+    text: "Jira said no",
+    tone: "error",
+    bonk: true,
+  });
   assert.equal(eventNotice({ t: "bonked" }), null);
 });
 

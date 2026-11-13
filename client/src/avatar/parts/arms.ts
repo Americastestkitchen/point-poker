@@ -27,7 +27,8 @@ export function buildArms(shape: BodyShape, material: THREE.Material, parent: TH
     shoulder.rotation.z = side * 0.25;
     parent.add(shoulder);
     return {
-      shoulder, hand,
+      shoulder,
+      hand,
       apply(a: Pose["arms"][0]) {
         shoulder.rotation.x = a.x;
         shoulder.rotation.z = a.z;

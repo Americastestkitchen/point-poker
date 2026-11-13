@@ -5,7 +5,10 @@ import { mesh, toon } from "../../scene/art/materials.ts";
 /** Built standing on the top of the head (the head anchor's origin). */
 export function visor(): THREE.Group {
   const g = new THREE.Group();
-  const band = mesh(new THREE.CylinderGeometry(0.265, 0.265, 0.05, 24, 1, true), toon("#163a22", { side: THREE.DoubleSide }));
+  const band = mesh(
+    new THREE.CylinderGeometry(0.265, 0.265, 0.05, 24, 1, true),
+    toon("#163a22", { side: THREE.DoubleSide }),
+  );
   band.position.y = -0.12;
   const brim = mesh(
     new THREE.CylinderGeometry(0.42, 0.42, 0.01, 24, 1, false, -Math.PI / 2.5, (Math.PI * 2) / 2.5),

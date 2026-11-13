@@ -82,7 +82,10 @@ export function manualSubmit(input: string): string | null {
 }
 
 /** Where an error shows: under the Jira field when there is one, else over the whole form. */
-export function pickerErrors(o: { jira: boolean; invalid: string | null; load: TicketLoadState }): { field: string | null; form: string | null } {
+export function pickerErrors(o: { jira: boolean; invalid: string | null; load: TicketLoadState }): {
+  field: string | null;
+  form: string | null;
+} {
   const failed = o.load.status === "failed" ? o.load.reason : null;
   if (o.jira) return { field: o.invalid ?? failed, form: null };
   return { field: null, form: failed };
@@ -110,7 +113,9 @@ export function pickerCue(armed: boolean, cue: PickerCue): { armed: boolean; pop
 
 // ---------------------------------------------------------------- the footer
 
-export function peopleLine<P extends Pick<PublicPlayer, "isDealer">>(players: readonly P[]): { dots: P[]; text: string; nobody: boolean } {
+export function peopleLine<P extends Pick<PublicPlayer, "isDealer">>(
+  players: readonly P[],
+): { dots: P[]; text: string; nobody: boolean } {
   const others = players.filter((p) => !p.isDealer);
   return {
     dots: others.slice(0, MAX_DOTS),

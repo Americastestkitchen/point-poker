@@ -18,11 +18,27 @@ export function OptionsDialog() {
   const soundOn = !audio.muted;
 
   return (
-    <Dialog open={popup.open} onClose={popup.close} title="Options" width="sm"
-      actions={<Button variant="primary" onPress={popup.close}>{popup.back ? "◂ Back" : "Done"}</Button>}>
+    <Dialog
+      open={popup.open}
+      onClose={popup.close}
+      title="Options"
+      width="sm"
+      actions={
+        <Button variant="primary" onPress={popup.close}>
+          {popup.back ? "◂ Back" : "Done"}
+        </Button>
+      }
+    >
       <div className={s.list}>
         <div className={s.option}>
-          <Toggle label={soundOn ? "🔊 Sound" : "🔇 Sound"} checked={soundOn} onChange={(on) => { audio.setMuted(!on); flipped(); }} />
+          <Toggle
+            label={soundOn ? "🔊 Sound" : "🔇 Sound"}
+            checked={soundOn}
+            onChange={(on) => {
+              audio.setMuted(!on);
+              flipped();
+            }}
+          />
           <p className={s.note}>Card flips, chips and the basement's hum.</p>
         </div>
         <div className={s.option}>
