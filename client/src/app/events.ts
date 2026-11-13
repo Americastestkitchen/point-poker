@@ -31,7 +31,9 @@ export type GameEvent =
   /** You put a card down (`changed` when you swapped one already there). */
   | { t: "played"; value: number; changed: boolean }
   /** Something asked to show the ticket in full. */
-  | { t: "openTicket" };
+  | { t: "openTicket" }
+  /** A chip hit you in the face (the UI flashes "BONK!" and shakes the screen). */
+  | { t: "bonked" };
 
 export interface Events {
   on(listener: (e: GameEvent) => void): () => void;
