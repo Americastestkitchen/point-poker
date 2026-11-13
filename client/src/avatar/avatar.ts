@@ -2,14 +2,15 @@
 // puts together a body shape, its parts (face, arms, labels, chair) and what
 // it's wearing, and applies the animator's pose every frame.
 import * as THREE from "three";
-import { COSMETIC } from "../../../shared/catalog/cosmetics.ts";
+import { COSMETIC, fills } from "../../../shared/catalog/cosmetics.ts";
 import { EMOTE, isEmote } from "../../../shared/catalog/emotes.ts";
 import type { Look } from "../../../shared/look.ts";
 import { mesh, toon } from "../scene/art/materials.ts";
 import { createAnimator, type ClipId, type HandPose } from "./animator.ts";
-import { anchorsFor, type AnchorId, type Spot } from "./bodies/anchors.ts";
+import { anchorsFor, type AnchorId, type Anchors, type Spot } from "./bodies/anchors.ts";
 import { BODY_SHAPES } from "./bodies/index.ts";
 import { BUILDERS, DEALER_GEAR, SLOT_ANCHOR } from "./cosmetics/index.ts";
+import { talkers } from "./cosmetics/talk.ts";
 import { buildArms, type Arms } from "./parts/arms.ts";
 import { buildChair } from "./parts/chair.ts";
 import { buildFace, type Face } from "./parts/face.ts";
@@ -64,8 +65,14 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   group.add(hitbox, body);
   const labels = createLabels(group);
 
-  let parts!: { face: Face; arms: Arms; anchors: Record<AnchorId, THREE.Object3D> };
-  let worn: THREE.Object3D[] = [];
+  let parts!: { face: Face; arms: Arms; anchors: Record<AnchorId, THREE.Object3D>; fit: Anchors };
+  /** What's on, with the parts that spin or move when talking, and whether it grows with the eyes. */
+  let worn: {
+    item: THREE.Object3D;
+    spin: THREE.Object3D | undefined;
+    talk: ReturnType<typeof talkers>;
+    onEyes: boolean;
+  }[] = [];
 
   /** Builds the body for the current shape: torso, tummy, face, arms and anchors. */
   function build() {
@@ -91,13 +98,17 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     // empty markers where things can be attached; the head is where hats stand
     const head = marker(A.head),
       eyes = marker(A.eyes),
+      nose = marker(A.nose),
       mouth = marker(A.mouth),
+      chin = marker(A.chin),
       chest = marker(A.chest);
-    body.add(head, eyes, mouth, chest);
+    body.add(head, eyes, nose, mouth, chin, chest);
     const anchors: Record<AnchorId, THREE.Object3D> = {
       head,
       eyes,
+      nose,
       mouth,
+      chin,
       chest,
       eyeL: face.eyeL,
       eyeR: face.eyeR,
@@ -107,22 +118,29 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       handR: arms.handR,
     };
     if (dealer) for (const gear of DEALER_GEAR) anchors[gear.anchor].add(gear.build());
-    parts = { face, arms, anchors };
+    parts = { face, arms, anchors, fit: A };
     labels.fit(shape);
     dress();
   }
 
   /** Puts on what the look says, each item on its slot's anchor. */
   function dress() {
-    for (const w of worn) w.removeFromParent();
+    for (const w of worn) w.item.removeFromParent();
     worn = look.cosmetics.map((id) => {
-      const item = BUILDERS[id]();
-      const { slots } = COSMETIC[id];
-      // hats sit a little higher on a dealer, over the visor
-      if (dealer && slots.includes("head")) item.position.y += 0.04;
-      item.rotation.z = (Math.random() - 0.5) * 0.25;
-      parts.anchors[SLOT_ANCHOR[slots[0]]].add(item);
-      return item;
+      const item = BUILDERS[id](parts.fit);
+      const cosmetic = COSMETIC[id];
+      if (fills(cosmetic, "head")) {
+        // hats sit at a jaunty angle, and a little higher on a dealer, over the visor
+        if (dealer) item.position.y += 0.04;
+        item.rotation.z = (Math.random() - 0.5) * 0.25;
+      }
+      parts.anchors[SLOT_ANCHOR[cosmetic.slots[0]]].add(item);
+      return {
+        item,
+        spin: item.getObjectByName("spin"),
+        talk: talkers(item),
+        onEyes: fills(cosmetic, "eyes"),
+      };
     });
   }
 
@@ -175,9 +193,15 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       parts.arms.apply(pose.arms);
       parts.face.apply(pose.face);
       labels.apply(pose.emote);
+      const { mouthOpen, eyeScale } = pose.face;
       for (const w of worn) {
-        const spin = w.getObjectByName("spin");
-        if (spin) spin.rotation.y += dt * 12;
+        if (w.spin) w.spin.rotation.y += dt * 12;
+        // eyewear grows and shrinks with the eyes; moustaches and brows move with the mouth
+        if (w.onEyes) w.item.scale.setScalar(eyeScale);
+        for (const { part, motion, y, rz } of w.talk) {
+          part.position.y = y + motion.lift * mouthOpen;
+          part.rotation.z = rz + Math.sin(t * 23) * motion.wobble * mouthOpen;
+        }
       }
     },
   };
