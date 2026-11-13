@@ -1,7 +1,7 @@
 // Your eyes: the camera sits behind your seat and you drag to look around.
 // Where you look is shared (throttled) so your bean turns its head for others.
 import * as THREE from "three";
-import { layout } from "./layout.ts";
+import { layout } from "../layout/layout.ts";
 
 export function createCameraRig(camera: THREE.PerspectiveCamera, onGaze: (yaw: number, pitch: number) => void) {
   const pos = new THREE.Vector3(0, 1.3, 3);

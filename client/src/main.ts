@@ -9,7 +9,7 @@ import { createAudio } from "./audio/sfx.ts";
 import { Hud } from "./hud.ts";
 import { mountLobby } from "./lobby.ts";
 import { mountScene } from "./scene/index.ts";
-import { createStage } from "./scene/stage.ts";
+import { createStage } from "./scene/engine/stage.ts";
 import "./style.css";
 
 const $ = (id: string) => document.getElementById(id)!;

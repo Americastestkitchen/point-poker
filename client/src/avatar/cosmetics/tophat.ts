@@ -1,6 +1,6 @@
 // A tall black top hat with a red band.
 import * as THREE from "three";
-import { mesh, toon } from "../../scene/materials.ts";
+import { mesh, toon } from "../../scene/art/materials.ts";
 
 /** Built standing on the top of the head (the head anchor's origin). */
 export function tophat(): THREE.Group {

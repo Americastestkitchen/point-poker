@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Animator, type Pose } from "./animator.ts";
+import { createAnimator, type Animator, type Pose } from "./animator.ts";
 
 /** Runs the animator for `seconds` at 60fps and returns every pose. */
 function run(a: Animator, seconds: number, from = 0): Pose[] {
@@ -8,7 +8,7 @@ function run(a: Animator, seconds: number, from = 0): Pose[] {
   for (let i = 1; i <= Math.round(seconds * 60); i++) poses.push(a.update(1 / 60, from + i / 60));
   return poses;
 }
-const still = () => new Animator({ random: () => 0.5, now: () => 0 });
+const still = () => createAnimator({ random: () => 0.5, now: () => 0 });
 
 test("at rest the arms hang forward and the face smiles", () => {
   const p = run(still(), 1).at(-1)!;
@@ -58,7 +58,7 @@ test("a bonk squashes the body and settles", () => {
 
 test("talking opens the mouth, and it closes if the 'stopped' message never comes", () => {
   let now = 0;
-  const a = new Animator({ random: () => 0.5, now: () => now });
+  const a = createAnimator({ random: () => 0.5, now: () => now });
   a.setTalk(0.8);
   assert.ok(Math.max(...run(a, 0.5).map((p) => p.face.mouthOpen)) > 0.3);
   now = 2000;

@@ -10,7 +10,7 @@ import type { Storage } from "./app/storage.ts";
 import { myPlayer, type AppState, type Store } from "./app/store.ts";
 import type { Mic } from "./audio/mic.ts";
 import type { Audio } from "./audio/sfx.ts";
-import { CARD_SUIT } from "./scene/textures.ts";
+import { CARD_SUIT } from "./scene/art/textures.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

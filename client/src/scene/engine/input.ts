@@ -1,7 +1,7 @@
 // Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote.
-import { EMOTES } from "../../../shared/catalog/emotes.ts";
-import type { Actions } from "../app/actions.ts";
-import type { Store } from "../app/store.ts";
+import { EMOTES } from "../../../../shared/catalog/emotes.ts";
+import type { Actions } from "../../app/actions.ts";
+import type { Store } from "../../app/store.ts";
 import type { CameraRig } from "./camera.ts";
 import type { Stage } from "./stage.ts";
 

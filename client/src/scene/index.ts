@@ -1,16 +1,17 @@
 // The 3D scene: the room, the table and everyone at it, read from the store.
-import * as THREE from "three";
 import type { Actions } from "../app/actions.ts";
 import type { Store } from "../app/store.ts";
 import type { Audio } from "../audio/sfx.ts";
 import { loadEnvironment } from "../environments/index.ts";
-import { createCameraRig } from "./camera.ts";
-import { createFlights } from "./flights.ts";
-import { bindInput } from "./input.ts";
-import { layout } from "./layout.ts";
-import type { Stage } from "./stage.ts";
-import { TicketPaper, buildTable } from "./table.ts";
-import { mountTableView } from "./table-view.ts";
+import { createCameraRig } from "./engine/camera.ts";
+import { bindInput } from "./engine/input.ts";
+import type { Stage } from "./engine/stage.ts";
+import { layout } from "./layout/layout.ts";
+import { createFlights } from "./table/flights.ts";
+import { buildTable } from "./table/furniture.ts";
+import { createPot } from "./table/pot.ts";
+import { mountTableView } from "./table/table-view.ts";
+import { createTicketPaper } from "./table/ticket.ts";
 
 export async function mountScene(stage: Stage, deps: { store: Store; actions: Actions; audio: Audio }) {
   const { store, actions, audio } = deps;
@@ -20,15 +21,13 @@ export async function mountScene(stage: Stage, deps: { store: Store; actions: Ac
   stage.scene.fog = env.fog;
   stage.scene.add(env.root, buildTable(layout, env.tableMaterials));
 
-  const ticket = new TicketPaper(layout);
+  const ticket = createTicketPaper(layout);
   stage.picking.register(ticket.mesh, actions.openTicket);
-  const pot = new THREE.Group();
-  const p = layout.anchors.pot.position;
-  pot.position.set(p.x, p.y, p.z);
-  stage.scene.add(ticket.mesh, pot);
+  stage.scene.add(ticket.mesh);
+  const flights = createFlights();
+  const pot = createPot(stage, { flights, audio });
 
   const rig = createCameraRig(stage.camera, actions.gaze);
-  const flights = createFlights();
   const table = mountTableView(stage, { store, actions, audio, flights, rig, ticket, pot, screen: env.props.statusScreen });
   bindInput(stage, { store, actions, rig });
   audio.ambience(env.ambience);

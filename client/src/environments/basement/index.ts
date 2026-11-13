@@ -1,9 +1,9 @@
 // The Backlog Basement: a dim basement room with a swaying lamp, a neon sign,
 // a telly behind the dealer, a rubber duck and plenty of sticky-note wisdom.
 import * as THREE from "three";
-import { toon } from "../../scene/materials.ts";
-import type { Anchor, Vec3 } from "../../scene/layout.ts";
-import { FONT, canvasTex, woodTexture, wrapText } from "../../scene/textures.ts";
+import { toon } from "../../scene/art/materials.ts";
+import type { Anchor, Vec3 } from "../../scene/layout/layout.ts";
+import { FONT, canvasTex, woodTexture, wrapText } from "../../scene/art/textures.ts";
 import type { Environment, Sign, Squeaky, StatusScreen } from "../types.ts";
 import { feltTexture, wallpaperTexture } from "./textures.ts";
 

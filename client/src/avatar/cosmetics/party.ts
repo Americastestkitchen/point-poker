@@ -1,7 +1,7 @@
 // A striped party hat with a pom-pom.
 import * as THREE from "three";
-import { canvasTex } from "../../scene/textures.ts";
-import { mesh, toon } from "../../scene/materials.ts";
+import { canvasTex } from "../../scene/art/textures.ts";
+import { mesh, toon } from "../../scene/art/materials.ts";
 
 /** Built standing on the top of the head (the head anchor's origin). */
 export function party(): THREE.Group {

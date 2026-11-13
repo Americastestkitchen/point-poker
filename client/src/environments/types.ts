@@ -2,8 +2,8 @@
 // look; `layout` decides where they go, so the game plays the same everywhere.
 import type * as THREE from "three";
 import type { AmbienceId, Audio } from "../audio/sfx.ts";
-import type { Layout } from "../scene/layout.ts";
-import type { Picking } from "../scene/picking.ts";
+import type { Layout } from "../scene/layout/layout.ts";
+import type { Picking } from "../scene/engine/picking.ts";
 
 /** Shows the ticket and how the round is going (the Basement's telly). */
 export interface StatusScreen {

@@ -1,6 +1,6 @@
 // Poker chips: single chips and the stacks in front of each seat and in the pot.
 import * as THREE from "three";
-import { canvasTex } from "./textures.ts";
+import { canvasTex } from "../art/textures.ts";
 
 const CHIP_COLORS = { 1: "#c0392b", 5: "#2d6cdf", 25: "#151515", 100: "#e6be5a" } as const;
 let chipGeo: THREE.CylinderGeometry | null = null;

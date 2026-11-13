@@ -2,7 +2,7 @@
 // renderer for now; the title screen (#4) moves it onto the main stage.
 import * as THREE from "three";
 import type { Look } from "../../../shared/look.ts";
-import { Avatar } from "../avatar/avatar.ts";
+import { createAvatar } from "../avatar/avatar.ts";
 
 export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { dealer: boolean; visible(): boolean }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -15,7 +15,7 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
   const key = new THREE.DirectionalLight("#fff0d8", 2.2);
   key.position.set(1.5, 3, 2);
   scene.add(key);
-  const avatar = new Avatar(look, { dealer: opts.dealer });
+  const avatar = createAvatar(look, { dealer: opts.dealer });
   scene.add(avatar.group);
 
   const clock = new THREE.Clock();

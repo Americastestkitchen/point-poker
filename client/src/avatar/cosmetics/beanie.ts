@@ -1,6 +1,6 @@
 // A propeller beanie. The propeller (named "spin") turns.
 import * as THREE from "three";
-import { mesh, toon } from "../../scene/materials.ts";
+import { mesh, toon } from "../../scene/art/materials.ts";
 
 /** Built standing on the top of the head (the head anchor's origin). */
 export function beanie(): THREE.Group {

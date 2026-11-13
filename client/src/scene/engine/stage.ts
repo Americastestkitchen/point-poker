@@ -1,6 +1,6 @@
 // The one WebGL renderer: scene, camera, the frame loop and picking.
 import * as THREE from "three";
-import type { Audio } from "../audio/sfx.ts";
+import type { Audio } from "../../audio/sfx.ts";
 import { createPicking, type Picking } from "./picking.ts";
 
 export interface Stage {

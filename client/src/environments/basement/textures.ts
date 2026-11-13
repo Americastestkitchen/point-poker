@@ -1,6 +1,6 @@
 // Basement-only textures: the casino felt and the sad wallpaper.
 import * as THREE from "three";
-import { FONT, canvasTex } from "../../scene/textures.ts";
+import { FONT, canvasTex } from "../../scene/art/textures.ts";
 
 export function feltTexture(): THREE.CanvasTexture {
   return canvasTex(1024, 1024, (g) => {
