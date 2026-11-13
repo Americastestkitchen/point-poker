@@ -1,7 +1,7 @@
 // How a bean looks: one object, checked the same way everywhere.
 import { z } from "zod";
-import { BODY_IDS, type BodyId } from "./catalog/bodies.ts";
-import { COLORS, type Color } from "./catalog/colors.ts";
+import { BODY_IDS } from "./catalog/bodies.ts";
+import { COLORS } from "./catalog/colors.ts";
 import { COSMETIC_IDS, COSMETICS, cosmetic, type CosmeticId, type Slot } from "./catalog/cosmetics.ts";
 
 export const Look = z.object({
@@ -22,19 +22,24 @@ export type LookInput = z.infer<typeof LookInput>;
 
 export const DEFAULT_LOOK: Look = { color: COLORS[0], body: "bean", cosmetics: [] };
 
+// What validateLook() checks each part with: the Look schema's own fields.
+const color = Look.shape.color.catch(DEFAULT_LOOK.color);
+const body = Look.shape.body.catch(DEFAULT_LOOK.body);
+const item = Look.shape.cosmetics.element;
+
 /** Keeps what's valid and falls back to the defaults for the rest. Unknown items and clashing slots are dropped. */
 export function validateLook(input: LookInput | undefined): Look {
-  const color = (COLORS as readonly string[]).includes(input?.color ?? "") ? (input!.color as Color) : DEFAULT_LOOK.color;
-  const body = (BODY_IDS as readonly string[]).includes(input?.body ?? "") ? (input!.body as BodyId) : DEFAULT_LOOK.body;
   const cosmetics: CosmeticId[] = [];
   const taken = new Set<Slot>();
-  for (const id of input?.cosmetics ?? []) {
-    const c = cosmetic(id);
-    if (!c || c.slots.some((s) => taken.has(s))) continue;
-    c.slots.forEach((s) => taken.add(s));
-    cosmetics.push(c.id as CosmeticId);
+  for (const raw of input?.cosmetics ?? []) {
+    const id = item.safeParse(raw);
+    if (!id.success) continue;
+    const { slots } = cosmetic(id.data)!;
+    if (slots.some((s) => taken.has(s))) continue;
+    slots.forEach((s) => taken.add(s));
+    cosmetics.push(id.data);
   }
-  return { color, body, cosmetics };
+  return { color: color.parse(input?.color), body: body.parse(input?.body), cosmetics };
 }
 
 /** The item in a slot, if any. */
