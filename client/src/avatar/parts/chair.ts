@@ -11,7 +11,7 @@ export function buildChair(dealer: boolean): THREE.Group {
   back.position.set(0, 0.86, -0.3);
   back.rotation.x = -0.08;
   g.add(seat, back);
-  for (const [x, z] of [[-0.24, -0.26], [0.24, -0.26], [-0.24, 0.18], [0.24, 0.18]]) {
+  for (const [x, z] of [[-0.24, -0.26], [0.24, -0.26], [-0.24, 0.18], [0.24, 0.18]] as const) {
     const leg = mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.48), wood);
     leg.position.set(x, 0.24, z);
     g.add(leg);

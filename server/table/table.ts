@@ -178,14 +178,14 @@ export class Table {
         const currentQueue = this.ctx.claimQueue();
         const children = await tickets.find({ kind: "epic", key: ticket.key });
         if (!current()) return;
-        if (children.tickets.length === 0) throw new Error("That epic has no child tickets");
+        const first = children.tickets.find((c) => c.points === null) ?? children.tickets[0];
+        if (!first) throw new Error("That epic has no child tickets");
         if (currentQueue()) {
           s.epic = { key: ticket.key, summary: ticket.summary, url: ticket.url };
           s.queue = children.tickets;
           s.queueLabel = children.label;
           this.ctx.changed();
         }
-        const first = children.tickets.find((c) => c.points === null) ?? children.tickets[0];
         ticket = await tickets.get(first.key);
         if (!current()) return;
       }

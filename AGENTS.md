@@ -117,5 +117,7 @@ an intentional protocol change. Legacy lobby/HUD migration belongs to #4/#11.
 Run **`npm run check`**: TypeScript (including `*.test-d.ts`), runtime tests,
 game build to `dist`, then gallery build to `node_modules/.gallery`. Use the
 existing boundary, registry, snapshot and session checks rather than duplicating
-them here. `noUncheckedIndexedAccess` is not enabled; it is a separate follow-up.
+them here. `noUncheckedIndexedAccess` is enabled: narrow missing entries before use,
+iterate values instead of reindexing, and model fixed shapes as tuples. Preserve
+empty-input behavior and report broken invariants instead of hiding them with assertions.
 No browser check is required for documentation-only changes.

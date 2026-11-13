@@ -261,7 +261,9 @@ function buildRoom(s: THREE.Group, leds: Led[]) {
       const x = 60 + (i % 4) * 172 + Math.random() * 20, y = 50 + Math.floor(i / 4) * 220 + Math.random() * 20;
       g.save(); g.translate(x + 70, y + 70); g.rotate((Math.random() - 0.5) * 0.3);
       g.fillStyle = "rgba(0,0,0,0.3)"; g.fillRect(-66, -62, 140, 140);
-      g.fillStyle = cols[i % 4]; g.fillRect(-70, -70, 140, 140);
+      const color = cols[i % cols.length];
+      if (color === undefined) throw new Error("Missing sticky note color");
+      g.fillStyle = color; g.fillRect(-70, -70, 140, 140);
       g.fillStyle = "#c0392b"; g.beginPath(); g.arc(0, -58, 8, 0, 7); g.fill();
       g.fillStyle = "#2a1d17"; g.font = `bold 24px "Comic Sans MS", ${FONT}`; g.textAlign = "center";
       n.split("\n").forEach((l, k) => g.fillText(l, 0, -10 + k * 30));
@@ -303,6 +305,7 @@ function buildRoom(s: THREE.Group, leds: Led[]) {
     rack.add(slab);
     for (let l = 0; l < 4; l++) {
       const on = ["#39ff7a", "#ffb02e", "#39c2ff", "#ff4757"][(u + l) % 4];
+      if (on === undefined) throw new Error("Missing rack LED color");
       const mat = new THREE.MeshBasicMaterial({ color: on });
       const led = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.018), mat);
       led.position.set(0.18 + l * 0.03, 0.25 + u * 0.19, 0.372);

@@ -25,6 +25,7 @@ test("a wave raises the right arm, then ends after two seconds", () => {
   const poses = run(a, 2.2);
   assert.ok(Math.min(...poses.slice(0, 60).map((p) => p.arms[1].x)) < -2, "right arm up");
   assert.ok(poses.slice(0, 60).every((p) => Math.abs(p.arms[0].x + 1.15) < 1e-9), "left arm stays down");
+  assert.ok(poses[0]);
   assert.equal(poses[0].emote?.id, "wave");
   assert.equal(poses.at(-1)!.emote, null);
 });

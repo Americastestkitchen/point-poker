@@ -41,6 +41,7 @@ test("an issue becomes a ticket", async () => {
     assignee: "Ann", reporter: "Bob", labels: ["ux"], currentPoints: 3, url: "https://jira.example/browse/SD-1",
     adf: description, statusCategory: "indeterminate", parent: { key: "SD-0", summary: "The epic" },
   });
+  assert.ok(asked[0]);
   assert.equal(asked[0].pathname, "/rest/api/3/issue/SD-1");
 });
 
@@ -68,6 +69,7 @@ test("a search lists ticket summaries with their points", async () => {
     { key: "SD-1", summary: "One", status: "To Do", points: 2 },
     { key: "SD-2", summary: "", status: "", points: null },
   ] });
+  assert.ok(asked[0]);
   assert.equal(asked[0].searchParams.get("jql"), "parent = SD-0 ORDER BY rank");
   assert.deepEqual(await jira({}).source.find({ kind: "upcoming" }), { label: "Current & upcoming sprints", tickets: [] });
 });
