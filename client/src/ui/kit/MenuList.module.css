@@ -17,8 +17,9 @@
 .label { font-family: var(--pp-font-display); font-size: var(--pp-size-lg); font-weight: var(--pp-weight-strong); }
 .hint { font-size: var(--pp-size-sm); color: var(--pp-color-faint); }
 
-/* hover and keyboard focus are the same highlight: the mouse moves focus */
-.item:focus, .item:hover:not(:disabled), .item[data-demo="hover"], .item[data-demo="focus"] {
+/* One highlight, for focus: a moving mouse moves focus, so hover needs no look of its own
+   (an item that opens under a resting cursor must not look chosen next to the focused one). */
+.item:focus, .item[data-demo="hover"], .item[data-demo="focus"] {
   color: var(--pp-color-ink);
   background: color-mix(in srgb, var(--pp-color-gold) 12%, transparent);
   border-color: var(--pp-color-edge);

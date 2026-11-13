@@ -103,4 +103,6 @@ test("the coin counter rolls from the old value to the new one", () => {
   assert.equal(countAt(100, 200, 5), 200, "clamped");
   assert.ok(countAt(100, 200, 0.5) > 150, "eases out: most of the way by halfway");
   assert.equal(countAt(200, 100, 1), 100, "counts down too");
+  assert.equal(countAt(3, 6.5, 1), 6.5, "a split pot's half coin is where it stops");
+  assert.equal(countAt(3, 6.5, 0.5), Math.round(countAt(3, 6.5, 0.5)), "whole numbers on the way");
 });

@@ -79,7 +79,9 @@ export function Dialog({ open, onClose, title, children, actions, dismissable = 
   };
 
   return createPortal(
-    <div className={s.backdrop} style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }} onPointerDown={(e) => { if (dismissable && e.target === e.currentTarget) close(); }}>
+    <div className={s.backdrop} style={{ zIndex: `calc(var(--pp-layer-dialog) + ${depth})` }} onPointerDown={(e) => { if (dismissable && e.target === e.currentTarget) close(); }}
+      // a press on the backdrop must not pull focus to the page after the dialog underneath took it back
+      onMouseDown={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}>
       <div ref={box} role="dialog" aria-modal aria-labelledby={titleId} tabIndex={-1} className={cx(s.box, s[width])} onKeyDown={trapTab}>
         <Panel padding="lg" variant={variant} className={cx(s.panel, s[variant])}>
           <header className={s.head}>

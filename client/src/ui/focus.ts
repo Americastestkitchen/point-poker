@@ -26,18 +26,23 @@ export function useFocusable(disabled = false) {
     onPointerMove: (e: PointerEvent<HTMLElement>) => {
       if (e.pointerType !== "mouse" || disabled || (e.movementX === 0 && e.movementY === 0)) return;
       // never from a field you're typing in: Enter there must not press whatever the mouse is over
-      if (document.activeElement === e.currentTarget || typing(document.activeElement)) return;
+      const held = document.activeElement;
+      if (held === e.currentTarget || (typing(held) && !hoverFocused(held))) return;
       e.currentTarget.setAttribute(HOVER_FOCUS, "");
       e.currentTarget.focus({ preventScroll: true });
     },
     // The mouse moved on: focus it only borrowed goes back to the page, so it doesn't linger on
-    // a control nobody chose. Inside a dialog it stays, so the arrow keys keep working there.
+    // a control nobody chose. Inside a dialog it stays (the arrow keys keep working there) and
+    // stays borrowed, so the next thing the mouse reaches can have it.
     onPointerLeave: (e: PointerEvent<HTMLElement>) => {
       const el = e.currentTarget;
-      if (e.pointerType !== "mouse" || !hoverFocused(el)) return;
+      if (e.pointerType !== "mouse" || !hoverFocused(el) || el.closest("[role='dialog']")) return;
       el.removeAttribute(HOVER_FOCUS);
-      if (document.activeElement === el && !el.closest("[role='dialog']")) el.blur();
+      if (document.activeElement === el) el.blur();
     },
+    // clicking into a field or typing in it makes it yours: it keeps focus when the mouse leaves
+    onPointerDownCapture: (e: PointerEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
+    onKeyDownCapture: (e: KeyboardEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
     onBlur: (e: FocusEvent<HTMLElement>) => e.currentTarget.removeAttribute(HOVER_FOCUS),
     onFocus: (_e: FocusEvent<HTMLElement>) => {
       if (!disabled) sounds.hover();

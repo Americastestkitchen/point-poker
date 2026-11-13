@@ -25,5 +25,6 @@ export function fraction(value: number, { min, max }: Range): number {
 export function countAt(from: number, to: number, t: number): number {
   const k = Math.min(1, Math.max(0, t));
   const eased = 1 - (1 - k) ** 3;
-  return Math.round(from + (to - from) * eased);
+  // it lands exactly on `to` (a split pot pays 6.5), and passes whole numbers on the way
+  return k === 1 ? to : Math.round(from + (to - from) * eased);
 }
