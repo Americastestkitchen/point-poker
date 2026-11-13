@@ -25,7 +25,7 @@ git commit -am "Describe the change"
 git push                 # -> dev site updates in about a minute
 ```
 
-`npm run lint` (oxlint) on its own takes about a second; every finding is an error, see [AGENTS.md](AGENTS.md) for how to fix one.
+`npm run lint` (oxlint) takes about a second on its own, and every finding is an error.
 
 If you move a seat, prop or body anchor on purpose, run `npm run test:update-snapshots` to re-pin the positions and commit the updated `.snapshot` files.
 
@@ -35,14 +35,10 @@ closes. Previews sign in to Jira through the dev site (see [Jira sign-in](#jira-
 
 ## UI kit
 
-The React UI kit in `client/src/ui/` supplies the primitives the game screens in
-`client/src/screens/` (title screens and HUD) are built from.
-The 3D world stays plain Three.js.
-See [AGENTS.md](AGENTS.md) for the screen integration contract. Colours, fonts, spacing
-and glows live in `client/src/ui/tokens.ts` only: the kit's and the screens' stylesheets use the
-`--pp-*` variables, and a test fails on raw colours. To see every primitive in every state, run `npm run dev` and open
-`/gallery.html`. `npm run check` also builds it to `node_modules/.gallery`; the game
-build in `dist` excludes it.
+The React kit in `client/src/ui/` holds the primitives the game screens in `client/src/screens/`
+are built from; the 3D world stays plain Three.js. Colours, fonts, spacing and glows live only in
+`client/src/ui/tokens.ts`, used as `--pp-*` CSS variables, and a test fails on raw colours. To see
+every primitive in every state, run `npm run dev` and open `/gallery.html`.
 
 ## Logo
 
@@ -69,6 +65,9 @@ GitHub Actions then:
 2. runs typecheck, tests and build,
 3. deploys production on Fly,
 4. publishes a GitHub Release with notes generated from the commits since the last release.
+
+A release can land in the middle of a game. Saved tables in an old format are dropped, and open
+tabs keep the old client until they reload, so keep both compatible (see [AGENTS.md](AGENTS.md)).
 
 ## Secrets
 
