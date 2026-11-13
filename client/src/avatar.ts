@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import type { Body, Emote, Hat } from "../../shared/protocol.ts";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { FONT, canvasTex } from "./textures.ts";
+import { FONT, canvasTex } from "./scene/textures.ts";
 
 /** Where the face, arms and hat sit on each body shape. */
 interface Shape {

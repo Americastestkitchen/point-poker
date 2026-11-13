@@ -9,7 +9,7 @@
     "dev:server": "node --env-file-if-exists=.env.local --watch server/main.ts",
     "build": "vite build",
     "start": "node --env-file-if-exists=.env.local server/main.ts",
-    "test": "node --test \"shared/**/*.test.ts\" \"server/**/*.test.ts\" \"test/*.test.ts\"",
+    "test": "node --test \"shared/**/*.test.ts\" \"server/**/*.test.ts\" \"client/**/*.test.ts\" \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run build",
     "release": "node scripts/release.mjs"
@@ -17,7 +17,8 @@
   "dependencies": {
     "three": "^0.187.0",
     "ws": "^8.22.2",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

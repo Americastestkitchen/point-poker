@@ -1,5 +1,6 @@
-// End-to-end safety net: starts the real server and plays a whole session with
-// scripted WebSocket clients, including a restart that restores saved tables.
+// End-to-end safety net: starts the real server and plays a whole session
+// through the real client session, store and actions (running in Node, with
+// the socket and storage injected), including a restart that restores saved tables.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -7,7 +8,12 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ClientMsg, RoomState, ServerMsg } from "../shared/protocol.ts";
+import type { RoomState, ServerMsg } from "../shared/protocol.ts";
+import { createActions, type Actions } from "../client/src/app/actions.ts";
+import type { GameEvent } from "../client/src/app/events.ts";
+import { createSession, type Session } from "../client/src/app/session.ts";
+import { createStorage, memoryStorage, type Profile } from "../client/src/app/storage.ts";
+import { createStore, type Store } from "../client/src/app/store.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const ENTRY = join(ROOT, JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).main);
@@ -32,8 +38,9 @@ class Server {
   get http() { return `http://127.0.0.1:${this.port}`; }
   get ws() { return `ws://127.0.0.1:${this.port}/ws`; }
 
+  /** Starts the server; a restart keeps the same port so clients can find it again. */
   async start() {
-    this.port = await freePort();
+    this.port ||= await freePort();
     const env: NodeJS.ProcessEnv = { ...process.env, PORT: String(this.port), DATA_DIR: this.dataDir, HOST_PASSCODE: PASSCODE };
     for (const k of Object.keys(env)) if (k.startsWith("JIRA_")) delete env[k];
     const proc = spawn(process.execPath, [ENTRY], { env, stdio: ["ignore", "pipe", "pipe"] });
@@ -62,48 +69,62 @@ class Server {
   cleanup() { rmSync(this.dataDir, { recursive: true, force: true }); }
 }
 
-type Hello = Omit<Extract<ClientMsg, { t: "join" }>, "t">;
-
-/** One scripted player: a socket plus everything it has received. */
+/** One player: the real client store, session and actions, plus a tap on the raw socket. */
 class Player {
-  readonly msgs: ServerMsg[] = [];
-  state: RoomState | null = null;
-  id = "";
-  token = "";
-  isDealer = false;
-  closed: { code: number; reason: string } | null = null;
-  private ws: WebSocket;
+  readonly storage = createStorage(memoryStorage());
+  readonly store: Store = createStore();
+  readonly session: Session;
+  readonly actions: Actions;
+  readonly events: GameEvent[] = [];
+  /** Every message the server sent, straight off the wire. */
+  readonly wire: ServerMsg[] = [];
+  closeCode = 0;
   private checks = new Set<() => void>();
 
-  private constructor(url: string) {
-    this.ws = new WebSocket(url);
-    this.ws.onmessage = (e) => {
-      const m = JSON.parse(String(e.data)) as ServerMsg;
-      this.msgs.push(m);
-      if (m.t === "welcome") { this.id = m.playerId; this.token = m.token; this.isDealer = m.isDealer; }
-      if (m.t === "state") this.state = m.state;
-      this.check();
-    };
-    this.ws.onclose = (e) => { this.closed = { code: e.code, reason: e.reason }; this.check(); };
+  readonly room: string;
+
+  private constructor(server: Server, room: string, profile: Profile, extra: { dealerKey?: string; token?: string }) {
+    this.room = room;
+    this.storage.setProfile(profile);
+    if (extra.dealerKey) this.storage.setDealerKey(room, extra.dealerKey);
+    if (extra.token) this.storage.setToken(room, extra.token);
+    this.session = createSession({
+      connect: (url) => {
+        const ws = new WebSocket(url);
+        ws.addEventListener("message", (e) => this.wire.push(JSON.parse(String(e.data))));
+        ws.addEventListener("close", (e) => (this.closeCode = e.code));
+        return ws;
+      },
+      storage: this.storage, store: this.store, url: server.ws, retryDelay: () => 50,
+    });
+    this.actions = createActions(this.session, this.store);
+    this.store.events.on((e) => { this.events.push(e); this.check(); });
+    this.store.subscribe(() => this.check());
   }
 
-  static async join(server: Server, code: string, hello: Hello): Promise<Player> {
-    const p = new Player(`${server.ws}?room=${code}`);
-    await new Promise<void>((resolve, reject) => {
-      p.ws.onopen = () => resolve();
-      p.ws.onerror = () => reject(new Error("socket error"));
-    });
-    p.send({ t: "join", ...hello });
-    await p.until((x) => (!!x.id && !!x.state) || !!x.closed, "welcome");
+  static async join(server: Server, room: string, profile: Profile, extra: { dealerKey?: string; token?: string } = {}) {
+    const p = new Player(server, room, profile, extra);
+    p.session.join(room);
+    await p.until((x) => (!!x.me && !!x.state) || x.closed, "welcome");
     return p;
   }
 
-  send(m: ClientMsg) { this.ws.send(JSON.stringify(m)); }
-  close() { this.ws.close(); return this.until((x) => !!x.closed, "close"); }
+  get me() { return this.store.getState().me!; }
+  get id() { return this.me.id; }
+  get state() { return this.store.getState().room!; }
+  get closed() { return this.store.getState().connection.status === "closed"; }
+  get token() { return this.storage.token(this.room)!; }
+  player(id: string) { return this.state.players.find((p) => p.id === id); }
+  toasts() { return this.events.flatMap((e) => (e.t === "toast" ? [e.text] : [])); }
+
+  async leave() {
+    this.session.close();
+    await this.until((x) => x.closed, "leave");
+  }
 
   private check() { for (const c of [...this.checks]) c(); }
 
-  /** Resolves once `pred` holds, checking again after every message. */
+  /** Resolves once `pred` holds, checking again after every change. */
   until(pred: (p: Player) => boolean, label: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const done = () => { if (pred(this)) { clearTimeout(timer); this.checks.delete(done); resolve(); } };
@@ -114,18 +135,21 @@ class Player {
   }
 
   untilState(pred: (s: RoomState) => boolean, label: string) {
-    return this.until((p) => !!p.state && pred(p.state), label);
+    return this.until((p) => !!p.store.getState().room && pred(p.state), label);
   }
-
-  player(id: string) { return this.state?.players.find((p) => p.id === id); }
-  toasts() { return this.msgs.filter((m) => m.t === "toast").map((m) => (m as { text: string }).text); }
 }
 
-const look = (name: string) => ({ name, color: "#3bceac", hat: "tophat" as const, body: "bean" as const });
+const look = (name: string, extra: Partial<Profile> = {}): Profile => ({ name, color: "#3bceac", hat: "tophat", body: "bean", ...extra });
 
 test("a whole session over real sockets, including a restart", async (t) => {
   const server = new Server();
-  t.after(async () => { await server.stop(); server.cleanup(); });
+  const everyone: Player[] = [];
+  const join = async (...args: Parameters<typeof Player.join> extends [Server, ...infer R] ? R : never) => {
+    const p = await Player.join(server, ...args);
+    everyone.push(p);
+    return p;
+  };
+  t.after(async () => { for (const p of everyone) p.session.close(); await server.stop(); server.cleanup(); });
   await server.start();
 
   // ---- opening a table needs the host passcode
@@ -140,133 +164,141 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal((await fetch(`${server.http}/api/rooms/ZZZZ`)).status, 404);
 
   // ---- everyone sits down
-  const deb = await Player.join(server, code, { ...look("Deb"), dealerKey });
-  assert.equal(deb.isDealer, true);
-  const ann = await Player.join(server, code, look("Ann"));
-  const bob = await Player.join(server, code, { ...look("Bob"), hat: "crown", body: "chonk" });
-  assert.equal(ann.isDealer, false);
+  const deb = await join(code, look("Deb"), { dealerKey });
+  assert.equal(deb.me.isDealer, true);
+  const ann = await join(code, look("Ann"));
+  const bob = await join(code, look("Bob", { hat: "crown", body: "chonk" }));
+  assert.equal(ann.me.isDealer, false);
   await deb.untilState((s) => s.players.length === 3, "three players");
   assert.equal(deb.player(deb.id)?.seat, -1);
   assert.deepEqual([ann, bob].map((p) => deb.player(p.id)?.seat).sort(), [0, 1]);
   assert.equal(deb.player(bob.id)?.body, "chonk");
+  await deb.until((p) => p.events.some((e) => e.t === "joined" && e.player.id === bob.id), "joined event");
 
   // ---- only the dealer runs the round
-  ann.send({ t: "reveal" });
+  ann.actions.dealer.reveal();
   await ann.until((p) => p.toasts().includes("Only the dealer can do that"), "role error");
 
   // ---- a round: vote, change a vote, reveal, settle, re-settle
-  deb.send({ t: "manualTicket", key: "", summary: "Login page", description: "" });
+  deb.actions.dealer.typeIn("Login page");
   await ann.untilState((s) => s.phase === "voting" && s.round === 1, "voting");
-  assert.equal(ann.state!.ticket?.key, "TICKET");
-  assert.equal(ann.state!.ticket?.summary, "Login page");
+  await bob.untilState((s) => s.phase === "voting", "bob sees voting");
+  assert.equal(ann.state.ticket?.key, "TICKET");
+  assert.equal(ann.state.ticket?.summary, "Login page");
+  assert.ok(ann.events.some((e) => e.t === "dealt"));
 
-  ann.send({ t: "vote", value: 2 });
-  bob.send({ t: "vote", value: 5 });
+  ann.actions.vote(2);
+  bob.actions.vote(5);
   await deb.untilState((s) => s.players.filter((p) => p.hasVoted).length === 2, "two votes in");
-  ann.send({ t: "vote", value: 3 });
-  await bob.until((p) => p.msgs.some((m) => m.t === "adjust" && m.id === ann.id), "adjust");
-  assert.ok(!ann.msgs.some((m) => m.t === "adjust"), "the voter isn't told about their own adjust");
+  await deb.until((p) => p.events.some((e) => e.t === "allIn"), "everyone's in");
+  ann.actions.vote(3);
+  assert.equal(ann.store.getState().ui.myVote, 3);
+  await bob.until((p) => p.events.some((e) => e.t === "adjust" && e.id === ann.id), "adjust");
+  assert.ok(!ann.wire.some((m) => m.t === "adjust"), "the voter isn't told about their own adjust");
 
   // nobody's card leaks before the reveal
   for (const p of [deb, ann, bob]) {
-    for (const m of p.msgs) {
+    for (const m of p.wire) {
       if (m.t === "state") assert.ok(m.state.players.every((x) => x.vote === null) && m.state.pot === 0, "vote leaked before reveal");
     }
   }
 
-  deb.send({ t: "reveal" });
+  deb.actions.dealer.reveal();
   await bob.untilState((s) => s.phase === "revealed", "revealed");
   assert.equal(bob.player(ann.id)?.vote, 3);
   assert.equal(bob.player(bob.id)?.vote, 5);
-  assert.equal(bob.state!.pot, 8);
+  assert.equal(bob.state.pot, 8);
+  assert.ok(bob.events.some((e) => e.t === "revealed"));
 
-  deb.send({ t: "settle", finalPoints: 5 });
+  deb.actions.dealer.settle(5);
   await ann.untilState((s) => s.phase === "settled" && s.finalPoints === 5, "settled at 5");
-  assert.deepEqual(ann.state!.winners, [bob.id]);
+  assert.deepEqual(ann.state.winners, [bob.id]);
   assert.equal(ann.player(bob.id)?.chips, 8);
-  assert.equal(ann.state!.houseWon, false);
+  assert.equal(ann.state.houseWon, false);
 
-  deb.send({ t: "settle", finalPoints: 2 });
+  deb.actions.dealer.settle(2);
   await ann.untilState((s) => s.finalPoints === 2, "re-settled at 2");
-  assert.deepEqual(ann.state!.winners, [ann.id]);
+  assert.deepEqual(ann.state.winners, [ann.id]);
   assert.equal(ann.player(ann.id)?.chips, 8);
   assert.equal(ann.player(bob.id)?.chips, 0, "the first payout is taken back");
-  assert.equal(ann.state!.history.length, 1);
-  assert.equal(ann.state!.history[0].finalPoints, 2);
+  assert.equal(ann.state.history.length, 1);
+  assert.equal(ann.state.history[0].finalPoints, 2);
+  assert.deepEqual(ann.events.filter((e) => e.t === "settled"), [{ t: "settled", resettled: false }, { t: "settled", resettled: true }]);
 
   // ---- nobody close enough: the house rakes it in
-  deb.send({ t: "nextRound" });
+  deb.actions.dealer.next();
   await ann.untilState((s) => s.phase === "waiting" && !s.ticket, "back to waiting");
-  deb.send({ t: "manualTicket", key: "SD-2", summary: "Search", description: "" });
+  deb.session.send({ t: "manualTicket", key: "SD-2", summary: "Search", description: "" });
   await ann.untilState((s) => s.phase === "voting" && s.round === 2, "round 2");
-  ann.send({ t: "vote", value: 1 });
-  bob.send({ t: "vote", value: 1 });
+  await bob.untilState((s) => s.round === 2, "bob sees round 2");
+  assert.equal(ann.store.getState().ui.myVote, null, "a new round forgets your last card");
+  ann.actions.vote(1);
+  bob.actions.vote(1);
   await deb.untilState((s) => s.players.filter((p) => p.hasVoted).length === 2, "round 2 votes");
-  deb.send({ t: "reveal" });
-  deb.send({ t: "settle", finalPoints: 8 });
+  deb.actions.dealer.reveal();
+  deb.actions.dealer.settle(8);
   await bob.untilState((s) => s.phase === "settled", "house round settled");
-  assert.equal(bob.state!.houseWon, true);
-  assert.deepEqual(bob.state!.winners, [deb.id]);
+  assert.equal(bob.state.houseWon, true);
+  assert.deepEqual(bob.state.winners, [deb.id]);
   assert.equal(bob.player(deb.id)?.chips, 2);
 
   // ---- skip and cancel pay nobody
-  deb.send({ t: "nextRound" });
-  deb.send({ t: "manualTicket", key: "SD-3", summary: "Signup", description: "" });
+  deb.actions.dealer.next();
+  deb.session.send({ t: "manualTicket", key: "SD-3", summary: "Signup", description: "" });
   await ann.untilState((s) => s.round === 3 && s.phase === "voting", "round 3");
-  ann.send({ t: "vote", value: 5 });
-  deb.send({ t: "skip" });
+  ann.actions.vote(5);
+  deb.actions.dealer.skip();
   await ann.untilState((s) => s.phase === "waiting" && s.skipped.includes("SD-3"), "skipped");
   await ann.until((p) => p.toasts().includes("⏭️ The dealer skipped SD-3"), "skip toast");
   assert.equal(ann.player(ann.id)?.chips, 8);
 
-  deb.send({ t: "manualTicket", key: "SD-4", summary: "Cancel me", description: "" });
+  deb.session.send({ t: "manualTicket", key: "SD-4", summary: "Cancel me", description: "" });
   await ann.untilState((s) => s.ticket?.key === "SD-4", "round 4");
-  deb.send({ t: "cancelRound" });
+  deb.actions.dealer.cancel();
   await ann.untilState((s) => s.phase === "waiting" && !s.ticket, "cancelled");
   await bob.until((p) => p.toasts().includes("🎩 The dealer cancelled this round"), "cancel toast");
 
   // ---- kick: the player is gone and can't come back
-  const cat = await Player.join(server, code, look("Cat"));
+  const cat = await join(code, look("Cat"));
   await deb.untilState((s) => s.players.length === 4, "cat sat down");
-  deb.send({ t: "kick", id: cat.id });
-  await cat.until((p) => p.closed?.code === 4001, "cat kicked");
-  assert.equal(cat.closed!.reason, "Removed by the dealer");
+  deb.actions.dealer.kick(cat.id);
+  await cat.until((p) => p.closed, "cat kicked");
+  assert.equal(cat.closeCode, 4001);
+  assert.equal(cat.store.getState().connection.reason, "Removed by the dealer");
   await ann.untilState((s) => s.players.length === 3, "cat gone");
   await ann.until((p) => p.toasts().includes("👋 Cat was removed from the table"), "kick toast");
-  const catAgain = await Player.join(server, code, { ...look("Cat"), token: cat.token });
-  assert.equal(catAgain.closed?.code, 4001);
+  await ann.until((p) => p.events.some((e) => e.t === "left" && e.player.id === cat.id), "left event");
+  const catAgain = await join(code, look("Cat"), { token: cat.token });
+  assert.equal(catAgain.closeCode, 4001);
 
   // ---- reconnect with a seat token
-  await ann.close();
+  await ann.leave();
   await deb.untilState((s) => s.players.find((p) => p.id === ann.id)?.connected === false, "ann away");
-  const ann2 = await Player.join(server, code, { ...look("Ann"), token: ann.token });
+  const ann2 = await join(code, look("Ann"), { token: ann.token });
   assert.equal(ann2.id, ann.id);
   await deb.untilState((s) => s.players.find((p) => p.id === ann.id)?.connected === true, "ann back");
   assert.equal(ann2.player(ann.id)?.chips, 8);
   // the same seat opened in another tab takes over
-  const ann3 = await Player.join(server, code, { ...look("Ann"), token: ann.token });
-  await ann2.until((p) => p.closed?.code === 4002, "older tab closed");
+  const ann3 = await join(code, look("Ann"), { token: ann.token });
+  await ann2.until((p) => p.closed, "older tab closed");
+  assert.equal(ann2.closeCode, 4002);
   assert.equal(ann3.id, ann.id);
 
-  // ---- restart: saved tables come back and everyone reconnects to their seat
+  // ---- restart: saved tables come back and everyone reconnects to their seat on their own
+  const before = { deb: deb.id, ann: ann3.id, bob: bob.id };
   await server.stop();
-  await Promise.all([deb, bob, ann3].map((p) => p.until((x) => !!x.closed, "server gone")));
+  await Promise.all([deb, bob, ann3].map((p) => p.until((x) => x.store.getState().connection.status === "connecting", "line dropped")));
   await server.start();
   const back = await (await fetch(`${server.http}/api/rooms/${code}`)).json();
   assert.equal(back.exists, true);
-  const deb2 = await Player.join(server, code, { ...look("Deb"), dealerKey });
-  assert.equal(deb2.id, deb.id);
-  assert.equal(deb2.isDealer, true);
-  const ann4 = await Player.join(server, code, { ...look("Ann"), token: ann.token });
-  assert.equal(ann4.id, ann.id);
-  await ann4.untilState((s) => s.players.length === 3, "everyone restored");
-  assert.equal(ann4.player(ann.id)?.chips, 8);
-  assert.equal(ann4.player(deb.id)?.chips, 2);
-  assert.equal(ann4.player(bob.id)?.connected, false);
-  assert.deepEqual(ann4.state!.history.map((h) => [h.key, h.finalPoints]), [["TICKET", 2], ["SD-2", 8]]);
-  assert.deepEqual(ann4.state!.skipped, ["SD-3"]);
-  const catAfter = await Player.join(server, code, { ...look("Cat"), token: cat.token });
-  assert.equal(catAfter.closed?.code, 4001, "bans survive a restart");
-
-  for (const p of [deb2, ann4]) await p.close();
+  for (const p of [deb, bob, ann3]) await p.until((x) => x.store.getState().connection.status === "open", "reconnected");
+  await deb.untilState((s) => s.players.length === 3 && s.players.every((p) => p.connected), "everyone back");
+  assert.deepEqual({ deb: deb.id, ann: ann3.id, bob: bob.id }, before);
+  assert.equal(deb.me.isDealer, true);
+  assert.equal(deb.player(ann.id)?.chips, 8);
+  assert.equal(deb.player(deb.id)?.chips, 2);
+  assert.deepEqual(deb.state.history.map((h) => [h.key, h.finalPoints]), [["TICKET", 2], ["SD-2", 8]]);
+  assert.deepEqual(deb.state.skipped, ["SD-3"]);
+  const catAfter = await join(code, look("Cat"), { token: cat.token });
+  assert.equal(catAfter.closeCode, 4001, "bans survive a restart");
 });

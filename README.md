@@ -69,7 +69,10 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
     It's plain logic with unit tests, no sockets.
   - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
     (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
-  - `client/` is the 3D table and UI.
+  - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
+    store, the event stream (`diff`), `actions`, the session (socket + reconnect) and storage.
+    The 3D scene (`scene/`) and the UI (`hud.ts`, `lobby.ts`) only read the store and call
+    `actions`; they never import each other.
   - `test/session.test.ts` plays a whole game against the real server.
 
 ## How to play

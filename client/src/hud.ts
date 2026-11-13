@@ -1,20 +1,32 @@
 // Everything drawn on top of the 3D scene: the action dock, the dealer's
-// ticket picker, the ticket sheet, announcements and the wallet.
-import { DECK, type ClientMsg, type PublicPlayer, type RoomState } from "../../shared/protocol.ts";
+// ticket picker, the ticket sheet, announcements and the wallet. It reads the
+// store and the event stream, and acts only through `actions`.
+import { DECK, type PublicPlayer, type RoomState } from "../../shared/protocol.ts";
 import { renderAdf } from "./adf.ts";
-import { sfx } from "./sfx.ts";
-import { CARD_SUIT } from "./textures.ts";
+import type { Actions } from "./app/actions.ts";
+import type { GameEvent } from "./app/events.ts";
+import type { Storage } from "./app/storage.ts";
+import type { AppState, Store } from "./app/store.ts";
+import type { Mic } from "./audio/mic.ts";
+import type { Audio } from "./audio/sfx.ts";
+import { CARD_SUIT } from "./scene/textures.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const KEY_RE = /\b[A-Za-z][A-Za-z0-9_]+-\d+\b/;
 
-export interface HudHooks {
-  send(m: ClientMsg): void;
-  playCard(value: number): void;
+export interface HudDeps {
+  store: Store;
+  actions: Actions;
+  audio: Audio;
+  storage: Storage;
+  mic: Mic;
+  /** Opens the look editor over the table. */
   openLook(): void;
-  roomCode: string;
 }
+
+/** Events that the next render should know about; handled right after it. */
+const DEFERRED = new Set<GameEvent["t"]>(["synced", "joined", "left", "dealt", "ticketChanged", "queueChanged", "revealed", "settled"]);
 
 const TYPE_ICON: Record<string, [string, string]> = {
   bug: ["●", "#e5493a"], story: ["▮", "#63ba3c"], epic: ["⚡", "#904ee2"], task: ["✓", "#4bade8"],
@@ -48,34 +60,73 @@ export class Hud {
   private sheetKey = "";
   private pickerForced = false;
   private dockKey = "";
-  private readonly h: HudHooks;
+  private phaseKey = "";
+  private pending: GameEvent[] = [];
+  private queued = false;
+  private readonly store: Store;
+  private readonly actions: Actions;
+  private readonly audio: Audio;
+  private readonly deps: HudDeps;
 
-  constructor(hooks: HudHooks) {
-    this.h = hooks;
+  constructor(deps: HudDeps) {
+    this.deps = deps;
+    this.store = deps.store;
+    this.actions = deps.actions;
+    this.audio = deps.audio;
     this.setupChrome();
+    this.setupMic();
     this.setupPicker();
     this.setupSheet();
+    this.store.subscribe((s, prev) => this.onStore(s, prev));
+    this.store.events.on((e) => {
+      if (DEFERRED.has(e.t)) { this.pending.push(e); this.schedule(); }
+      else this.react(e);
+    });
+    this.onStore(this.store.getState(), null);
   }
 
-  setMe(id: string, isDealer: boolean) {
-    this.me = { id, isDealer };
-    document.body.classList.toggle("is-dealer", isDealer);
+  private onStore(s: AppState, prev: AppState | null) {
+    if (s.me && s.me !== prev?.me) {
+      this.me = { ...s.me };
+      document.body.classList.toggle("is-dealer", s.me.isDealer);
+    }
+    if (s.connection !== prev?.connection) {
+      const { status, reason } = s.connection;
+      $("conn").textContent = status === "open" || status === "idle" ? "" : status === "connecting" ? "reconnecting…" : `disconnected: ${reason ?? ""}`;
+      if (status === "closed" && reason === "Removed by the dealer") this.toast("👋 The dealer removed you from this table.", "error");
+    }
+    if (s.room !== prev?.room) this.schedule();
+    else if (s.ui.myVote !== prev?.ui.myVote) {
+      this.myVote = s.ui.myVote;
+      if (this.st) { this.renderDock(this.st, false); this.renderStatus(this.st); }
+    }
   }
 
-  setVote(v: number | null) {
-    this.myVote = v;
-    if (this.st) { this.renderDock(this.st, false); this.renderStatus(this.st); }
+  /** Render once per new view, after its events are in. */
+  private schedule() {
+    if (this.queued) return;
+    this.queued = true;
+    queueMicrotask(() => {
+      this.queued = false;
+      const st = this.store.getState().room;
+      const evs = this.pending;
+      this.pending = [];
+      if (!st) return;
+      this.myVote = this.store.getState().ui.myVote;
+      this.render(st, evs);
+      for (const e of evs) this.react(e);
+    });
   }
 
   // ------------------------------------------------------------------ chrome
 
   private setupChrome() {
     $("invite").onclick = () => this.copyInvite();
-    $("wardrobe").onclick = () => this.h.openLook();
+    $("wardrobe").onclick = () => this.deps.openLook();
     const mute = $("mute");
-    const paint = () => (mute.textContent = sfx.muted ? "🔇" : "🔊");
+    const paint = () => (mute.textContent = this.audio.muted ? "🔇" : "🔊");
     paint();
-    mute.onclick = () => { sfx.setMuted(!sfx.muted); paint(); };
+    mute.onclick = () => { this.audio.setMuted(!this.audio.muted); paint(); };
     $("help").onclick = () => this.togglePop("help-pop");
     $("wallet").onclick = () => this.togglePop("board");
     $("dealer-btn").onclick = () => this.togglePop("dealer-pop");
@@ -98,8 +149,37 @@ export class Hud {
     el.hidden = !show;
   }
 
+  /** Mic loudness makes your bean's mouth move; no audio ever leaves the browser. */
+  private setupMic() {
+    const { mic, storage } = this.deps;
+    const btn = $("mic");
+    const paint = () => {
+      btn.classList.toggle("on", mic.on);
+      btn.title = mic.on ? "Mic on: your mouth moves when you talk (no audio is sent). Click to turn off." : "Turn on mic: your character's mouth moves when you talk (no audio is sent)";
+    };
+    mic.onLevel = (level) => this.actions.talk(level);
+    mic.onMeter = (level) => btn.style.setProperty("--lvl", level.toFixed(2));
+    const start = async () => {
+      try {
+        await mic.start();
+        storage.setMic(true);
+      } catch {
+        this.toast("Couldn't use the mic. Check your browser's permission for this site.", "error");
+        storage.setMic(false);
+      }
+      paint();
+    };
+    btn.onclick = () => {
+      if (mic.on) { mic.stop(); storage.setMic(false); paint(); }
+      else start();
+    };
+    paint();
+    if (storage.mic()) start();
+    else setTimeout(() => this.toast("🎙️ Tip: turn on your mic (top right) and your bean's mouth moves when you talk. No audio is sent."), 4000);
+  }
+
   async copyInvite() {
-    const url = `${location.origin}${location.pathname}?room=${this.h.roomCode}`;
+    const url = `${location.origin}${location.pathname}?room=${this.store.getState().connection.room}`;
     try {
       await navigator.clipboard.writeText(url);
       this.toast("🔗 Invite link copied. Paste it in Slack or Teams.");
@@ -119,22 +199,15 @@ export class Hud {
 
   // ------------------------------------------------------------------ main update
 
-  update(prev: RoomState | null, st: RoomState) {
+  private render(st: RoomState, evs: GameEvent[]) {
     this.st = st;
-    const phaseChanged = prev?.phase !== st.phase || prev?.round !== st.round;
-    const newTicket = st.ticket && (prev?.ticket?.key !== st.ticket.key || (phaseChanged && st.phase === "voting"));
+    const phaseKey = `${st.phase}:${st.round}`;
+    const phaseChanged = phaseKey !== this.phaseKey;
+    this.phaseKey = phaseKey;
 
-    // people coming and going
-    if (prev) {
-      for (const p of st.players) if (!prev.players.some((q) => q.id === p.id) && p.id !== this.me.id) this.toast(`👋 ${p.name} sat down`);
-      for (const p of prev.players) if (!st.players.some((q) => q.id === p.id)) this.toast(`🚪 ${p.name} left`);
-    }
-
-    // the dealer's ticket picker
+    // the dealer's ticket picker opens by itself when there's no ticket
     if (this.me.isDealer) {
-      if (this.loading && (newTicket || (st.queue.length && prev?.queue.length !== st.queue.length))) this.stopLoading();
       if (!st.ticket && !this.pickerForced) { this.pickerForced = true; this.openPicker(); }
-      if (st.ticket && newTicket) { this.pickerForced = false; this.closePicker(); }
       this.renderPicker(st);
     }
 
@@ -143,27 +216,65 @@ export class Hud {
     this.renderDock(st, phaseChanged);
     this.renderBoard(st);
     this.renderDealer(st);
-    this.renderWallet(st, prev);
+    // a winner's wallet counts up when the coins land; everything else updates straight away
+    const iWon = evs.some((e) => e.t === "settled") && st.winners.includes(this.me.id);
+    if (!iWon) this.setWallet(st.players.find((p) => p.id === this.me.id)?.chips ?? 0);
+    const mine = st.players.find((p) => p.id === this.me.id);
+    if (mine) $("wardrobe").style.setProperty("--me", mine.color);
+    document.title = `${st.ticket ? st.ticket.key + " · " : ""}Point Poker`;
+  }
 
-    if (!prev) {
-      if (st.ticket && st.phase === "voting") this.openSheet();
-      return;
+  private react(e: GameEvent) {
+    const st = this.st;
+    switch (e.t) {
+      case "synced":
+        if (st?.ticket && st.phase === "voting") this.openSheet();
+        return;
+      case "joined":
+        if (e.player.id !== this.me.id) this.toast(`👋 ${e.player.name} sat down`);
+        return;
+      case "left":
+        this.toast(`🚪 ${e.player.name} left`);
+        return;
+      case "ticketChanged":
+        if (!this.me.isDealer) return;
+        this.stopLoading();
+        this.pickerForced = false;
+        this.closePicker();
+        return;
+      case "queueChanged":
+        if (this.me.isDealer && this.loading) this.stopLoading();
+        return;
+      case "dealt":
+        if (!st?.ticket) return;
+        this.announce(`<div class="a-kicker">New ticket</div><div class="a-title">${esc(st.ticket.key)}</div><div class="a-sub">${esc(st.ticket.summary)}</div>`, "deal", 1800);
+        setTimeout(() => this.openSheet(), 900);
+        return;
+      case "revealed": {
+        if (!st) return;
+        this.closeSheet();
+        const votes = st.players.filter((p) => p.plays && p.vote !== null).map((p) => p.vote!);
+        const same = votes.length > 1 && votes.every((v) => v === votes[0]);
+        this.announce(same
+          ? `<div class="a-title">Everyone said ${votes[0]}! 🎉</div><div class="a-sub">Consensus. Mark it on the calendar.</div>`
+          : `<div class="a-title">Cards up!</div><div class="a-sub">${votes.length ? `From ${Math.min(...votes)} to ${Math.max(...votes)}` : "Nobody picked a card"}</div>`, "reveal", 1700);
+        this.audio.flip();
+        return;
+      }
+      case "settled":
+        if (st) this.celebrate(st);
+        return;
+      case "toast":
+        this.toast(e.text, e.level);
+        if (e.level === "error") this.audio.bonk();
+        return;
+      case "loadFailed":
+        this.loadFailed(e.text);
+        return;
+      case "openTicket":
+        this.openSheet();
+        return;
     }
-    if (phaseChanged && st.phase === "voting" && st.ticket) {
-      this.announce(`<div class="a-kicker">New ticket</div><div class="a-title">${esc(st.ticket.key)}</div><div class="a-sub">${esc(st.ticket.summary)}</div>`, "deal", 1800);
-      setTimeout(() => this.openSheet(), 900);
-    }
-    if (phaseChanged && st.phase === "revealed") {
-      this.closeSheet();
-      const votes = st.players.filter((p) => p.plays && p.vote !== null).map((p) => p.vote!);
-      const same = votes.length > 1 && votes.every((v) => v === votes[0]);
-      this.announce(same
-        ? `<div class="a-title">Everyone said ${votes[0]}! 🎉</div><div class="a-sub">Consensus. Mark it on the calendar.</div>`
-        : `<div class="a-title">Cards up!</div><div class="a-sub">${votes.length ? `From ${Math.min(...votes)} to ${Math.max(...votes)}` : "Nobody picked a card"}</div>`, "reveal", 1700);
-      sfx.flip();
-    }
-    const resettled = !phaseChanged && st.phase === "settled" && prev.finalPoints !== st.finalPoints;
-    if (st.phase === "settled" && (phaseChanged || resettled)) this.celebrate(st);
   }
 
   // ------------------------------------------------------------------ ticket tab + sheet
@@ -225,7 +336,7 @@ export class Hud {
     s.classList.remove("leaving");
     void s.offsetWidth;
     s.classList.add("arriving");
-    sfx.slide();
+    this.audio.slide();
   }
 
   closeSheet() {
@@ -322,18 +433,18 @@ export class Hud {
     dock.hidden = !body && !side && !title;
     dock.querySelectorAll<HTMLButtonElement>(".pcard").forEach((b) => {
       const v = Number(b.dataset.v);
-      b.onpointerenter = () => sfx.hover();
+      b.onpointerenter = () => this.audio.hover();
       b.onclick = () => {
-        if (st.phase === "voting") this.h.playCard(v);
-        else if (D && (st.phase === "revealed" || st.phase === "settled") && v !== st.finalPoints) this.h.send({ t: "settle", finalPoints: v });
+        if (st.phase === "voting") this.actions.vote(v);
+        else if (D && (st.phase === "revealed" || st.phase === "settled") && v !== st.finalPoints) this.actions.dealer.settle(v);
       };
     });
     dock.querySelectorAll<HTMLButtonElement>("[data-act]").forEach((b) => (b.onclick = () => {
       const act = b.dataset.act;
       if (act === "picker") this.openPicker();
-      else if (act === "reveal") this.h.send({ t: "reveal" });
-      else if (act === "redeal") this.h.send({ t: "deal" });
-      else if (act === "next") { this.h.send({ t: "nextRound" }); this.startLoading("Dealing the next ticket…"); }
+      else if (act === "reveal") this.actions.dealer.reveal();
+      else if (act === "redeal") this.actions.dealer.deal();
+      else if (act === "next") { this.actions.dealer.next(); this.startLoading("Dealing the next ticket…"); }
     }));
   }
 
@@ -345,7 +456,7 @@ export class Hud {
       const ref = input.value.trim();
       if (!ref) return input.focus();
       if (!KEY_RE.test(ref)) return this.pickerError("Paste a Jira link, or a key like SD-1234");
-      this.h.send({ t: "loadTicket", ref });
+      this.actions.dealer.load(ref);
       this.startLoading(`Fetching ${ref.match(KEY_RE)![0].toUpperCase()} from Jira…`);
     };
     $("pk-form").onsubmit = (e) => { e.preventDefault(); submit(); };
@@ -353,17 +464,17 @@ export class Hud {
     input.oninput = () => this.pickerError("");
     $("pk-close").onclick = () => this.closePicker();
     $("pk-scrim").onclick = () => { if (this.st?.ticket) this.closePicker(); };
-    $("pk-sprint").onclick = () => { this.h.send({ t: "fetchQueue" }); this.startLoading("Loading this sprint's tickets…"); };
+    $("pk-sprint").onclick = () => { this.actions.dealer.loadSprint(); this.startLoading("Loading this sprint's tickets…"); };
     $("pk-invite").onclick = () => this.copyInvite();
     $("pk-manual").onsubmit = (e) => {
       e.preventDefault();
       const summary = $<HTMLInputElement>("pk-m-summary").value.trim();
       if (!summary) return;
-      this.h.send({ t: "manualTicket", key: "", summary, description: "" });
+      this.actions.dealer.typeIn(summary);
       $<HTMLInputElement>("pk-m-summary").value = "";
     };
     const plays = $<HTMLInputElement>("pk-plays");
-    plays.onchange = () => this.h.send({ t: "dealerPlays", plays: plays.checked });
+    plays.onchange = () => this.actions.dealer.setPlays(plays.checked);
   }
 
   openPicker() {
@@ -400,7 +511,7 @@ export class Hud {
         <span class="k">${esc(q.key)}</span><span class="s">${esc(q.summary)}</span>
         <span class="p">${done.has(q.key) ? "✓ done" : skipped.has(q.key) ? "skipped" : q.points !== null ? `${q.points} pts` : ""}</span></button>`).join("")}</div>` : "";
     $("pk-queue").querySelectorAll<HTMLButtonElement>("[data-key]").forEach((b) => (b.onclick = () => {
-      this.h.send({ t: "loadTicket", ref: b.dataset.key! });
+      this.actions.dealer.load(b.dataset.key!);
       this.startLoading(`Fetching ${b.dataset.key}…`);
     }));
   }
@@ -424,7 +535,7 @@ export class Hud {
     this.stopLoading();
     if ($("picker").hidden) this.openPicker();
     this.pickerError(text);
-    sfx.bonk();
+    this.audio.bonk();
   }
 
   private pickerError(text: string) {
@@ -463,24 +574,17 @@ export class Hud {
     const body = $("dealer-body");
     body.querySelectorAll<HTMLButtonElement>("[data-dc]").forEach((b) => (b.onclick = () => {
       const act = b.dataset.dc;
-      if (act === "redeal") this.h.send({ t: "deal" });
-      else if (act === "skip") { this.h.send({ t: "skip" }); if (nextUp) this.startLoading(`Skipping to ${nextUp.key}…`); }
-      else if (act === "cancel") { if (confirm("Cancel this round? Nobody gets paid and the ticket is cleared.")) this.h.send({ t: "cancelRound" }); }
+      if (act === "redeal") this.actions.dealer.deal();
+      else if (act === "skip") { this.actions.dealer.skip(); if (nextUp) this.startLoading(`Skipping to ${nextUp.key}…`); }
+      else if (act === "cancel") { if (confirm("Cancel this round? Nobody gets paid and the ticket is cleared.")) this.actions.dealer.cancel(); }
       else if (act === "picker") this.openPicker();
       $("dealer-pop").hidden = true;
     }));
     body.querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => {
-      if (confirm(`Kick ${b.dataset.name} from the table? They won't be able to rejoin.`)) this.h.send({ t: "kick", id: b.dataset.kick! });
+      if (confirm(`Kick ${b.dataset.name} from the table? They won't be able to rejoin.`)) this.actions.dealer.kick(b.dataset.kick!);
     }));
     const plays = body.querySelector<HTMLInputElement>("#dc-plays")!;
-    plays.onchange = () => this.h.send({ t: "dealerPlays", plays: plays.checked });
-  }
-
-  private renderWallet(st: RoomState, prev: RoomState | null) {
-    const mine = st.players.find((p) => p.id === this.me.id)?.chips ?? 0;
-    // a winner's wallet counts up when the coins land; everything else updates straight away
-    const winning = st.phase === "settled" && st.winners.includes(this.me.id) && prev && (prev.phase !== "settled" || prev.finalPoints !== st.finalPoints);
-    if (!winning) this.setWallet(mine);
+    plays.onchange = () => this.actions.dealer.setPlays(plays.checked);
   }
 
   private setWallet(n: number) {
@@ -521,7 +625,7 @@ export class Hud {
       try { await navigator.clipboard.writeText(text); this.toast(`📋 Copied ${latest.size} ticket${latest.size === 1 ? "" : "s"} and their points`); }
       catch { prompt("Copy these:", text.replace(/\n/g, " | ")); }
     });
-    $("board-body").querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => this.h.send({ t: "kick", id: b.dataset.kick! })));
+    $("board-body").querySelectorAll<HTMLButtonElement>("[data-kick]").forEach((b) => (b.onclick = () => this.actions.dealer.kick(b.dataset.kick!)));
   }
 
   // ------------------------------------------------------------------ announcements + winning
@@ -592,10 +696,10 @@ export class Hud {
       ], { duration: 1150 + i * 35, easing: "cubic-bezier(.3,.1,.3,1)", delay: i * 18, fill: "forwards" });
       anim.onfinish = () => {
         c.remove();
-        if (++landed % 3 === 0) sfx.chip();
+        if (++landed % 3 === 0) this.audio.chip();
         if (landed === 1) this.countWalletTo(this.st?.players.find((p) => p.id === this.me.id)?.chips ?? this.wallet);
       };
     }
-    sfx.win();
+    this.audio.win();
   }
 }
