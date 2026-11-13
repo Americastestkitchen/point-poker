@@ -7,7 +7,10 @@ import { cx } from "./cx.ts";
 import s from "./Carousel.module.css";
 
 /** An option is anything but `undefined`, which stands for "no option there". */
-export interface CarouselProps<T extends {} | null> {
+// oxlint-disable-next-line typescript/no-empty-object-type -- {} is meant here: any value that isn't null or undefined
+type Option = {} | null;
+
+export interface CarouselProps<T extends Option> {
   label: string;
   options: readonly T[];
   value: T;
@@ -21,7 +24,7 @@ export interface CarouselProps<T extends {} | null> {
 }
 
 /** Pick one of a few options with ←/→, the arrow buttons, or a tap on either side. */
-export function Carousel<T extends {} | null>({
+export function Carousel<T extends Option>({
   label,
   options,
   value,

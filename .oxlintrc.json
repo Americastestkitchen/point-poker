@@ -38,6 +38,10 @@
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-condition": "error",
     "typescript/ban-ts-comment": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error", // .catch((e) => …) gets unknown, like catch (e) does
+    "typescript/no-unsafe-function-type": "error", // the bare Function type
+    "typescript/no-empty-object-type": "error", // {} means "anything but null"
+    "typescript/no-wrapper-object-types": "error", // Object, String, Number…
     "unicorn/no-abusive-eslint-disable": "error",
 
     // React

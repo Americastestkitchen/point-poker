@@ -75,7 +75,7 @@ class Hub {
       if (msg.t !== "cmd") return;
       this.table.run(me, msg.cmd).then(
         (r) => send(ws, { t: "result", id: msg.id, ...(r.error ? { error: r.error } : {}) }),
-        (e) => this.log.error("command failed", msg.cmd.t, e),
+        (e: unknown) => this.log.error("command failed", msg.cmd.t, e),
       );
     });
     ws.on("close", () => {

@@ -10,7 +10,8 @@ import { myPlayer, type Store } from "./store.ts";
 export function createActions(session: Pick<Session, "request" | "fx">, store: Store) {
   const run = (cmd: Command) => session.request(cmd);
   /** For actions nobody waits on: a failure shows up as a toast. */
-  const report = (e: Error) => store.events.emit({ t: "toast", text: e.message, level: "error" });
+  const report = (e: unknown) =>
+    store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
 
   return {
     /** Put a card down (or swap the one you put down). */
@@ -21,7 +22,7 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       store.vote({ t: "played", value });
       store.events.emit({ t: "played", value, changed });
       const answered = () => store.vote({ t: "answered" });
-      run({ t: "vote", value }).then(answered, (e: Error) => {
+      run({ t: "vote", value }).then(answered, (e: unknown) => {
         answered();
         report(e);
       });
