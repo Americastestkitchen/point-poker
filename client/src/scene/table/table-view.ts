@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { Fx } from "../../../../shared/protocol.ts";
 import { cardValues, voters } from "../../../../shared/rules.ts";
 import type { Actions } from "../../app/actions.ts";
-import type { GameEvent } from "../../app/events.ts";
+import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import type { StatusScreen } from "../../environments/types.ts";
@@ -22,9 +22,6 @@ export interface TableView {
   update(dt: number, t: number): void;
 }
 
-/** Events that change how the next redraw animates; handled during the redraw. */
-const DEFERRED = new Set<GameEvent["t"]>(["synced", "joined", "reshaped", "dealt", "revealed", "settled"]);
-
 const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
 
 export function mountTableView(stage: Stage, deps: {
@@ -34,31 +31,22 @@ export function mountTableView(stage: Stage, deps: {
   const { store, actions, audio, flights, rig, ticket, pot, screen } = deps;
   const { scene, camera } = stage;
   const seats = new Map<string, Seat>();
-  let pending: GameEvent[] = [];
-  let queued = false;
 
   const meId = () => store.getState().me?.id ?? "";
 
-  // Redraw once per new view, after its events are in, so they can shape the animation.
-  const schedule = () => {
-    if (queued) return;
-    queued = true;
-    queueMicrotask(() => { queued = false; redraw(); });
-  };
-  store.subscribe((s, prev) => { if (s.room !== prev.room || s.me !== prev.me) schedule(); });
-  store.events.on((e) => {
-    if (DEFERRED.has(e.t)) { pending.push(e); schedule(); return; }
-    react(e);
+  // Each new view redraws the table, and what changed in it shapes the animation.
+  store.subscribe((s, prev) => {
+    if (s.room !== prev.room) redraw(s.changes);
+    else if (s.me !== prev.me) redraw([]);
   });
+  store.events.on(react);
 
-  function redraw() {
+  function redraw(changes: readonly ViewChange[]) {
     const st = store.getState().room;
     if (!st) return;
-    const evs = pending;
-    pending = [];
-    const happened = (t: GameEvent["t"]) => evs.some((e) => e.t === t);
+    const happened = (t: ViewChange["t"]) => changes.some((c) => c.t === t);
     const me = meId();
-    const settled = evs.find((e) => e.t === "settled");
+    const settled = changes.find((c) => c.t === "settled");
     const payingOut = settled?.t === "settled" && !settled.resettled;
 
     const players = st.players.filter((p) => !p.isDealer).sort((a, b) => a.seat - b.seat);
@@ -153,9 +141,9 @@ export function mountTableView(stage: Stage, deps: {
     }
 
     // people arriving wave; people who changed shape gasp
-    for (const e of evs) {
-      if ((e.t === "joined" || e.t === "reshaped") && e.player.id !== me) {
-        seats.get(e.player.id)?.avatar.play(e.t === "joined" ? "wave" : "shock");
+    for (const c of changes) {
+      if ((c.t === "joined" || c.t === "reshaped") && c.player.id !== me) {
+        seats.get(c.player.id)?.avatar.play(c.t === "joined" ? "wave" : "shock");
         audio.pop();
       }
     }

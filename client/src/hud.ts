@@ -5,7 +5,7 @@ import type { TableView } from "../../shared/protocol.ts";
 import { cardValues, favourite, nextInQueue, parseIssueKey, tally, voters } from "../../shared/rules.ts";
 import { renderAdf } from "./adf.ts";
 import type { Actions } from "./app/actions.ts";
-import type { GameEvent } from "./app/events.ts";
+import type { GameEvent, ViewChange } from "./app/events.ts";
 import type { Storage } from "./app/storage.ts";
 import { myPlayer, type AppState, type Store } from "./app/store.ts";
 import type { Mic } from "./audio/mic.ts";
@@ -24,9 +24,6 @@ export interface HudDeps {
   /** Opens the look editor over the table. */
   openLook(): void;
 }
-
-/** Events that the next render should know about; handled right after it. */
-const DEFERRED = new Set<GameEvent["t"]>(["synced", "joined", "left", "dealt", "ticketChanged", "revealed", "settled"]);
 
 const TYPE_ICON: Record<string, [string, string]> = {
   bug: ["●", "#e5493a"], story: ["▮", "#63ba3c"], epic: ["⚡", "#904ee2"], task: ["✓", "#4bade8"],
@@ -61,8 +58,6 @@ export class Hud {
   private pickerForced = false;
   private dockKey = "";
   private phaseKey = "";
-  private pending: GameEvent[] = [];
-  private queued = false;
   private readonly store: Store;
   private readonly actions: Actions;
   private readonly audio: Audio;
@@ -78,10 +73,7 @@ export class Hud {
     this.setupPicker();
     this.setupSheet();
     this.store.subscribe((s, prev) => this.onStore(s, prev));
-    this.store.events.on((e) => {
-      if (DEFERRED.has(e.t)) { this.pending.push(e); this.schedule(); }
-      else this.react(e);
-    });
+    this.store.events.on((e) => this.react(e));
     this.onStore(this.store.getState(), null);
   }
 
@@ -97,27 +89,17 @@ export class Hud {
       $("conn").textContent = status === "open" || status === "idle" ? "" : status === "connecting" ? "reconnecting…" : `disconnected: ${reason ?? ""}`;
       if (status === "closed" && reason === "Removed by the dealer") this.toast("👋 The dealer removed you from this table.", "error");
     }
-    if (s.room !== prev?.room) this.schedule();
-    else if (s.ui.myVote !== prev?.ui.myVote) {
+    if (s.room !== prev?.room) {
+      // a new view: draw it, then react to what changed in it
+      this.myVote = s.ui.myVote;
+      if (s.room) {
+        this.render(s.room, s.changes);
+        for (const c of s.changes) this.react(c);
+      }
+    } else if (s.ui.myVote !== prev?.ui.myVote) {
       this.myVote = s.ui.myVote;
       if (this.st) { this.renderDock(this.st, false); this.renderStatus(this.st); }
     }
-  }
-
-  /** Render once per new view, after its events are in. */
-  private schedule() {
-    if (this.queued) return;
-    this.queued = true;
-    queueMicrotask(() => {
-      this.queued = false;
-      const st = this.store.getState().room;
-      const evs = this.pending;
-      this.pending = [];
-      if (!st) return;
-      this.myVote = this.store.getState().ui.myVote;
-      this.render(st, evs);
-      for (const e of evs) this.react(e);
-    });
   }
 
   // ------------------------------------------------------------------ chrome
@@ -201,7 +183,7 @@ export class Hud {
 
   // ------------------------------------------------------------------ main update
 
-  private render(st: TableView, evs: GameEvent[]) {
+  private render(st: TableView, changes: readonly ViewChange[]) {
     this.st = st;
     const phaseKey = `${st.phase}:${st.round}`;
     const phaseChanged = phaseKey !== this.phaseKey;
@@ -219,14 +201,14 @@ export class Hud {
     this.renderBoard(st);
     this.renderDealer(st);
     // a winner's wallet counts up when the coins land; everything else updates straight away
-    const iWon = evs.some((e) => e.t === "settled") && st.winners.includes(this.me.id);
+    const iWon = changes.some((c) => c.t === "settled") && st.winners.includes(this.me.id);
     if (!iWon) this.setWallet(st.players.find((p) => p.id === this.me.id)?.chips ?? 0);
     const mine = st.players.find((p) => p.id === this.me.id);
     if (mine) $("wardrobe").style.setProperty("--me", mine.look.color);
     document.title = `${st.ticket ? st.ticket.key + " · " : ""}Point Poker`;
   }
 
-  private react(e: GameEvent) {
+  private react(e: ViewChange | GameEvent) {
     const st = this.st;
     switch (e.t) {
       case "synced":

@@ -1,10 +1,11 @@
-// One stream of things that just happened, for the HUD, the scene and audio.
-// It merges what diff() works out from two views with the server's effects.
+// What happened. diff() works out what changed between two views; those
+// changes arrive in the store with the view itself. Everything else that
+// happens (effects, toasts, local moments) goes on the event stream.
 import type { PublicPlayer, ServerMsg, TableView } from "../../../shared/protocol.ts";
 import { allIn } from "../../../shared/rules.ts";
 
-export type GameEvent =
-  // ---- worked out by diff()
+/** What changed between two views of the table, as worked out by diff(). */
+export type ViewChange =
   /** The first view of this table arrived. */
   | { t: "synced" }
   | { t: "joined"; player: PublicPlayer }
@@ -19,7 +20,10 @@ export type GameEvent =
   | { t: "allIn" }
   | { t: "revealed" }
   /** The dealer called the final points; `resettled` when they changed their call. */
-  | { t: "settled"; resettled: boolean }
+  | { t: "settled"; resettled: boolean };
+
+/** Things that happen without changing the view. */
+export type GameEvent =
   // ---- straight from the server: effects (someone looked around, talked,
   // emoted, flicked a chip or fiddled with their card) and toasts
   | Extract<ServerMsg, { t: "fx" | "toast" }>
@@ -45,9 +49,9 @@ export function createEvents(): Events {
 const everyoneIn = (s: TableView) => s.phase === "voting" && allIn(s.players);
 
 /** What changed between two views of the table, as events. Pure. */
-export function diff(prev: TableView | null, next: TableView): GameEvent[] {
+export function diff(prev: TableView | null, next: TableView): ViewChange[] {
   if (!prev) return [{ t: "synced" }];
-  const out: GameEvent[] = [];
+  const out: ViewChange[] = [];
   const before = new Map(prev.players.map((p) => [p.id, p]));
   const after = new Set(next.players.map((p) => p.id));
   for (const p of next.players) {

@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenedTable, TableInfo, type ServerMsg, type TableView } from "../shared/protocol.ts";
 import { createActions, type Actions } from "../client/src/app/actions.ts";
-import type { GameEvent } from "../client/src/app/events.ts";
+import type { GameEvent, ViewChange } from "../client/src/app/events.ts";
 import { createSession, type Session } from "../client/src/app/session.ts";
 import { createStorage, memoryStorage, type Profile } from "../client/src/app/storage.ts";
 import { createStore, type Store } from "../client/src/app/store.ts";
@@ -75,7 +75,8 @@ class Player {
   readonly store: Store = createStore();
   readonly session: Session;
   readonly actions: Actions;
-  readonly events: GameEvent[] = [];
+  /** What this player saw happen: changes that came with each view, and events. */
+  readonly events: (ViewChange | GameEvent)[] = [];
   /** Every message the server sent, straight off the wire. */
   readonly wire: ServerMsg[] = [];
   closeCode = 0;
@@ -99,7 +100,10 @@ class Player {
     });
     this.actions = createActions(this.session, this.store);
     this.store.events.on((e) => { this.events.push(e); this.check(); });
-    this.store.subscribe(() => this.check());
+    this.store.subscribe((s, prev) => {
+      if (s.room !== prev.room) this.events.push(...s.changes);
+      this.check();
+    });
   }
 
   static async join(server: Server, room: string, profile: Profile, extra: { dealerKey?: string; token?: string } = {}) {
