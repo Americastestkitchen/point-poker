@@ -27,7 +27,8 @@ export interface MountOptions {
 /** Render `ui` into `container` (an overlay above the canvas). Returns a function that unmounts it. */
 export function mountUi(container: HTMLElement, ui: ReactNode, { sounds, toasts }: MountOptions = {}): () => void {
   installTokens(container.ownerDocument);
-  container.classList.add(s.root!);
+  if (!s.root) throw new Error("root.module.css has no .root class");
+  container.classList.add(s.root);
   const root = createRoot(container);
   root.render(
     <StrictMode>

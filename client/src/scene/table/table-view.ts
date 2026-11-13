@@ -66,7 +66,7 @@ export function mountTableView(
     });
     const payingOut = potDoes === "payOut";
 
-    const players = st.players.filter((p) => !p.isDealer).sort((a, b) => a.seat - b.seat);
+    const players = st.players.filter((p) => !p.isDealer).toSorted((a, b) => a.seat - b.seat);
     const count = players.length;
     const slotOf = new Map<string, number>(players.map((p, i) => [p.id, i]));
     const revealed = st.phase === "revealed" || st.phase === "settled";
@@ -81,7 +81,7 @@ export function mountTableView(
 
     let flipIndex = 0;
     for (const p of st.players) {
-      const slot = p.isDealer ? -1 : slotOf.get(p.id)!;
+      const slot = slotOf.get(p.id) ?? -1; // the dealer has no slot
       const mine = p.id === me;
       let seat = seats.get(p.id);
       if (!seat) {
@@ -283,6 +283,8 @@ export function mountTableView(
         audio.slide();
         return;
       }
+      default:
+        return; // the rest are for the screens
     }
   }
 

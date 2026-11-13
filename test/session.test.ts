@@ -64,8 +64,8 @@ class Server {
           resolve();
         }
       };
-      proc.stdout!.on("data", onData);
-      proc.stderr!.on("data", (b: Buffer) => (out += b));
+      proc.stdout.on("data", onData);
+      proc.stderr.on("data", (b: Buffer) => (out += b));
       proc.once("exit", (code) => {
         clearTimeout(timer);
         reject(new Error(`server exited (${code}):\n${out}`));
@@ -120,6 +120,7 @@ class Player {
       store: this.store,
       url: server.ws,
       retryDelay: () => 50,
+      log: console,
     });
     this.actions = createActions(this.session, this.store);
     this.store.events.on((e) => {
@@ -241,7 +242,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(ann.isDealer, false);
   await deb.untilState((s) => s.players.length === 3, "three players");
   assert.equal(deb.player(deb.id)?.seat, -1);
-  assert.deepEqual([ann, bob].map((p) => deb.player(p.id)?.seat).sort(), [0, 1]);
+  assert.deepEqual(new Set([ann, bob].map((p) => deb.player(p.id)?.seat)), new Set([0, 1]));
   assert.deepEqual(deb.player(bob.id)?.look, { color: "#3bceac", body: "chonk", cosmetics: ["crown"] });
   await deb.until((p) => p.events.some((e) => e.t === "joined" && e.player.id === bob.id), "joined event");
 
@@ -292,20 +293,20 @@ test("a whole session over real sockets, including a restart", async (t) => {
     }
   }
 
-  deb.actions.dealer.reveal();
+  await deb.actions.dealer.reveal();
   await bob.untilState((s) => s.phase === "revealed", "revealed");
   assert.equal(bob.player(ann.id)?.vote, 3);
   assert.equal(bob.player(bob.id)?.vote, 5);
   assert.equal(bob.state.pot, 8);
   assert.ok(bob.events.some((e) => e.t === "revealed"));
 
-  deb.actions.dealer.settle(5);
+  await deb.actions.dealer.settle(5);
   await ann.untilState((s) => s.phase === "settled" && s.finalPoints === 5, "settled at 5");
   assert.deepEqual(ann.state.winners, [bob.id]);
   assert.equal(ann.player(bob.id)?.chips, 8);
   assert.equal(ann.state.houseWon, false);
 
-  deb.actions.dealer.settle(2);
+  await deb.actions.dealer.settle(2);
   await ann.untilState((s) => s.finalPoints === 2, "re-settled at 2");
   assert.deepEqual(ann.state.winners, [ann.id]);
   assert.equal(ann.player(ann.id)?.chips, 8);
@@ -332,8 +333,8 @@ test("a whole session over real sockets, including a restart", async (t) => {
   ann.actions.vote(1);
   bob.actions.vote(1);
   await deb.untilState((s) => s.players.filter((p) => p.hasVoted).length === 2, "round 2 votes");
-  deb.actions.dealer.reveal();
-  deb.actions.dealer.settle(8);
+  await deb.actions.dealer.reveal();
+  await deb.actions.dealer.settle(8);
   await bob.untilState((s) => s.phase === "settled", "house round settled");
   assert.equal(bob.state.houseWon, true);
   assert.deepEqual(bob.state.winners, [deb.id]);

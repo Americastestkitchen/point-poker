@@ -11,21 +11,23 @@ import type { Store } from "./store.ts";
 
 /**
  * The bits of a WebSocket the session uses. The browser's WebSocket and
- * Node's global one both fit (handler params are loose so either's event types do).
+ * Node's global one both fit: their handlers take these DOM event types.
  */
 export interface SocketLike {
   readonly readyState: number;
   send(data: string): void;
   close(code?: number, reason?: string): void;
-  onopen: ((e: any) => void) | null;
-  onmessage: ((e: any) => void) | null;
-  onclose: ((e: any) => void) | null;
+  onopen: ((e: Event) => void) | null;
+  onmessage: ((e: MessageEvent) => void) | null;
+  onclose: ((e: CloseEvent) => void) | null;
 }
 
 export interface SessionDeps {
   connect(url: string): SocketLike;
   storage: Storage;
   store: Store;
+  /** Where the session notes what it ignores, like a message it doesn't understand. */
+  log: { warn(...args: unknown[]): void };
   /** The WebSocket endpoint, like wss://host/ws. */
   url: string;
   /** Wait before reconnect attempt n (from 0). */
@@ -58,7 +60,10 @@ export function createSession(deps: SessionDeps): Session {
     return c.status === "idle" ? "" : c.room;
   };
   const live = () => ws?.readyState === OPEN && connection().status === "open";
-  const send = (msg: ClientMsg) => ws!.send(JSON.stringify(msg));
+  const send = (msg: ClientMsg) => {
+    if (!ws) throw new Error("session: sending with no socket");
+    ws.send(JSON.stringify(msg));
+  };
 
   /** Moves the connection on, then does what that step says. */
   function step(e: ConnectionEvent) {
@@ -144,7 +149,7 @@ export function createSession(deps: SessionDeps): Session {
         return;
       }
       if (parsed.success) receive(parsed.data);
-      else console.warn("ignoring a message we don't understand", parsed.error);
+      else deps.log.warn("ignoring a message we don't understand", parsed.error);
     };
     sock.onclose = (e: { code: number; reason: string }) => {
       if (ws !== sock) return;

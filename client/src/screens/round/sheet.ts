@@ -44,13 +44,15 @@ export function crumbs(ticket: Ticket, epic: Epic | null): Crumb[] {
   return out;
 }
 
-/** "Ada Lovelace" → "AL"; at most two letters. */
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+/** "Ada Lovelace" → "AL"; at most two letters (an emoji or accented letter counts as one). */
 export function initials(name: string): string {
   return name
     .split(/\s+/)
-    .flatMap((w) => [...w].slice(0, 1))
-    .join("")
+    .flatMap((w) => Array.from(graphemes.segment(w), (g) => g.segment).slice(0, 1))
     .slice(0, 2)
+    .join("")
     .toUpperCase();
 }
 

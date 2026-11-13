@@ -5,4 +5,6 @@ import { mountUi } from "../root.tsx";
 import { Gallery } from "./Gallery.tsx";
 
 const audio = createAudio(createStorage(localStorage));
-mountUi(document.getElementById("ui")!, <Gallery audio={audio} />, { sounds: audio });
+const container = document.getElementById("ui");
+if (!container) throw new Error("gallery.html has no #ui");
+mountUi(container, <Gallery audio={audio} />, { sounds: audio });

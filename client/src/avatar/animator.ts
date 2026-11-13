@@ -74,7 +74,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
     { x: REST_ARM_X, z: -0.25, stretch: 1 },
     { x: REST_ARM_X, z: 0.25, stretch: 1 },
   ];
-  const pupils = [0, 1].map(() => ({ off: { x: 0, y: 0 }, vel: { x: 0, y: 0 } }));
+  const pupil = () => ({ off: { x: 0, y: 0 }, vel: { x: 0, y: 0 } });
+  const pupils: [ReturnType<typeof pupil>, ReturnType<typeof pupil>] = [pupil(), pupil()];
 
   return {
     handPose: { kind: "none" },
@@ -219,7 +220,7 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       // pupils spring toward where we're looking, with wobble
       const tx = Math.min(0.6, Math.max(-0.6, Math.sin(yaw) * 0.5));
       const ty = Math.min(0.6, Math.max(-0.6, pitch * 0.8));
-      const looking = pupils.map((p) => {
+      const spring = (p: ReturnType<typeof pupil>) => {
         p.vel.x += ((tx - p.off.x) * 120 - p.vel.x * 7) * dt;
         p.vel.y += ((ty - p.off.y) * 120 - p.vel.y * 7 - 6) * dt;
         p.off.x += p.vel.x * dt;
@@ -231,7 +232,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         }
         const z = Math.sqrt(Math.max(0, 1 - (p.off.x ** 2 + p.off.y ** 2)));
         return { x: p.off.x, y: p.off.y, z };
-      }) as Pose["face"]["pupils"];
+      };
+      const looking: Pose["face"]["pupils"] = [spring(pupils[0]), spring(pupils[1])];
 
       return {
         body: { sx, sy, y, rotX: -pitch * 0.25 + lean, rotY: yaw * 0.6, rotZ },

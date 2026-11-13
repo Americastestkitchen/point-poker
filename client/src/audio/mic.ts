@@ -134,7 +134,7 @@ async function browserMic(): Promise<MicInput> {
   // browsers start audio suspended until a click; resume on the next one
   if (ctx.state === "suspended") {
     const wake = () => {
-      ctx.resume();
+      ctx.resume().catch(() => {});
       window.removeEventListener("pointerdown", wake);
     };
     window.addEventListener("pointerdown", wake);

@@ -4,7 +4,11 @@ export const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /** The code after typing or pasting `text` onto `value`. */
 export function typeInto(value: string, text: string, length: number, alphabet = LETTERS): string {
-  const kept = [...text.toUpperCase()].filter((c) => alphabet.includes(c)).join("");
+  const kept = text
+    .toUpperCase()
+    .split("")
+    .filter((c) => alphabet.includes(c))
+    .join("");
   return (value + kept).slice(0, length);
 }
 

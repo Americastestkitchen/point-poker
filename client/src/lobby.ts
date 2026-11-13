@@ -11,7 +11,14 @@ import type { Store } from "./app/store.ts";
 import type { Audio } from "./audio/sfx.ts";
 import { createTurntable } from "./scene/turntable.ts";
 
-const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+/** The page's element with this id, checked to be the kind index.html promises. */
+function $(id: string): HTMLElement;
+function $<T extends HTMLElement>(id: string, kind: new () => T): T;
+function $(id: string, kind: new () => HTMLElement = HTMLElement): HTMLElement {
+  const el = document.getElementById(id);
+  if (!(el instanceof kind)) throw new Error(`The page has no ${kind.name} #${id}`);
+  return el;
+}
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 /** The hat row: going bare, then everything that sits on your head. */
@@ -63,7 +70,7 @@ export function mountLobby(deps: {
     $("new-table").onclick = openTable;
     $("join-code").onsubmit = (e) => {
       e.preventDefault();
-      const code = $<HTMLInputElement>("code-input").value.trim().toUpperCase();
+      const code = $("code-input", HTMLInputElement).value.trim().toUpperCase();
       if (code) location.search = `?room=${code}`;
     };
   }
@@ -126,8 +133,8 @@ export function mountLobby(deps: {
     $("creator-view").hidden = false;
     $("dealer-badge").hidden = !dealerKey;
     $("sit").textContent = playing ? "Done" : dealerKey ? "Open the table →" : "Join the table →";
-    ($("look-more") as HTMLDetailsElement).open = playing;
-    const nameIn = $<HTMLInputElement>("name-input");
+    $("look-more", HTMLDetailsElement).open = playing;
+    const nameIn = $("name-input", HTMLInputElement);
     nameIn.value = me.name;
     nameIn.oninput = () => edit({ t: "name", name: nameIn.value });
 
@@ -152,7 +159,7 @@ export function mountLobby(deps: {
       (b, h) => (b.innerHTML = icon(h)),
       (h) => edit({ t: "wear", slot: "head", id: h.id }),
     );
-    preview ??= createTurntable($<HTMLCanvasElement>("preview"), me.look, {
+    preview ??= createTurntable($("preview", HTMLCanvasElement), me.look, {
       dealer: !!dealerKey,
       visible: () => !$("lobby").hidden,
     });

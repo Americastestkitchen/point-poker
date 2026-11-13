@@ -24,6 +24,7 @@
     "typescript/no-for-in-array": "error",
     "typescript/no-implied-eval": "error",
     "eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+    "promise/always-return": ["error", { "ignoreLastCallback": true }], // a chain's last then() has nobody to return to
 
     // escape hatches
     "typescript/no-explicit-any": "error",

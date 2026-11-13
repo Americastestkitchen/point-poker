@@ -14,7 +14,12 @@ import { createGameUi } from "./screens/index.tsx";
 import { createToasts, mountUi } from "./ui/index.ts";
 import "./style.css";
 
-const $ = (id: string) => document.getElementById(id)!;
+/** The page's element with this id, checked to be the kind index.html promises. */
+function $<T extends HTMLElement>(id: string, kind: new () => T): T {
+  const el = document.getElementById(id);
+  if (!(el instanceof kind)) throw new Error(`The page has no ${kind.name} #${id}`);
+  return el;
+}
 
 const roomCode = (new URLSearchParams(location.search).get("room") ?? "").toUpperCase();
 const storage = createStorage(localStorage);
@@ -25,6 +30,7 @@ const session = createSession({
   connect: (url) => new WebSocket(url),
   storage,
   store,
+  log: console,
   url: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`,
 });
 const actions = createActions(session, store);
@@ -32,7 +38,7 @@ const lobby = mountLobby({ store, storage, audio, actions, roomCode, onSit: star
 
 async function startGame() {
   store.seated();
-  const stage = createStage($("scene") as HTMLCanvasElement, { audio });
+  const stage = createStage($("scene", HTMLCanvasElement), { audio });
   const game = createGameUi({
     store,
     actions,
@@ -47,7 +53,7 @@ async function startGame() {
       return `${location.origin}${location.pathname}?room=${c.status === "idle" ? "" : c.room}`;
     },
   });
-  const unmountUi = mountUi($("ui"), game.ui, { sounds: audio, toasts });
+  const unmountUi = mountUi($("ui", HTMLElement), game.ui, { sounds: audio, toasts });
   // the UI lives as long as the page: let go of the mic when it's really gone (not bfcached)
   addEventListener("pagehide", (e) => {
     if (e.persisted) return;
