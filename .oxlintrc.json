@@ -1,0 +1,98 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import", "promise"],
+  "categories": { "correctness": "error", "suspicious": "error" },
+  "options": { "typeAware": true, "denyWarnings": true, "reportUnusedDisableDirectives": "error" },
+  "rules": {
+    // bugs the compiler doesn't catch
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "allowForKnownSafeCalls": [
+          { "from": "package", "name": ["test", "it", "describe", "suite"], "package": "node:test" }
+        ]
+      }
+    ],
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+    "typescript/only-throw-error": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/restrict-template-expressions": "error",
+    "typescript/require-array-sort-compare": "error",
+    "typescript/no-misused-spread": "error",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-implied-eval": "error",
+    "eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+
+    // escape hatches
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "typescript/ban-ts-comment": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+
+    // React
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/no-array-index-key": "error",
+    "react/react-in-jsx-scope": "off", // the automatic JSX runtime
+
+    // modules
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+    "eslint/no-console": "error", // logging goes through the injected log
+
+    // off, each for a reason
+    "typescript/unbound-method": "off", // commands destructure their ctx: run({ s, changed }, …)
+    "typescript/consistent-return": "off", // effects return a cleanup only on some paths
+    "typescript/no-deprecated": "off", // THREE.Clock -> Timer is its own change
+    "eslint/no-redeclare": "off", // a Zod schema and its type share a name on purpose
+    "eslint/no-shadow": "off",
+    "import/no-unassigned-import": "off", // import "./style.css"
+    "unicorn/no-useless-spread": "off", // [...listeners] copies on purpose, so a listener can unsubscribe mid-emit
+    "unicorn/prefer-add-event-listener": "off", // the session's SocketLike uses onopen/onmessage/onclose
+    "unicorn/consistent-function-scoping": "off",
+    "jsx-a11y/prefer-tag-over-role": "off", // the kit builds game controls with roles
+    "jsx-a11y/no-autofocus": "off" // menus and dialogs focus their first control on purpose
+  },
+  "overrides": [
+    {
+      // tests poke at JSON and internals
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.test-d.ts", "**/fixtures.ts", "test/**"],
+      "rules": {
+        "typescript/no-non-null-assertion": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unnecessary-condition": "off",
+        "eslint/no-console": "off"
+      }
+    },
+    {
+      // plain JavaScript outside tsconfig.json: its values have no types to check
+      "files": ["scripts/**"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    },
+    // entry points own the console
+    { "files": ["scripts/**", "server/main.ts"], "rules": { "eslint/no-console": "off" } }
+  ],
+  "ignorePatterns": ["dist"]
+}
