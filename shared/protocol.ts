@@ -152,9 +152,38 @@ export type ClientMsg = z.infer<typeof ClientMsg>;
 
 // ---------- HTTP ----------
 
+/** A Jira Cloud site the signed-in dealer can load tickets from. */
+export const JiraSite = z.object({ id: z.string(), name: z.string(), url: z.string() });
+export type JiraSite = z.infer<typeof JiraSite>;
+
+/** POST /api/rooms's body: which of your Jira sites the table uses, once you've picked one. */
+export const OpenRequest = z.object({ site: z.string().optional() });
+export type OpenRequest = z.infer<typeof OpenRequest>;
+
 /** POST /api/rooms: a new table, and the key that makes you its dealer. */
 export const OpenedTable = z.object({ code: z.string(), dealerKey: z.string() });
 export type OpenedTable = z.infer<typeof OpenedTable>;
+
+/**
+ * POST /api/rooms refused: `signIn` (401) when the dealer has to sign in with Jira first,
+ * `sites` (409) when they have more than one Jira site and have to pick.
+ */
+export const OpenRefusal = z.object({
+  error: z.string(),
+  signIn: z.boolean().optional(),
+  sites: z.array(JiraSite).optional(),
+});
+export type OpenRefusal = z.infer<typeof OpenRefusal>;
+
+/**
+ * GET /api/host: how opening a table works on this server. `jira` is "signIn" when dealers sign
+ * in with their own Jira account (then `user` is who's signed in, or null), "off" otherwise.
+ */
+export const HostInfo = z.object({
+  jira: z.enum(["signIn", "off"]),
+  user: z.object({ name: z.string() }).nullable(),
+});
+export type HostInfo = z.infer<typeof HostInfo>;
 
 /** GET /api/rooms/:code (a 404 when `exists` is false). */
 export const TableInfo = z.object({ exists: z.boolean(), jiraEnabled: z.boolean(), needsPasscode: z.boolean() });

@@ -1,6 +1,6 @@
 // The app, assembled from the adapters it's given. No globals, no env.
 import { createServer } from "node:http";
-import type { DealerAuth } from "./auth/passcode.ts";
+import type { DealerAuth } from "./auth/dealer.ts";
 import { Rooms } from "./rooms.ts";
 import type { RoomStore } from "./store/store.ts";
 import type { TableDeps } from "./table/table.ts";

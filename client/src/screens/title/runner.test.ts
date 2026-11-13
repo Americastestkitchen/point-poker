@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { OpenResult, TableCheck } from "../../app/tables.ts";
+import type { SignedIn } from "./flow.ts";
 import { createTitleFlow, type Title } from "./runner.ts";
 
 /** A promise you settle by hand, to answer the server's calls in any order. */
@@ -11,24 +12,29 @@ function later<T>() {
 }
 const settle = () => new Promise((r) => setImmediate(r));
 
-function setup({ invite = "", saved = true, savedPasscode = "" } = {}) {
+function setup({ invite = "", saved = true, savedPasscode = "", signedIn = null as SignedIn } = {}) {
   const checks: { code: string; answer: (r: TableCheck) => void }[] = [];
-  const opens: { passcode: string; answer: (r: OpenResult) => void }[] = [];
+  const opens: { passcode: string; site?: string; answer: (r: OpenResult) => void }[] = [];
+  let signIns = 0;
   const sat: string[] = [];
   const errors: string[] = [];
   let forgotten = 0;
   const title: Title = {
     inviteCode: invite,
+    signedIn,
+    signIn: () => void signIns++,
     tables: {
+      host: async () => null,
+      signOut: async () => true,
       savedPasscode: () => savedPasscode,
       check(code) {
         const l = later<TableCheck>();
         checks.push({ code, answer: l.resolve });
         return l.promise;
       },
-      open(passcode) {
+      open(passcode, site) {
         const l = later<OpenResult>();
-        opens.push({ passcode, answer: l.resolve });
+        opens.push({ passcode, site, answer: l.resolve });
         return l.promise;
       },
     },
@@ -36,7 +42,7 @@ function setup({ invite = "", saved = true, savedPasscode = "" } = {}) {
     forgetInvite: () => void forgotten++,
   };
   const flow = createTitleFlow({ title, saved, error: (text) => void errors.push(text) });
-  return { flow, checks, opens, sat, errors, forgotten: () => forgotten };
+  return { flow, checks, opens, sat, errors, forgotten: () => forgotten, signIns: () => signIns };
 }
 
 const open = { t: "open" } as const;
@@ -147,4 +153,27 @@ test("a gone invite drops ?room= once; listeners hear each change", async () => 
   flow.dispatch({ t: "back" });
   assert.equal(heard, 1, "unsubscribed");
   assert.equal(forgotten(), 1);
+});
+
+test("opening asks you to sign in with Jira, then to pick a site, and sends the one you picked", async () => {
+  const { flow, opens, sat, signIns } = setup();
+  flow.attach();
+  flow.dispatch({ t: "pick", item: "open" });
+  opens[0]?.answer({ t: "signIn" });
+  await settle();
+  flow.dispatch({ t: "signIn" });
+  assert.equal(signIns(), 1);
+
+  // ...and back from Atlassian, the page starts over and opens the table straight away
+  const back = setup({ signedIn: "ok" });
+  back.flow.attach();
+  assert.equal(back.opens.length, 1);
+  back.opens[0]?.answer({ t: "pickSite", sites: [{ id: "c-1", name: "Acme", url: "https://acme.atlassian.net" }] });
+  await settle();
+  back.flow.dispatch({ t: "siteChosen", site: "c-1" });
+  assert.equal(back.opens[1]?.site, "c-1");
+  back.opens[1]?.answer({ t: "opened", code: "ABCD" });
+  await settle();
+  assert.deepEqual(back.sat, ["ABCD"]);
+  assert.deepEqual(sat, []);
 });

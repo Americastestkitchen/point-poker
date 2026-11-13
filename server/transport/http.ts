@@ -2,8 +2,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
-import type { OpenedTable, TableInfo } from "../../shared/protocol.ts";
-import type { DealerAuth } from "../auth/passcode.ts";
+import { OpenRequest, type OpenedTable, type TableInfo } from "../../shared/protocol.ts";
+import type { DealerAuth } from "../auth/dealer.ts";
 import type { Rooms } from "../rooms.ts";
 
 const MIME: Record<string, string> = {
@@ -21,13 +21,31 @@ const json = (res: ServerResponse, status: number, body: unknown) => {
   res.end(JSON.stringify(body));
 };
 
+/** A small JSON body (POST /api/rooms), or undefined when there's none or it isn't JSON. */
+async function readJson(req: IncomingMessage, limit = 4096): Promise<unknown> {
+  let text = "";
+  for await (const chunk of req) {
+    text += String(chunk);
+    if (text.length > limit) return undefined;
+  }
+  try {
+    return text ? JSON.parse(text) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: string }) {
   const { rooms, auth, distDir } = deps;
   return async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://x");
+    if (await auth.route(req, res, url)) return;
+    if (url.pathname === "/api/host" && req.method === "GET") return json(res, 200, auth.host(req));
     if (url.pathname === "/api/rooms" && req.method === "POST") {
-      if (!auth.canOpenTable(req)) return json(res, 401, { error: "Wrong host passcode" });
-      const table = rooms.create();
+      const body = OpenRequest.catch({}).parse(await readJson(req));
+      const check = auth.open(req, body);
+      if (!check.ok) return json(res, check.status, check.refusal);
+      const table = rooms.create(check.jira);
       return json(res, 200, { code: table.code, dealerKey: table.snapshot().dealerKey } satisfies OpenedTable);
     }
     if (url.pathname.startsWith("/api/rooms/") && req.method === "GET") {

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { DECKS } from "../../shared/catalog/decks.ts";
 import { Look } from "../../shared/look.ts";
-import { Epic, Phase, RoundResult, TableSettings, Ticket, TicketSummary } from "../../shared/protocol.ts";
+import { Epic, JiraSite, Phase, RoundResult, TableSettings, Ticket, TicketSummary } from "../../shared/protocol.ts";
 
 export const PlayerState = z.object({
   id: z.string(),
@@ -20,11 +20,17 @@ export const PlayerState = z.object({
 });
 export type PlayerState = z.infer<typeof PlayerState>;
 
+/** Whose Jira login a table loads tickets with: the dealer who opened it, on the site they picked. */
+export const TableJira = z.object({ account: z.string(), site: JiraSite });
+export type TableJira = z.infer<typeof TableJira>;
+
 export const TableState = z.object({
   code: z.string(),
   /** Secret that makes whoever presents it the dealer. */
   dealerKey: z.string(),
   dealerId: z.string().nullable(),
+  /** The dealer's Jira login (null: the server's shared one, or none). Tables saved before it had none. */
+  jira: TableJira.nullable().default(null),
   players: z.array(PlayerState),
   phase: Phase,
   round: z.number(),
@@ -51,11 +57,12 @@ export type TableState = z.infer<typeof TableState>;
 type Json = string | number | boolean | null | undefined | readonly Json[] | { readonly [key: string]: Json };
 export const jsonSafe = (s: TableState): Json => s;
 
-export function newTableState(code: string, dealerKey: string, now: number): TableState {
+export function newTableState(code: string, dealerKey: string, now: number, jira: TableJira | null = null): TableState {
   return {
     code,
     dealerKey,
     dealerId: null,
+    jira,
     players: [],
     phase: "waiting",
     round: 0,

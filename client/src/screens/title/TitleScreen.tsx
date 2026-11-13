@@ -1,5 +1,5 @@
 // The title screens, over the drifting 3D room: the main menu with your bean, joining by code,
-// opening a table, character select, an invite link's "Join table ABCD", and an invite to a
+// opening a table (signing in with Jira first), character select, an invite link's "Join table ABCD", and an invite to a
 // table that's gone. flow.ts decides where each choice leads; this draws the view and runs the
 // effects it asks for (asking the server, sitting down) through the `title` it's given.
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -10,7 +10,7 @@ import { Button, CodeSlots, Dialog, MenuList, Panel, Spinner, TextField, useBack
 import { CharacterEditor } from "../character/CharacterEditor.tsx";
 import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
-import type { TitleEvent, TitleView } from "./flow.ts";
+import type { OpenAsk, TitleEvent, TitleView } from "./flow.ts";
 import { createTitleFlow, type Title } from "./runner.ts";
 import logo from "../../../../assets/logo.svg";
 import s from "./TitleScreen.module.css";
@@ -68,6 +68,7 @@ export function TitleScreen({ title }: { title: Title }) {
   return (
     <div className={s.root} data-screen="title">
       <Body
+        title={title}
         view={view}
         profile={profile}
         saved={saved}
@@ -79,18 +80,17 @@ export function TitleScreen({ title }: { title: Title }) {
           dispatch({ t: "done" });
         }}
       />
-      <PasscodeDialog
-        open={view.t === "opening" && view.passcode !== null}
-        wrong={view.t === "opening" && !!view.passcode?.wrong}
+      <OpenDialogs
+        ask={view.t === "opening" ? view.ask : null}
         sending={view.t === "opening" && view.sending}
-        onSubmit={(passcode) => dispatch({ t: "passcodeEntered", passcode })}
-        onClose={() => dispatch({ t: "back" })}
+        dispatch={dispatch}
       />
     </div>
   );
 }
 
 function Body(props: {
+  title: Title;
   view: TitleView;
   profile: Profile;
   saved: boolean;
@@ -98,7 +98,7 @@ function Body(props: {
   onPick(id: MenuId): void;
   onSaved(profile: Profile): void;
 }) {
-  const { view, profile, saved, dispatch } = props;
+  const { title, view, profile, saved, dispatch } = props;
   switch (view.t) {
     case "checking":
     case "sitting":
@@ -135,6 +135,7 @@ function Body(props: {
     case "opening":
       return (
         <Menu
+          title={title}
           profile={profile}
           saved={saved}
           joining={view.t === "join" ? view : null}
@@ -153,6 +154,7 @@ const doneLabel = (next: Extract<TitleView, { t: "character" }>["next"]) =>
   next.t === "open" ? "Open the table" : next.t === "sit" ? `Join table ${next.code}` : "Done";
 
 function Menu(props: {
+  title: Title;
   profile: Profile;
   saved: boolean;
   joining: Extract<TitleView, { t: "join" }> | null;
@@ -173,6 +175,7 @@ function Menu(props: {
       <div className={s.menuColumn}>
         <img className={s.logo} src={logo} alt="Point Poker" />
         <MenuList label="Main menu" autoFocus={!joining} items={items} onSelect={onPick} />
+        <JiraAccount title={props.title} />
       </div>
       {joining ? (
         <JoinPanel checking={joining.checking} error={joining.error} onCode={props.onCode} onBack={props.onBack} />
@@ -274,6 +277,95 @@ function Gone({ code, onBack }: { code: string; onBack(): void }) {
         </Button>
       </Panel>
     </div>
+  );
+}
+
+/** Who's signed in to Jira on this browser, with Sign out; nothing when nobody is (or there's no sign-in). */
+function JiraAccount({ title }: { title: Title }) {
+  const { store } = useGame();
+  // asked once per visit to the menu; signing out changes it here
+  const [user, setUser] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void title.tables.host().then((info) => {
+      if (live) setUser(info?.user?.name ?? null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [title]);
+  if (!user) return null;
+  const signOut = () =>
+    void title.tables.signOut().then((ok) => {
+      if (ok) setUser(null);
+      else store.events.emit({ t: "toast", text: "Couldn't sign out of Jira. Try again.", level: "error" });
+    });
+  return (
+    <p className={s.account}>
+      Signed in to Jira as <strong>{user}</strong>
+      <Button variant="link" onPress={signOut}>
+        Sign out
+      </Button>
+    </p>
+  );
+}
+
+/** What opening a table asks of you first: the host passcode, a Jira sign-in, or a Jira site. */
+function OpenDialogs({
+  ask,
+  sending,
+  dispatch,
+}: {
+  ask: OpenAsk | null;
+  sending: boolean;
+  dispatch(e: TitleEvent): void;
+}) {
+  const close = () => dispatch({ t: "back" });
+  return (
+    <>
+      <PasscodeDialog
+        open={ask?.t === "passcode"}
+        wrong={ask?.t === "passcode" && ask.wrong}
+        sending={sending}
+        onSubmit={(passcode) => dispatch({ t: "passcodeEntered", passcode })}
+        onClose={close}
+      />
+      <Dialog
+        open={ask?.t === "signIn"}
+        onClose={close}
+        title="Sign in with Jira"
+        width="sm"
+        actions={
+          <>
+            <Button variant="ghost" onPress={close}>
+              Cancel
+            </Button>
+            <Button variant="primary" onPress={() => dispatch({ t: "signIn" })} disabled={sending} autoFocus>
+              {sending ? "Going to Atlassian…" : "Sign in with Jira"}
+            </Button>
+          </>
+        }
+      >
+        <p className={s.muted}>
+          The dealer loads tickets with their own Jira account. You stay signed in on this browser until you sign out.
+          Players never need to sign in.
+        </p>
+      </Dialog>
+      <Dialog open={ask?.t === "site"} onClose={close} title="Which Jira?" width="sm">
+        <p className={s.muted}>Your account can see more than one Jira site. Pick the one this table uses.</p>
+        <MenuList
+          label="Jira sites"
+          autoFocus
+          items={(ask?.t === "site" ? ask.sites : []).map((site) => ({
+            id: site.id,
+            label: site.name || new URL(site.url).host,
+            hint: new URL(site.url).host,
+            disabled: sending,
+          }))}
+          onSelect={(site) => dispatch({ t: "siteChosen", site })}
+        />
+      </Dialog>
+    </>
   );
 }
 

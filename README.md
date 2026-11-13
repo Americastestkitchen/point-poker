@@ -13,12 +13,12 @@ calls the final points. The closest guess wins the pot.
 
 ### Where things live
 
-| Thing                               | Where                                       | You need access?                  |
-| ----------------------------------- | ------------------------------------------- | --------------------------------- |
-| Code                                | this GitHub repo                            | Yes: ask Jair to add you          |
-| Live and dev sites                  | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you        |
-| Tickets                             | Jira (the game only **reads** it)           | Only to show real tickets locally |
-| Secrets (Jira token, host passcode) | Fly, plus `.env.local` on your machine      | Ask Jair if you need them         |
+| Thing                              | Where                                       | You need access?                  |
+| ---------------------------------- | ------------------------------------------- | --------------------------------- |
+| Code                               | this GitHub repo                            | Yes: ask Jair to add you          |
+| Live and dev sites                 | [Fly.io](https://fly.io), a hosting service | No: GitHub deploys for you        |
+| Tickets                            | Jira, as the dealer who signed in           | Only to show real tickets locally |
+| Secrets (Atlassian app, token key) | Fly, plus `.env.local` on your machine      | Ask Jair if you need them         |
 
 ### How a change reaches people
 
@@ -39,7 +39,16 @@ npm start                  # http://localhost:8787
 ```
 
 That's enough to play with hand-typed tickets. To show real Jira tickets, create
-`.env.local` (it's never committed):
+`.env.local` (it's never committed) with the Atlassian app's credentials, so you sign in with
+your own Jira account when you open a table (see [CONTRIBUTING.md](CONTRIBUTING.md#jira-sign-in)):
+
+```
+ATLASSIAN_CLIENT_ID=...
+ATLASSIAN_CLIENT_SECRET=...
+TOKEN_KEY=...              # any long random string; seals sign-ins kept in .data/
+```
+
+Or, without the Atlassian app, one shared API token (no sign-in; a passcode guards opening):
 
 ```
 JIRA_BASE_URL=https://yoursite.atlassian.net
@@ -52,8 +61,8 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 
 ### Good to know
 
-- **Never write to Jira.** The game only reads tickets, and that's on purpose. Points get
-  entered in Jira by a person.
+- **Jira writes are deliberate.** The game reads Jira as the dealer who signed in, and the only
+  thing it writes is the points the table settles on (#17). Anything else needs a decision first.
 - **Releasing is safe mid-game.** The live site saves its tables, so a release just causes a
   few seconds of "reconnecting…". The dev site and previews don't save tables.
 - **Secrets never go in the repo.** If you see a token in a diff, stop and tell someone.
@@ -73,7 +82,7 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
     It's plain logic with unit tests, no sockets. Every command a player can send is one
     `defineCommand()` in `commands.ts`; the client imports their types from there.
   - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
-    (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
+    (the dealer's Jira sign-in, or the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
   - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
     store, view diffing and the event stream (`events.ts`), `actions`, the session
     (socket + reconnect) and storage.
@@ -99,7 +108,7 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 
 ## How to play
 
-- **Dealer:** open a table (needs the host passcode) and share the invite link. Then add a
+- **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Then add a
   ticket (or an epic, to queue its children), reveal the cards, and pick the final points.
 - **Players:** open the invite link, pick a body, colour and hat, and click a card.
   Drag to look around, use Z X C V to emote, click someone to throw a chip, and click the duck.

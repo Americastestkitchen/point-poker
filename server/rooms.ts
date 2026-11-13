@@ -1,7 +1,7 @@
 // The open tables, by code.
 import { randomBytes, randomUUID } from "node:crypto";
 import { TABLE_CODE } from "../shared/rules.ts";
-import { newTableState, type TableState } from "./table/state.ts";
+import { newTableState, type TableJira, type TableState } from "./table/state.ts";
 import { Table, type TableDeps } from "./table/table.ts";
 
 export class Rooms {
@@ -20,12 +20,13 @@ export class Rooms {
     return this.tables.get(code.toUpperCase());
   }
 
-  create(): Table {
+  /** Opens a table; `jira` is the dealer's Jira login it loads tickets with, if any. */
+  create(jira: TableJira | null = null): Table {
     const { letters, length } = TABLE_CODE;
     let code;
     do code = Array.from(randomBytes(length), (b) => letters[b % letters.length]).join("");
     while (this.tables.has(code));
-    const table = new Table(newTableState(code, randomUUID(), this.deps.now()), this.deps);
+    const table = new Table(newTableState(code, randomUUID(), this.deps.now(), jira), this.deps);
     this.tables.set(code, table);
     return table;
   }

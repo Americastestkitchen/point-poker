@@ -54,6 +54,9 @@ export function createStorage(s: StorageLike) {
 
     hostPass: () => s.getItem("pp-host-pass") ?? "",
     setHostPass: (pass: string) => s.setItem("pp-host-pass", pass),
+    /** The Jira site you last opened a table on ("" if none). */
+    jiraSite: () => s.getItem("pp-jira-site") ?? "",
+    setJiraSite: (id: string) => s.setItem("pp-jira-site", id),
 
     muted: () => s.getItem("pp-muted") === "1",
     setMuted: (m: boolean) => s.setItem("pp-muted", m ? "1" : "0"),
