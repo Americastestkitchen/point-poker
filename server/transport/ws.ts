@@ -22,7 +22,8 @@ function rateLimiter(now: () => number) {
   const buckets = new Map<string, { tokens: number; at: number }>();
   return (playerId: string, kind: ClientFx["kind"]) => {
     const { burst, perSecond } = FX_LIMITS[kind];
-    const key = `${playerId}:${kind}`, t = now();
+    const key = `${playerId}:${kind}`,
+      t = now();
     const b = buckets.get(key) ?? { tokens: burst, at: t };
     b.tokens = Math.min(burst, b.tokens + ((t - b.at) / 1000) * perSecond);
     b.at = t;
@@ -51,7 +52,11 @@ class Hub {
     let me: string | null = null;
     ws.on("message", (raw) => {
       let data: unknown;
-      try { data = JSON.parse(String(raw)); } catch { return; }
+      try {
+        data = JSON.parse(String(raw));
+      } catch {
+        return;
+      }
       const parsed = ClientMsg.safeParse(data);
       if (!parsed.success) return;
       const msg = parsed.data;
@@ -100,10 +105,15 @@ class Hub {
     switch (e.t) {
       case "changed":
         // several changes in one tick go out as one update
-        if (!this.pushQueued) { this.pushQueued = true; queueMicrotask(() => this.push()); }
+        if (!this.pushQueued) {
+          this.pushQueued = true;
+          queueMicrotask(() => this.push());
+        }
         return;
-      case "notice": return this.broadcast({ t: "toast", text: e.text, level: e.level }, e.except);
-      case "fx": return this.broadcast({ t: "fx", from: e.from, fx: e.fx }, e.except);
+      case "notice":
+        return this.broadcast({ t: "toast", text: e.text, level: e.level }, e.except);
+      case "fx":
+        return this.broadcast({ t: "fx", from: e.from, fx: e.fx }, e.except);
       case "removed": {
         const ws = this.sockets.get(e.playerId);
         this.sockets.delete(e.playerId);

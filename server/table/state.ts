@@ -53,9 +53,25 @@ export const jsonSafe = (s: TableState): Json => s;
 
 export function newTableState(code: string, dealerKey: string, now: number): TableState {
   return {
-    code, dealerKey, dealerId: null, players: [], phase: "waiting", round: 0, ticket: null,
-    pot: 0, finalPoints: null, winners: [], share: 0, houseWon: false, history: [], skipped: [], banned: [],
+    code,
+    dealerKey,
+    dealerId: null,
+    players: [],
+    phase: "waiting",
+    round: 0,
+    ticket: null,
+    pot: 0,
+    finalPoints: null,
+    winners: [],
+    share: 0,
+    houseWon: false,
+    history: [],
+    skipped: [],
+    banned: [],
     settings: { deck: DECKS.classic.cards, dealerPlays: false, environment: "basement" },
-    epic: null, queue: [], queueLabel: "", lastActive: now,
+    epic: null,
+    queue: [],
+    queueLabel: "",
+    lastActive: now,
   };
 }

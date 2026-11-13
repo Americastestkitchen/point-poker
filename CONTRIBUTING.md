@@ -4,11 +4,11 @@
 
 There's one branch, `main`.
 
-| When | What happens | Where |
-|---|---|---|
-| you push to `main` | checks run, then the dev site updates | **https://point-poker-dev.fly.dev** |
-| you run `npm run release` | checks run, then the live site updates and a GitHub Release is published | **https://point-poker.fly.dev** |
-| you open a pull request (optional) | checks run, then a preview site is created | `https://point-poker-pr-<number>.fly.dev` |
+| When                               | What happens                                                             | Where                                     |
+| ---------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------- |
+| you push to `main`                 | checks run, then the dev site updates                                    | **https://point-poker-dev.fly.dev**       |
+| you run `npm run release`          | checks run, then the live site updates and a GitHub Release is published | **https://point-poker.fly.dev**           |
+| you open a pull request (optional) | checks run, then a preview site is created                               | `https://point-poker-pr-<number>.fly.dev` |
 
 Production saves its tables to a small disk, so a release only causes a few seconds of
 "reconnecting…" and everyone lands back where they were. The dev site and previews don't
@@ -19,7 +19,8 @@ save tables: they're wiped whenever those sites redeploy or go to sleep.
 ```sh
 git pull
 # ...make changes...
-npm run check            # typecheck + tests + build (+ bundles the UI kit gallery)
+npm run format           # oxfmt rewrites the files to the one house style
+npm run check            # format check + typecheck + tests + build (+ bundles the UI kit gallery)
 git commit -am "Describe the change"
 git push                 # -> dev site updates in about a minute
 ```
@@ -53,6 +54,7 @@ npm run release -- minor     # new features: 0.2.0 -> 0.3.0
 It runs the checks, bumps the version, tags it (like `v0.3.0`) and pushes. It refuses to run if
 you have uncommitted or unpushed work, so what you release is what you tried on the dev site.
 GitHub Actions then:
+
 1. checks the tag is on `main`,
 2. runs typecheck, tests and build,
 3. deploys production on Fly,

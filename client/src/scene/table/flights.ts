@@ -16,7 +16,9 @@ export interface Flight {
 export function createFlights() {
   const flights: Flight[] = [];
   return {
-    add(f: Flight) { flights.push(f); },
+    add(f: Flight) {
+      flights.push(f);
+    },
     update(dt: number) {
       for (let i = flights.length - 1; i >= 0; i--) {
         const f = flights[i];

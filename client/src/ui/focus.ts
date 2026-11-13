@@ -15,7 +15,8 @@ const HOVER_FOCUS = "data-hover-focus";
 export const hoverFocused = (el: Element | null) => el?.hasAttribute(HOVER_FOCUS) ?? false;
 
 /** Is `el` somewhere you type (a text field)? */
-const typing = (el: Element | null) => !!el?.matches("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
+const typing = (el: Element | null) =>
+  !!el?.matches("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
 
 /** Props that make an element share the one focus and tick when it gets it. */
 export function useFocusable(disabled = false) {
@@ -41,8 +42,12 @@ export function useFocusable(disabled = false) {
       if (document.activeElement === el) el.blur();
     },
     // clicking into a field or typing in it makes it yours: it keeps focus when the mouse leaves
-    onPointerDownCapture: (e: PointerEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
-    onKeyDownCapture: (e: KeyboardEvent<HTMLElement>) => { if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS); },
+    onPointerDownCapture: (e: PointerEvent<HTMLElement>) => {
+      if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS);
+    },
+    onKeyDownCapture: (e: KeyboardEvent<HTMLElement>) => {
+      if (typing(e.currentTarget)) e.currentTarget.removeAttribute(HOVER_FOCUS);
+    },
     onBlur: (e: FocusEvent<HTMLElement>) => e.currentTarget.removeAttribute(HOVER_FOCUS),
     onFocus: (_e: FocusEvent<HTMLElement>) => {
       if (!disabled) sounds.hover();
@@ -60,24 +65,30 @@ interface RovingOptions {
  * Arrow keys move focus between a list's items. Only one item is a Tab stop, so Tab leaves
  * the list instead of walking through it.
  */
-export function useRoving(count: number, { orientation = "vertical", wrap = true, disabled = () => false }: RovingOptions = {}) {
+export function useRoving(
+  count: number,
+  { orientation = "vertical", wrap = true, disabled = () => false }: RovingOptions = {},
+) {
   const items = useRef<(HTMLElement | null)[]>([]);
   const [active, setActive] = useState(-1);
   const tabStop = active >= 0 && active < count && !disabled(active) ? active : first(count, disabled);
 
-  const onKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
-    const dir = direction(intentOf(e), orientation);
-    if (!dir) return;
-    const current = items.current.findIndex((el) => el === document.activeElement);
-    const next = step(current, count, dir, { wrap, disabled });
-    if (next >= 0) {
-      e.preventDefault();
-      const item = items.current[next];
-      item?.focus({ preventScroll: true });
-      // only as far as needed, so a list inside a scroll area follows the arrow keys
-      item?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    }
-  }, [count, orientation, wrap, disabled]);
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      const dir = direction(intentOf(e), orientation);
+      if (!dir) return;
+      const current = items.current.findIndex((el) => el === document.activeElement);
+      const next = step(current, count, dir, { wrap, disabled });
+      if (next >= 0) {
+        e.preventDefault();
+        const item = items.current[next];
+        item?.focus({ preventScroll: true });
+        // only as far as needed, so a list inside a scroll area follows the arrow keys
+        item?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+    },
+    [count, orientation, wrap, disabled],
+  );
 
   return {
     onKeyDown,

@@ -45,7 +45,10 @@ export function nextConnection(
       if (c.status !== "connecting" && c.status !== "open") return [c, null];
       if (isFinal(e.code)) return [{ status: "closed", room: c.room, reason: e.reason }, null];
       const tries = c.status === "open" ? 0 : c.attempt;
-      return [{ status: "connecting", room: c.room, attempt: tries + 1 }, { t: "redial", afterMs: retryDelay(tries) }];
+      return [
+        { status: "connecting", room: c.room, attempt: tries + 1 },
+        { t: "redial", afterMs: retryDelay(tries) },
+      ];
     }
     case "leave":
       if (c.status !== "connecting" && c.status !== "open") return [c, null];

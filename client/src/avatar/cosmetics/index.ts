@@ -15,7 +15,16 @@ import { party } from "./party.ts";
 import { tophat } from "./tophat.ts";
 import { visor } from "./visor.ts";
 
-export const BUILDERS: Record<CosmeticId, () => THREE.Object3D> = { beanie, tophat, cone, party, chef, horns, fez, crown };
+export const BUILDERS: Record<CosmeticId, () => THREE.Object3D> = {
+  beanie,
+  tophat,
+  cone,
+  party,
+  chef,
+  horns,
+  fez,
+  crown,
+};
 
 /** Which anchor each slot hangs off. Items that fill several slots use their first one. */
 export const SLOT_ANCHOR: Record<Slot, AnchorId> = { head: "head" };

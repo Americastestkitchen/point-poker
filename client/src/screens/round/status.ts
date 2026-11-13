@@ -34,7 +34,10 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
       line = dealer ? "Add a ticket to start" : "Waiting for the dealer to add a ticket…";
       break;
     case "voting":
-      line = amVoter && myVote === null ? "Pick a card below" : `${playing.filter((p) => p.hasVoted).length} of ${playing.length} picked`;
+      line =
+        amVoter && myVote === null
+          ? "Pick a card below"
+          : `${playing.filter((p) => p.hasVoted).length} of ${playing.length} picked`;
       break;
     case "revealed":
       line = dealer ? "Choose the final points below" : "The dealer is choosing the final points…";
@@ -48,8 +51,13 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
     steps,
     idle: step === 0,
     line,
-    voters: room.phase === "voting"
-      ? playing.map((p) => ({ player: p, voted: p.hasVoted, label: `${p.name}${p.hasVoted ? " ✓" : " is thinking…"}` }))
-      : null,
+    voters:
+      room.phase === "voting"
+        ? playing.map((p) => ({
+            player: p,
+            voted: p.hasVoted,
+            label: `${p.name}${p.hasVoted ? " ✓" : " is thinking…"}`,
+          }))
+        : null,
   };
 }

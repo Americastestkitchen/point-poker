@@ -28,15 +28,24 @@ export function BonkFlash() {
     timer.current = setTimeout(() => body.classList.remove(SHAKE), SHAKE_MS);
   });
 
-  useEffect(() => () => {
-    clearTimeout(timer.current);
-    document.body.classList.remove(SHAKE);
-  }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      document.body.classList.remove(SHAKE);
+    },
+    [],
+  );
 
   return (
     <div className={s.layer} aria-hidden>
       {hit !== null && (
-        <div key={hit} className={s.flash} onAnimationEnd={(e) => { if (e.target === e.currentTarget) setHit(null); }}>
+        <div
+          key={hit}
+          className={s.flash}
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget) setHit(null);
+          }}
+        >
           <span className={s.word}>BONK!</span>
         </div>
       )}

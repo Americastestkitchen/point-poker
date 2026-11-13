@@ -20,13 +20,33 @@ export interface ConfirmDialogProps {
  * "Are you sure?" in the kit's look, instead of the browser's confirm(). Opened from inside
  * another dialog, it sits on top and takes Esc first. Focus starts on the safe choice.
  */
-export function ConfirmDialog({ open, title, children, confirmLabel, cancelLabel = "Never mind", tone = "primary", onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  cancelLabel = "Never mind",
+  tone = "primary",
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onClose={onCancel} title={title} width="sm"
-      actions={<>
-        <Button data-autofocus onPress={onCancel}>{cancelLabel}</Button>
-        <Button variant={tone} onPress={onConfirm}>{confirmLabel}</Button>
-      </>}>
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      title={title}
+      width="sm"
+      actions={
+        <>
+          <Button data-autofocus onPress={onCancel}>
+            {cancelLabel}
+          </Button>
+          <Button variant={tone} onPress={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </>
+      }
+    >
       {children}
     </Dialog>
   );

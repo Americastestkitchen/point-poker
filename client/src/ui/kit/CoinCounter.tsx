@@ -10,7 +10,15 @@ const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 
  * Your coins. A new value rolls up (or down) to it and the coin bumps. The rolling number is
  * written straight to the DOM each frame: per-frame values never go into React state.
  */
-export function CoinCounter({ value, size = "md", label = "coins" }: { value: number; size?: "md" | "lg"; label?: string }) {
+export function CoinCounter({
+  value,
+  size = "md",
+  label = "coins",
+}: {
+  value: number;
+  size?: "md" | "lg";
+  label?: string;
+}) {
   const root = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
   const shown = useRef(value);
@@ -44,7 +52,9 @@ export function CoinCounter({ value, size = "md", label = "coins" }: { value: nu
   return (
     <span ref={root} className={cx(s.counter, s[size])} role="status" aria-label={`${fmt(value)} ${label}`}>
       <span className={s.coin} aria-hidden />
-      <span ref={text} className={s.amount} aria-hidden>{fmt(shown.current)}</span>
+      <span ref={text} className={s.amount} aria-hidden>
+        {fmt(shown.current)}
+      </span>
     </span>
   );
 }

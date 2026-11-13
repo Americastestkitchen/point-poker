@@ -68,7 +68,14 @@ export function createSeat(stage: Stage, player: PublicPlayer, deps: { layout: L
       avatar.group.rotation.y += dr * Math.min(1, dt * 4);
       avatar.update(dt, t);
       // idle fidget: now and then someone straightens their face-down card
-      if (voting && card.group.visible && !card.isFaceUp && avatar.group.visible && !avatar.busyWithCard && Math.random() < dt / 11) {
+      if (
+        voting &&
+        card.group.visible &&
+        !card.isFaceUp &&
+        avatar.group.visible &&
+        !avatar.busyWithCard &&
+        Math.random() < dt / 11
+      ) {
         avatar.play("adjustCard");
         card.nudge(0.2);
       }

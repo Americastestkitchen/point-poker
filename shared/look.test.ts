@@ -3,7 +3,11 @@ import assert from "node:assert/strict";
 import { DEFAULT_LOOK, randomLook, validateLook, wear, wornIn } from "./look.ts";
 
 test("a look keeps what's valid and drops the rest", () => {
-  assert.deepEqual(validateLook({ color: "#ffd23f", body: "pear", cosmetics: ["crown"] }), { color: "#ffd23f", body: "pear", cosmetics: ["crown"] });
+  assert.deepEqual(validateLook({ color: "#ffd23f", body: "pear", cosmetics: ["crown"] }), {
+    color: "#ffd23f",
+    body: "pear",
+    cosmetics: ["crown"],
+  });
   assert.deepEqual(validateLook({ color: "plaid", body: "blob", cosmetics: ["jetpack"] }), DEFAULT_LOOK);
   assert.deepEqual(validateLook(undefined), DEFAULT_LOOK);
   assert.deepEqual(validateLook({ cosmetics: ["fez", "crown"] }).cosmetics, ["fez"], "one thing per slot");

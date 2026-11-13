@@ -20,34 +20,66 @@ test("paragraphs, headings (under the sheet's title) and text", () => {
     { type: "heading", attrs: { level: 6 }, content: [t("c")] },
     { type: "heading", content: [t("d")] },
   );
-  assert.deepEqual(heads.map((h) => typeof h !== "string" && h.tag), ["h3", "h5", "h6", "h5"]);
+  assert.deepEqual(
+    heads.map((h) => typeof h !== "string" && h.tag),
+    ["h3", "h5", "h6", "h5"],
+  );
 });
 
 test("marks wrap the text, the first one innermost", () => {
-  const [para] = body(p(t("x", [{ type: "strong" }, { type: "em" }, { type: "code" }, { type: "strike" }, { type: "underline" }, { type: "textColor" }])));
+  const [para] = body(
+    p(
+      t("x", [
+        { type: "strong" },
+        { type: "em" },
+        { type: "code" },
+        { type: "strike" },
+        { type: "underline" },
+        { type: "textColor" },
+      ]),
+    ),
+  );
   assert.deepEqual(para, {
     tag: "p",
-    children: [{ tag: "u", children: [{ tag: "s", children: [{ tag: "code", children: [{ tag: "em", children: [{ tag: "strong", children: ["x"] }] }] }] }] }],
+    children: [
+      {
+        tag: "u",
+        children: [
+          {
+            tag: "s",
+            children: [{ tag: "code", children: [{ tag: "em", children: [{ tag: "strong", children: ["x"] }] }] }],
+          },
+        ],
+      },
+    ],
   });
 });
 
 test("links only go to http(s), opening elsewhere", () => {
-  const [para] = body(p(
-    t("ok", [{ type: "link", attrs: { href: "https://example.com/a" } }]),
-    t("bad", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]),
-    t("odd", [{ type: "link", attrs: { href: 7 } }]),
-  ));
-  assert.deepEqual(para, { tag: "p", children: [{ tag: "a", href: "https://example.com/a", children: ["ok"] }, "bad", "odd"] });
+  const [para] = body(
+    p(
+      t("ok", [{ type: "link", attrs: { href: "https://example.com/a" } }]),
+      t("bad", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]),
+      t("odd", [{ type: "link", attrs: { href: 7 } }]),
+    ),
+  );
+  assert.deepEqual(para, {
+    tag: "p",
+    children: [{ tag: "a", href: "https://example.com/a", children: ["ok"] }, "bad", "odd"],
+  });
 });
 
 test("lists, task lists, quotes, code, rules and breaks", () => {
   const out = body(
     { type: "bulletList", content: [{ type: "listItem", content: [p(t("one"))] }] },
     { type: "orderedList", content: [{ type: "listItem", content: [p(t("two"))] }] },
-    { type: "taskList", content: [
-      { type: "taskItem", attrs: { state: "DONE" }, content: [t("done")] },
-      { type: "taskItem", attrs: { state: "TODO" }, content: [t("todo")] },
-    ] },
+    {
+      type: "taskList",
+      content: [
+        { type: "taskItem", attrs: { state: "DONE" }, content: [t("done")] },
+        { type: "taskItem", attrs: { state: "TODO" }, content: [t("todo")] },
+      ],
+    },
     { type: "blockquote", content: [p(t("quote"))] },
     { type: "codeBlock", content: [t("let x = 1")] },
     { type: "rule" },
@@ -56,10 +88,14 @@ test("lists, task lists, quotes, code, rules and breaks", () => {
   assert.deepEqual(out, [
     { tag: "ul", children: [{ tag: "li", children: [{ tag: "p", children: ["one"] }] }] },
     { tag: "ol", children: [{ tag: "li", children: [{ tag: "p", children: ["two"] }] }] },
-    { tag: "ul", role: "tasks", children: [
-      { tag: "li", role: "taskDone", children: ["☑ ", "done"] },
-      { tag: "li", role: "task", children: ["☐ ", "todo"] },
-    ] },
+    {
+      tag: "ul",
+      role: "tasks",
+      children: [
+        { tag: "li", role: "taskDone", children: ["☑ ", "done"] },
+        { tag: "li", role: "task", children: ["☐ ", "todo"] },
+      ],
+    },
     { tag: "blockquote", children: [{ tag: "p", children: ["quote"] }] },
     { tag: "pre", children: [{ tag: "code", children: ["let x = 1"] }] },
     { tag: "hr", children: [] },
@@ -82,7 +118,10 @@ test("panels, mentions, emoji, status lozenges and dates", () => {
       { type: "date", attrs: { timestamp: "soon" } },
     ),
   );
-  assert.deepEqual(out.slice(0, 3).map((o) => typeof o !== "string" && o.role), ["panel-warning", "panel-info", "panel-info"]);
+  assert.deepEqual(
+    out.slice(0, 3).map((o) => typeof o !== "string" && o.role),
+    ["panel-warning", "panel-info", "panel-info"],
+  );
   const para = out[3];
   assert.ok(para && typeof para !== "string");
   const [mention, someone, emoji, custom, status, date, bad] = para.children;
@@ -102,7 +141,10 @@ test("smart links: inline in the text, block and embed as their own line; unsafe
     { type: "blockCard", attrs: { url: long } },
     { type: "embedCard", attrs: { url: "javascript:alert(1)" } },
   );
-  assert.deepEqual(out[0], { tag: "p", children: [{ tag: "a", role: "cardLink", href: "https://example.com/page", children: ["example.com/page"] }] });
+  assert.deepEqual(out[0], {
+    tag: "p",
+    children: [{ tag: "a", role: "cardLink", href: "https://example.com/page", children: ["example.com/page"] }],
+  });
   const block = out[1];
   assert.ok(block && typeof block !== "string" && block.tag === "p");
   const link = block.children[0];
@@ -117,18 +159,33 @@ test("attachments point to Jira; tables get a scroller and a body", () => {
   const out = body(
     { type: "mediaSingle", content: [{ type: "media", attrs: { id: "x" } }] },
     { type: "mediaGroup", content: [{ type: "media" }] },
-    { type: "table", content: [
-      { type: "tableRow", content: [{ type: "tableHeader", content: [p(t("H"))] }] },
-      { type: "tableRow", content: [{ type: "tableCell", content: [p(t("C"))] }] },
-    ] },
+    {
+      type: "table",
+      content: [
+        { type: "tableRow", content: [{ type: "tableHeader", content: [p(t("H"))] }] },
+        { type: "tableRow", content: [{ type: "tableCell", content: [p(t("C"))] }] },
+      ],
+    },
   );
   assert.deepEqual(out[0], { tag: "div", role: "media", children: ["📎 Attachment (open in Jira to view)"] });
   assert.equal(typeof out[1] !== "string" && out[1]?.role, "media");
   assert.deepEqual(out[2], {
-    tag: "div", role: "tableWrap", children: [{ tag: "table", children: [{ tag: "tbody", children: [
-      { tag: "tr", children: [{ tag: "th", children: [{ tag: "p", children: ["H"] }] }] },
-      { tag: "tr", children: [{ tag: "td", children: [{ tag: "p", children: ["C"] }] }] },
-    ] }] }],
+    tag: "div",
+    role: "tableWrap",
+    children: [
+      {
+        tag: "table",
+        children: [
+          {
+            tag: "tbody",
+            children: [
+              { tag: "tr", children: [{ tag: "th", children: [{ tag: "p", children: ["H"] }] }] },
+              { tag: "tr", children: [{ tag: "td", children: [{ tag: "p", children: ["C"] }] }] },
+            ],
+          },
+        ],
+      },
+    ],
   });
 });
 
@@ -143,16 +200,39 @@ test("expands show open with their title; unknown nodes keep their content or va
     null,
   );
   assert.deepEqual(out, [
-    { tag: "div", role: "expand", children: [{ tag: "p", role: "expandTitle", children: ["More"] }, { tag: "p", children: ["inside"] }] },
-    { tag: "div", role: "expand", children: [{ tag: "p", role: "expandTitle", children: ["Details"] }, { tag: "p", children: ["deeper"] }] },
+    {
+      tag: "div",
+      role: "expand",
+      children: [
+        { tag: "p", role: "expandTitle", children: ["More"] },
+        { tag: "p", children: ["inside"] },
+      ],
+    },
+    {
+      tag: "div",
+      role: "expand",
+      children: [
+        { tag: "p", role: "expandTitle", children: ["Details"] },
+        { tag: "p", children: ["deeper"] },
+      ],
+    },
     { tag: "div", children: [{ tag: "p", children: ["kept"] }] },
   ]);
 });
 
 test("no rich text: the plain description in paragraphs, or a shrug", () => {
-  assert.deepEqual(readAdf(null, "First.\n\nSecond\nline."), [{ tag: "p", children: ["First."] }, { tag: "p", children: ["Second\nline."] }]);
-  assert.deepEqual(readAdf(doc(p(), { type: "rule" }), "Plain"), [{ tag: "p", children: ["Plain"] }], "a doc with no words falls back");
-  assert.deepEqual(readAdf("not adf", "  "), [{ tag: "p", role: "empty", children: ["No description. Bold of them."] }]);
+  assert.deepEqual(readAdf(null, "First.\n\nSecond\nline."), [
+    { tag: "p", children: ["First."] },
+    { tag: "p", children: ["Second\nline."] },
+  ]);
+  assert.deepEqual(
+    readAdf(doc(p(), { type: "rule" }), "Plain"),
+    [{ tag: "p", children: ["Plain"] }],
+    "a doc with no words falls back",
+  );
+  assert.deepEqual(readAdf("not adf", "  "), [
+    { tag: "p", role: "empty", children: ["No description. Bold of them."] },
+  ]);
   assert.deepEqual(readAdf([1, 2], ""), [{ tag: "p", role: "empty", children: ["No description. Bold of them."] }]);
 });
 

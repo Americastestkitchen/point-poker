@@ -1,12 +1,37 @@
 .icon {
-  display: inline-grid; place-items: center; flex: none; vertical-align: -3px;
-  border-radius: 4px; color: var(--pp-color-type-glyph);
-  font-family: var(--pp-font-sheet); font-weight: var(--pp-weight-display); line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  vertical-align: -3px;
+  border-radius: 4px;
+  color: var(--pp-color-type-glyph);
+  font-family: var(--pp-font-sheet);
+  font-weight: var(--pp-weight-display);
+  line-height: 1;
 }
-.md { width: 18px; height: 18px; font-size: 11px; }
-.sm { width: 14px; height: 14px; font-size: 9px; border-radius: 3px; }
-.bug { background: var(--pp-color-type-bug); }
-.story { background: var(--pp-color-type-story); }
-.epic { background: var(--pp-color-type-epic); }
-.task { background: var(--pp-color-type-task); }
-.other { background: var(--pp-color-type-other); }
+.md {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+.sm {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  border-radius: 3px;
+}
+.bug {
+  background: var(--pp-color-type-bug);
+}
+.story {
+  background: var(--pp-color-type-story);
+}
+.epic {
+  background: var(--pp-color-type-epic);
+}
+.task {
+  background: var(--pp-color-type-task);
+}
+.other {
+  background: var(--pp-color-type-other);
+}

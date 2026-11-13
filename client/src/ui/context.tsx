@@ -31,7 +31,12 @@ export interface UiProviderProps {
 }
 
 export function UiProvider({ sounds = silent, toasts, layer, children }: UiProviderProps) {
-  const [ui] = useState<Ui>(() => ({ sounds, backStack: createBackStack(), toasts: toasts ?? createToasts(), layer: layer ?? null }));
+  const [ui] = useState<Ui>(() => ({
+    sounds,
+    backStack: createBackStack(),
+    toasts: toasts ?? createToasts(),
+    layer: layer ?? null,
+  }));
   useEffect(() => {
     // capture, so Esc closes the topmost dialog before anything in it (or the 3D scene) sees it
     const onKey = (e: KeyboardEvent) => {

@@ -29,27 +29,35 @@ const UI = ["client/src/screens/", "client/src/lobby.ts", "client/src/ui/"];
 const RULES: Rule[] = [
   {
     name: "shared stands alone",
-    files: ["shared/"], forbid: ["*"], allow: ["shared/"],
+    files: ["shared/"],
+    forbid: ["*"],
+    allow: ["shared/"],
     why: "server and browser both run shared/, so it imports only from shared/ and packages.",
   },
   {
     name: "server without client",
-    files: ["server/"], forbid: ["client/"],
+    files: ["server/"],
+    forbid: ["client/"],
     why: "the server never loads browser code; move what both need into shared/.",
   },
   {
     name: "client takes only types from server",
-    files: ["client/src/"], forbid: ["server/"], types: true,
+    files: ["client/src/"],
+    forbid: ["server/"],
+    types: true,
     why: "a value import pulls server code into the bundle; use `import type`, or move the value into shared/.",
   },
   {
     name: "the table is plain logic",
-    files: ["server/table/"], forbid: ["server/transport/", "server/store/", "server/auth/"],
+    files: ["server/table/"],
+    forbid: ["server/transport/", "server/store/", "server/auth/"],
     why: "server/table/ has no sockets, files or passcodes; server/main.ts wires the adapters around it.",
   },
   {
     name: "the table takes only types from tickets",
-    files: ["server/table/"], forbid: ["server/tickets/"], types: true,
+    files: ["server/table/"],
+    forbid: ["server/tickets/"],
+    types: true,
     why: "the table gets its TicketSource passed in; it only needs the type from server/tickets/source.ts.",
   },
   {
@@ -60,47 +68,63 @@ const RULES: Rule[] = [
   },
   {
     name: "the 3D world doesn't import the UI",
-    files: WORLD, forbid: UI,
+    files: WORLD,
+    forbid: UI,
     why: "the world and the UI talk through the store: emit a GameEvent on store.events and let the UI react.",
   },
   {
     name: "the UI doesn't import the 3D world",
-    files: UI, forbid: WORLD,
+    files: UI,
+    forbid: WORLD,
     why: "the UI and the world talk through the store: read it, call actions, or listen on store.events; shared data goes in shared/.",
   },
   {
     name: "screens use the kit through its front door",
-    files: ["client/src/screens/"], forbid: ["client/src/ui/"], allow: ["client/src/ui/index.ts"],
+    files: ["client/src/screens/"],
+    forbid: ["client/src/ui/"],
+    allow: ["client/src/ui/index.ts"],
     why: "screens import the kit from ui/index.ts only; if a screen needs something the kit doesn't export, add a generic primitive to ui/ and export it there.",
   },
   {
     name: "screens are the game UI, not its wiring",
-    files: ["client/src/screens/"], forbid: ["client/src/main.ts", "client/src/lobby.ts", "client/src/app/session.ts"],
+    files: ["client/src/screens/"],
+    forbid: ["client/src/main.ts", "client/src/lobby.ts", "client/src/app/session.ts"],
     why: "screens get the store, actions and services injected through useGame(); commands go through actions, never the session or socket.",
   },
   {
     name: "screens take only types from audio",
-    files: ["client/src/screens/"], forbid: ["client/src/audio/"], types: true,
+    files: ["client/src/screens/"],
+    forbid: ["client/src/audio/"],
+    types: true,
     why: "main.ts builds the audio and mic and injects them; screens only need their types.",
   },
   {
     name: "the UI kit stands alone",
-    files: ["client/src/ui/"], except: ["client/src/ui/gallery/"], forbid: ["client/src/"], allow: ["client/src/ui/"],
+    files: ["client/src/ui/"],
+    except: ["client/src/ui/gallery/"],
+    forbid: ["client/src/"],
+    allow: ["client/src/ui/"],
     why: "the kit is generic: screens pass it what it shows. Only the dev gallery (ui/gallery/) wires in app/ and audio/.",
   },
   {
     name: "the gallery wires only app and audio",
-    files: ["client/src/ui/gallery/"], forbid: ["client/src/"], allow: ["client/src/ui/", "client/src/app/", "client/src/audio/"],
+    files: ["client/src/ui/gallery/"],
+    forbid: ["client/src/"],
+    allow: ["client/src/ui/", "client/src/app/", "client/src/audio/"],
     why: "the gallery shows the kit with real storage and sound; it doesn't mount the game.",
   },
   {
     name: "layout is passed in",
-    files: ["client/src/"], except: ["client/src/scene/index.ts"], forbid: ["client/src/scene/layout/layout.ts"], types: true,
+    files: ["client/src/"],
+    except: ["client/src/scene/index.ts"],
+    forbid: ["client/src/scene/layout/layout.ts"],
+    types: true,
     why: "only scene/index.ts imports the `layout` value; take it as an argument (like buildTable and createTicketPaper) and use `import type { Layout }`.",
   },
   {
     name: "no three.js where the header says so",
-    files: ["client/src/avatar/animator.ts", "client/src/scene/layout/layout.ts"], forbid: ["three"],
+    files: ["client/src/avatar/animator.ts", "client/src/scene/layout/layout.ts"],
+    forbid: ["three"],
     why: "these files are plain numbers so they run in node tests; keep three.js in the files that build meshes.",
   },
 ];
@@ -124,7 +148,8 @@ const TEXT_RULES = [
 /** Known breaks, each with the issue that removes it. The test fails when one is no longer needed. */
 const EXCEPTIONS = [
   {
-    file: "client/src/lobby.ts", imports: "client/src/scene/turntable.ts",
+    file: "client/src/lobby.ts",
+    imports: "client/src/scene/turntable.ts",
     why: "the look editor's preview keeps its own renderer until the title screen moves it onto the main stage",
     issue: 4,
   },
@@ -148,9 +173,14 @@ function sources(): string[] {
   return out;
 }
 
-interface Import { spec: string; line: number; typeOnly: boolean }
+interface Import {
+  spec: string;
+  line: number;
+  typeOnly: boolean;
+}
 
-const STATIC = /^[ \t]*(import|export)\s+(type\s+)?(\*(?:\s+as\s+\w+)?|\{([^}]*)\}|\w+(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+\w+))?)\s+from\s+["']([^"']+)["']/gm;
+const STATIC =
+  /^[ \t]*(import|export)\s+(type\s+)?(\*(?:\s+as\s+\w+)?|\{([^}]*)\}|\w+(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+\w+))?)\s+from\s+["']([^"']+)["']/gm;
 const BARE = /^[ \t]*import\s+["']([^"']+)["']/gm;
 const DYNAMIC = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 
@@ -159,7 +189,10 @@ function importsOf(src: string): Import[] {
   const line = (at: number) => src.slice(0, at).split("\n").length;
   const out: Import[] = [];
   for (const m of src.matchAll(STATIC)) {
-    const named = m[4]?.split(",").map((s) => s.trim()).filter(Boolean);
+    const named = m[4]
+      ?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const typeOnly = !!m[2] || (!!named?.length && m[3]!.startsWith("{") && named.every((s) => s.startsWith("type ")));
     out.push({ spec: m[5]!, line: line(m.index), typeOnly });
   }
@@ -176,7 +209,8 @@ function resolve(file: string, spec: string): string {
   return s.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0]!;
 }
 
-const isPath = (target: string) => /^(shared|server|client|test|scripts|assets)\//.test(target) || target.startsWith("../");
+const isPath = (target: string) =>
+  /^(shared|server|client|test|scripts|assets)\//.test(target) || target.startsWith("../");
 const matches = (target: string, pattern: string) =>
   pattern === "*" ? isPath(target) : pattern.endsWith("/") ? target.startsWith(pattern) : target === pattern;
 const covers = (file: string, patterns: string[]) => patterns.some((p) => matches(file, p));
@@ -207,11 +241,22 @@ test("the scanner reads every kind of import", () => {
     'const l = () => import("./l.ts");',
     "export const m = 1;",
   ].join("\n");
-  assert.deepEqual(importsOf(src).map((i) => [i.spec, i.line, i.typeOnly]), [
-    ["three", 1, false], ["./a.ts", 2, true], ["./b.ts", 3, true], ["./d.ts", 4, false], ["./f.ts", 5, false],
-    ["../h.ts", 6, false], ["./i.ts", 9, false], ["./j.ts", 10, true], ["./k.ts", 11, false],
-    ["./style.css", 12, false], ["./l.ts", 13, false],
-  ]);
+  assert.deepEqual(
+    importsOf(src).map((i) => [i.spec, i.line, i.typeOnly]),
+    [
+      ["three", 1, false],
+      ["./a.ts", 2, true],
+      ["./b.ts", 3, true],
+      ["./d.ts", 4, false],
+      ["./f.ts", 5, false],
+      ["../h.ts", 6, false],
+      ["./i.ts", 9, false],
+      ["./j.ts", 10, true],
+      ["./k.ts", 11, false],
+      ["./style.css", 12, false],
+      ["./l.ts", 13, false],
+    ],
+  );
   assert.equal(resolve("client/src/app/session.ts", "../../../server/table/commands.ts"), "server/table/commands.ts");
   assert.equal(resolve("client/src/x.ts", "three/addons/controls/OrbitControls.js"), "three");
 });
@@ -234,14 +279,21 @@ test("imports stay inside their boundaries", () => {
         if (!covers(target, rule.forbid) || covers(target, rule.allow ?? [])) continue;
         if (rule.types && imp.typeOnly) continue;
         const known = EXCEPTIONS.find((e) => e.file === file && e.imports === target);
-        if (known) { used.add(known); continue; }
+        if (known) {
+          used.add(known);
+          continue;
+        }
         broken.push(`${file}:${imp.line} imports "${imp.spec}", breaking "${rule.name}": ${rule.why}`);
       }
     }
   }
   assert.equal(broken.length, 0, `\n${broken.join("\n")}\n`);
   const stale = EXCEPTIONS.filter((e) => !used.has(e));
-  assert.equal(stale.length, 0, `\n${stale.map((e) => `${e.file} no longer imports ${e.imports}: delete its entry in EXCEPTIONS (#${e.issue}).`).join("\n")}\n`);
+  assert.equal(
+    stale.length,
+    0,
+    `\n${stale.map((e) => `${e.file} no longer imports ${e.imports}: delete its entry in EXCEPTIONS (#${e.issue}).`).join("\n")}\n`,
+  );
 });
 
 test("source-text rules hold", () => {
@@ -250,7 +302,8 @@ test("source-text rules hold", () => {
     for (const file of files) {
       if (exempt(file) || !covers(file, rule.files)) continue;
       for (const [i, line] of stripComments(text.get(file)!).split("\n").entries()) {
-        for (const m of line.matchAll(rule.pattern)) broken.push(`${file}:${i + 1} uses "${m[0]}", breaking "${rule.name}": ${rule.why}`);
+        for (const m of line.matchAll(rule.pattern))
+          broken.push(`${file}:${i + 1} uses "${m[0]}", breaking "${rule.name}": ${rule.why}`);
       }
     }
   }

@@ -6,8 +6,12 @@ import { parseSaved } from "./file.ts";
 export function memoryStore(): RoomStore & { readonly saved: string } {
   let saved = "[]";
   return {
-    get saved() { return saved; },
+    get saved() {
+      return saved;
+    },
     load: () => parseSaved(saved, console),
-    save: (tables) => { saved = JSON.stringify(tables); },
+    save: (tables) => {
+      saved = JSON.stringify(tables);
+    },
   };
 }

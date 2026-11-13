@@ -8,10 +8,11 @@ export default defineConfig(({ mode }) => ({
   // React draws only the UI on top of the canvas; the 3D world stays plain Three.js.
   // Only index.html ships in dist; gallery mode checks the UI kit separately.
   plugins: [react()],
-  build: mode === "gallery"
-    // `npm run build:gallery`: bundles the gallery as a check, into a throwaway folder.
-    ? { outDir: "../node_modules/.gallery", emptyOutDir: true, rolldownOptions: { input: "client/gallery.html" } }
-    : { outDir: "../dist", emptyOutDir: true, chunkSizeWarningLimit: 1200 },
+  build:
+    mode === "gallery"
+      ? // `npm run build:gallery`: bundles the gallery as a check, into a throwaway folder.
+        { outDir: "../node_modules/.gallery", emptyOutDir: true, rolldownOptions: { input: "client/gallery.html" } }
+      : { outDir: "../dist", emptyOutDir: true, chunkSizeWarningLimit: 1200 },
   server: {
     host: true,
     allowedHosts: true,

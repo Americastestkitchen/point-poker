@@ -6,7 +6,11 @@ export function Spinner({ label, size = "md" }: { label?: string; size?: "sm" | 
   return (
     <span className={cx(s.spinner, s[size])} role="status" aria-label={label ?? "Loading"}>
       <span className={s.ring} aria-hidden />
-      {label && <span className={s.label} aria-hidden>{label}</span>}
+      {label && (
+        <span className={s.label} aria-hidden>
+          {label}
+        </span>
+      )}
     </span>
   );
 }

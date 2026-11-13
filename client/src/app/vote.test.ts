@@ -10,8 +10,16 @@ test("your card shows at once, and views from before your vote don't take it bac
 
 test("once the server answers, your view decides again", () => {
   assert.deepEqual(run({ t: "played", value: 3 }, { t: "answered", server: 3 }), { myVote: 3, votesInFlight: 0 });
-  assert.deepEqual(run({ t: "played", value: 3 }, { t: "answered", server: null }), { myVote: null, votesInFlight: 0 }, "a refused vote goes back");
-  assert.deepEqual(run({ t: "played", value: 3 }, { t: "answered", server: 3 }, { t: "view", server: null }).myVote, null, "a new round clears it");
+  assert.deepEqual(
+    run({ t: "played", value: 3 }, { t: "answered", server: null }),
+    { myVote: null, votesInFlight: 0 },
+    "a refused vote goes back",
+  );
+  assert.deepEqual(
+    run({ t: "played", value: 3 }, { t: "answered", server: 3 }, { t: "view", server: null }).myVote,
+    null,
+    "a new round clears it",
+  );
 });
 
 test("with two votes out, only the last answer hands back to the view", () => {

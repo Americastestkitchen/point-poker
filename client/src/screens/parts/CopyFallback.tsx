@@ -21,12 +21,29 @@ export function CopyFallback() {
   }, [shown]);
 
   return (
-    <Dialog open={!!shown} onClose={copy.dismiss} title={shown?.title ?? ""} width="md"
-      actions={<Button variant="primary" onPress={copy.dismiss}>Done</Button>}>
+    <Dialog
+      open={!!shown}
+      onClose={copy.dismiss}
+      title={shown?.title ?? ""}
+      width="md"
+      actions={
+        <Button variant="primary" onPress={copy.dismiss}>
+          Done
+        </Button>
+      }
+    >
       <p className={s.note}>Your browser wouldn't let us copy it. It's selected: copy it from here.</p>
-      <ScrollArea maxHeight="40vh" label="Text to copy" className={s.box}
-        onCopy={() => { toasts.show("📋 Copied"); }}>
-        <pre ref={text} className={s.text}>{shown?.text}</pre>
+      <ScrollArea
+        maxHeight="40vh"
+        label="Text to copy"
+        className={s.box}
+        onCopy={() => {
+          toasts.show("📋 Copied");
+        }}
+      >
+        <pre ref={text} className={s.text}>
+          {shown?.text}
+        </pre>
       </ScrollArea>
     </Dialog>
   );

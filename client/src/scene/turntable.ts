@@ -20,15 +20,20 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
 
   const clock = new THREE.Clock();
   const loop = () => {
-    if (!opts.visible()) { requestAnimationFrame(loop); return; }
-    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!opts.visible()) {
+      requestAnimationFrame(loop);
+      return;
+    }
+    const w = canvas.clientWidth,
+      h = canvas.clientHeight;
     if (canvas.width !== Math.floor(w * devicePixelRatio) || canvas.height !== Math.floor(h * devicePixelRatio)) {
       renderer.setPixelRatio(devicePixelRatio);
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     }
-    const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
+    const dt = Math.min(clock.getDelta(), 0.1),
+      t = clock.elapsedTime;
     avatar.group.rotation.y = Math.sin(t * 0.6) * 0.7;
     avatar.setGaze(Math.sin(t * 1.3) * 0.6, Math.sin(t * 0.9) * 0.3);
     avatar.update(dt, t);
@@ -38,7 +43,11 @@ export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { d
   loop();
 
   return {
-    setLook(next: Look) { avatar.setLook(next); },
-    wave() { avatar.play("wave"); },
+    setLook(next: Look) {
+      avatar.setLook(next);
+    },
+    wave() {
+      avatar.play("wave");
+    },
   };
 }

@@ -25,7 +25,12 @@ export function TicketSheet() {
   /** Opens it by itself, unless something else is up (a menu, the picker, the look editor). */
   const openIfFree = () => {
     const st = store.getState();
-    if (st.room?.ticket && st.screen === "table" && !st.ui.lookOpen && (st.ui.popup === null || st.ui.popup === "ticket")) {
+    if (
+      st.room?.ticket &&
+      st.screen === "table" &&
+      !st.ui.lookOpen &&
+      (st.ui.popup === null || st.ui.popup === "ticket")
+    ) {
       store.popupOpened("ticket");
     }
   };
@@ -52,8 +57,13 @@ export function TicketSheet() {
   }, [open, audio]);
 
   return (
-    <Dialog open={open} onClose={popup.close} variant="paper" width="xl"
-      title={ticket ? <Heading ticket={ticket} epic={room?.epic ?? null} /> : ""}>
+    <Dialog
+      open={open}
+      onClose={popup.close}
+      variant="paper"
+      width="xl"
+      title={ticket ? <Heading ticket={ticket} epic={room?.epic ?? null} /> : ""}
+    >
       {ticket && <Sheet ticket={ticket} />}
     </Dialog>
   );
@@ -66,9 +76,19 @@ function Heading({ ticket, epic }: { ticket: Ticket; epic: Epic | null }) {
       <span className={s.crumbs}>
         {path.map((c, i) => (
           <span key={`${i}:${c.text}`} className={s.crumb}>
-            {i > 0 && <i className={s.slash} aria-hidden>/</i>}
+            {i > 0 && (
+              <i className={s.slash} aria-hidden>
+                /
+              </i>
+            )}
             {c.type !== undefined && <TypeIcon type={c.type} size="sm" />}
-            {c.href ? <a className={s.crumbLink} href={c.href} target="_blank" rel="noreferrer">{c.text}</a> : c.text}
+            {c.href ? (
+              <a className={s.crumbLink} href={c.href} target="_blank" rel="noreferrer">
+                {c.text}
+              </a>
+            ) : (
+              c.text
+            )}
           </span>
         ))}
       </span>
@@ -93,18 +113,40 @@ function Sheet({ ticket }: { ticket: Ticket }) {
           <div className={s.details}>
             <h3 className={s.dh}>Details</h3>
             <dl className={s.fields}>
-              <Field label="Assignee"><Person name={who} /></Field>
-              {ticket.reporter && <Field label="Reporter"><Person name={ticket.reporter} /></Field>}
+              <Field label="Assignee">
+                <Person name={who} />
+              </Field>
+              {ticket.reporter && (
+                <Field label="Reporter">
+                  <Person name={ticket.reporter} />
+                </Field>
+              )}
               {ticket.priority && <Field label="Priority">{ticket.priority}</Field>}
               <Field label="Labels">
-                {ticket.labels.length ? ticket.labels.map((l) => <span key={l} className={s.label}>{l}</span>) : <span className={s.muted}>None</span>}
+                {ticket.labels.length ? (
+                  ticket.labels.map((l) => (
+                    <span key={l} className={s.label}>
+                      {l}
+                    </span>
+                  ))
+                ) : (
+                  <span className={s.muted}>None</span>
+                )}
               </Field>
               <Field label="Story points">
-                {ticket.currentPoints !== null ? <span className={s.points}>{ticket.currentPoints}</span> : <span className={s.muted}>Not pointed yet</span>}
+                {ticket.currentPoints !== null ? (
+                  <span className={s.points}>{ticket.currentPoints}</span>
+                ) : (
+                  <span className={s.muted}>Not pointed yet</span>
+                )}
               </Field>
             </dl>
           </div>
-          {url && <ButtonLink href={url} variant="primary" size="md" className={s.jira}>Open in Jira ↗</ButtonLink>}
+          {url && (
+            <ButtonLink href={url} variant="primary" size="md" className={s.jira}>
+              Open in Jira ↗
+            </ButtonLink>
+          )}
         </aside>
       </div>
     </div>
@@ -122,5 +164,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function Person({ name }: { name: string }) {
   if (!name) return <span className={s.muted}>None</span>;
-  return <><span className={s.avatar} aria-hidden>{initials(name)}</span><span className={s.name}>{name}</span></>;
+  return (
+    <>
+      <span className={s.avatar} aria-hidden>
+        {initials(name)}
+      </span>
+      <span className={s.name}>{name}</span>
+    </>
+  );
 }

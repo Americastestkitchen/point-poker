@@ -39,7 +39,9 @@ export type JoinResult =
   | { ok: true; playerId: string; token: string; isDealer: boolean }
   | { ok: false; code: 4001 | 4003; reason: string; text?: string };
 
-export interface CommandResult { error?: string }
+export interface CommandResult {
+  error?: string;
+}
 
 export const ROLE_ERROR = "Only the dealer can do that";
 
@@ -58,7 +60,9 @@ export class Table {
   constructor(state: TableState, deps: TableDeps) {
     this.s = state;
     this.deps = deps;
-    const emit = (e: TableEvent) => { for (const l of [...this.listeners]) l(e); };
+    const emit = (e: TableEvent) => {
+      for (const l of [...this.listeners]) l(e);
+    };
     this.ctx = {
       s: state,
       now: () => deps.now(),
@@ -72,22 +76,35 @@ export class Table {
         emit({ t: "removed", playerId: p.id, reason });
       },
       ready: (playerId, what, cooldownMs) => {
-        const key = `${playerId}:${what}`, now = deps.now();
+        const key = `${playerId}:${what}`,
+          now = deps.now();
         if (now - (this.lastUsed.get(key) ?? -Infinity) < cooldownMs) return false;
         this.lastUsed.set(key, now);
         return true;
       },
-      claimTicket: () => { const seq = ++this.ticketSeq; return () => seq === this.ticketSeq; },
-      claimQueue: () => { const seq = ++this.queueSeq; return () => seq === this.queueSeq; },
+      claimTicket: () => {
+        const seq = ++this.ticketSeq;
+        return () => seq === this.ticketSeq;
+      },
+      claimQueue: () => {
+        const seq = ++this.queueSeq;
+        return () => seq === this.queueSeq;
+      },
       load: (ref, label) => this.load(ref, label),
       upcoming: (project) => this.tickets().find({ kind: "upcoming", project }),
     };
   }
 
-  get code() { return this.s.code; }
+  get code() {
+    return this.s.code;
+  }
   /** How many players have a live connection. */
-  get connected() { return this.online.size; }
-  get lastActive() { return this.s.lastActive; }
+  get connected() {
+    return this.online.size;
+  }
+  get lastActive() {
+    return this.s.lastActive;
+  }
 
   /** Listen for state changes and effects; returns a function that stops listening. */
   on(listener: (e: TableEvent) => void): () => void {
@@ -99,12 +116,22 @@ export class Table {
   join(req: JoinRequest): JoinResult {
     const s = this.s;
     const isDealer = !!req.dealerKey && req.dealerKey === s.dealerKey;
-    if (!isDealer && req.token && s.banned.includes(req.token)) return { ok: false, code: 4001, reason: "Removed by the dealer" };
+    if (!isDealer && req.token && s.banned.includes(req.token))
+      return { ok: false, code: 4001, reason: "Removed by the dealer" };
     let me = s.players.find((p) => (!!req.token && p.token === req.token) || (isDealer && p.id === s.dealerId));
     if (!me) {
       const seat = isDealer ? -1 : freeSeat(s);
       if (seat === -2) return { ok: false, code: 4003, reason: "Table full", text: "The table is full" };
-      me = { id: this.newId(), token: randomUUID(), name: "", look: validateLook(undefined), seat, vote: null, chips: 0, lastWin: 0 };
+      me = {
+        id: this.newId(),
+        token: randomUUID(),
+        name: "",
+        look: validateLook(undefined),
+        seat,
+        vote: null,
+        chips: 0,
+        lastWin: 0,
+      };
       s.players.push(me);
       if (isDealer) s.dealerId = me.id;
     }
@@ -161,7 +188,10 @@ export class Table {
 
   private newId() {
     let id = "";
-    do id = Math.floor(this.deps.random() * 2 ** 32).toString(16).padStart(8, "0");
+    do
+      id = Math.floor(this.deps.random() * 2 ** 32)
+        .toString(16)
+        .padStart(8, "0");
     while (findPlayer(this.s, id));
     return id;
   }

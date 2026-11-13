@@ -53,7 +53,10 @@ export function createSession(deps: SessionDeps): Session {
   const pending = new Map<number, { resolve(): void; reject(e: Error): void }>();
 
   const connection = () => store.getState().connection;
-  const room = () => { const c = connection(); return c.status === "idle" ? "" : c.room; };
+  const room = () => {
+    const c = connection();
+    return c.status === "idle" ? "" : c.room;
+  };
   const live = () => ws?.readyState === OPEN && connection().status === "open";
   const send = (msg: ClientMsg) => ws!.send(JSON.stringify(msg));
 
@@ -66,9 +69,13 @@ export function createSession(deps: SessionDeps): Session {
 
   function run(effect: ConnectionEffect) {
     switch (effect.t) {
-      case "dial": return dial();
-      case "redial": timer = setTimeout(dial, effect.afterMs); return;
-      case "hello": return send(hello());
+      case "dial":
+        return dial();
+      case "redial":
+        timer = setTimeout(dial, effect.afterMs);
+        return;
+      case "hello":
+        return send(hello());
       case "hangUp": {
         clearTimeout(timer);
         const sock = ws;
@@ -77,7 +84,8 @@ export function createSession(deps: SessionDeps): Session {
         sock?.close();
         return;
       }
-      default: return effect satisfies never;
+      default:
+        return effect satisfies never;
     }
   }
 
@@ -89,7 +97,13 @@ export function createSession(deps: SessionDeps): Session {
 
   function hello(): ClientMsg {
     const p = storage.profile();
-    return { t: "join", name: p.name ?? "", look: p.look ?? DEFAULT_LOOK, token: storage.token(room()), dealerKey: storage.dealerKey(room()) };
+    return {
+      t: "join",
+      name: p.name ?? "",
+      look: p.look ?? DEFAULT_LOOK,
+      token: storage.token(room()),
+      dealerKey: storage.dealerKey(room()),
+    };
   }
 
   function receive(m: ServerMsg) {
@@ -119,10 +133,16 @@ export function createSession(deps: SessionDeps): Session {
   function dial() {
     const sock = deps.connect(`${deps.url}?room=${encodeURIComponent(room())}`);
     ws = sock;
-    sock.onopen = () => { if (ws === sock) step({ t: "opened" }); };
+    sock.onopen = () => {
+      if (ws === sock) step({ t: "opened" });
+    };
     sock.onmessage = (e: { data: unknown }) => {
       let parsed;
-      try { parsed = ServerMsg.safeParse(JSON.parse(String(e.data))); } catch { return; }
+      try {
+        parsed = ServerMsg.safeParse(JSON.parse(String(e.data)));
+      } catch {
+        return;
+      }
       if (parsed.success) receive(parsed.data);
       else console.warn("ignoring a message we don't understand", parsed.error);
     };

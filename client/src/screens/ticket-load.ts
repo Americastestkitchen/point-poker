@@ -41,7 +41,9 @@ export function createTicketLoad({ openPicker, bonk }: TicketLoadDeps) {
       const mine = ++latest;
       set({ status: "loading", text });
       work.then(
-        () => { if (mine === latest) set(idle); },
+        () => {
+          if (mine === latest) set(idle);
+        },
         (e: unknown) => {
           if (mine !== latest) return;
           set({ status: "failed", reason: e instanceof Error ? e.message : String(e) });

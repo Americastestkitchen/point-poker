@@ -33,7 +33,8 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
   const frames = new Set<(dt: number, t: number) => void>([delays.update]);
 
   const resize = () => {
-    const w = innerWidth, h = innerHeight;
+    const w = innerWidth,
+      h = innerHeight;
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
@@ -43,7 +44,12 @@ export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): 
 
   let started = false;
   return {
-    renderer, scene, camera, picking, audio: deps.audio, canvas,
+    renderer,
+    scene,
+    camera,
+    picking,
+    audio: deps.audio,
+    canvas,
     onFrame(fn) {
       frames.add(fn);
       return () => frames.delete(fn);

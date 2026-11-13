@@ -12,12 +12,22 @@ export function TicketTab() {
   const focus = useFocusable();
   if (!ticket) return null;
   return (
-    <button type="button" {...focus} className={s.tab} onClick={popup.show} aria-haspopup="dialog"
-      aria-label={`Read the ticket: ${ticket.key}, ${ticket.summary}`}>
+    <button
+      type="button"
+      {...focus}
+      className={s.tab}
+      onClick={popup.show}
+      aria-haspopup="dialog"
+      aria-label={`Read the ticket: ${ticket.key}, ${ticket.summary}`}
+    >
       <TypeIcon type={ticket.type || "task"} />
       <span className={s.key}>{ticket.key}</span>
-      <span className={s.summary} title={ticket.summary}>{ticket.summary}</span>
-      <span className={s.open} aria-hidden>Read ▸</span>
+      <span className={s.summary} title={ticket.summary}>
+        {ticket.summary}
+      </span>
+      <span className={s.open} aria-hidden>
+        Read ▸
+      </span>
     </button>
   );
 }

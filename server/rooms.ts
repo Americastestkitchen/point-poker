@@ -12,8 +12,12 @@ export class Rooms {
     for (const s of saved) this.tables.set(s.code, new Table(s, deps));
   }
 
-  get size() { return this.tables.size; }
-  get(code: string) { return this.tables.get(code.toUpperCase()); }
+  get size() {
+    return this.tables.size;
+  }
+  get(code: string) {
+    return this.tables.get(code.toUpperCase());
+  }
 
   create(): Table {
     const letters = "BCDFGHJKLMNPQRSTVWXZ";

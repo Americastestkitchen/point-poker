@@ -2,7 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player, ticket, view } from "../../app/fixtures.ts";
 import { kickConfirm, othersOf, playerState, roundActions, skipPlan } from "./panel.ts";
-import { BAD_KEY, jiraSubmit, manualSubmit, MAX_DOTS, pasteSubmits, peopleLine, pickerCue, pickerErrors, pickerSections, queueRows, type PickerCue } from "./picker.ts";
+import {
+  BAD_KEY,
+  jiraSubmit,
+  manualSubmit,
+  MAX_DOTS,
+  pasteSubmits,
+  peopleLine,
+  pickerCue,
+  pickerErrors,
+  pickerSections,
+  queueRows,
+  type PickerCue,
+} from "./picker.ts";
 
 const q = (key: string, points: number | null = null) => ({ key, summary: `About ${key}`, points, status: "To Do" });
 const result = (key: string) => ({ key, summary: "", finalPoints: 3, pot: 0, winners: [], share: 0 });
@@ -11,17 +23,28 @@ const result = (key: string) => ({ key, summary: "", finalPoints: 3, pot: 0, win
 
 test("round actions are only live while voting or revealed; picking a ticket always is", () => {
   const enabled = (phase: "waiting" | "voting" | "revealed" | "settled") =>
-    roundActions(view({ phase })).map((a) => `${a.id}:${a.enabled}`).join(" ");
+    roundActions(view({ phase }))
+      .map((a) => `${a.id}:${a.enabled}`)
+      .join(" ");
   assert.equal(enabled("waiting"), "restart:false skip:false cancel:false pick:true");
   assert.equal(enabled("voting"), "restart:true skip:true cancel:true pick:true");
   assert.equal(enabled("revealed"), "restart:true skip:true cancel:true pick:true");
   assert.equal(enabled("settled"), "restart:false skip:false cancel:false pick:true");
-  assert.deepEqual(roundActions(view()).filter((a) => a.danger).map((a) => a.id), ["cancel"]);
+  assert.deepEqual(
+    roundActions(view())
+      .filter((a) => a.danger)
+      .map((a) => a.id),
+    ["cancel"],
+  );
 });
 
 test("skip says which ticket comes next, and waits for it like a load; with none queued it just skips", () => {
   const queued = view({ phase: "voting", ticket: ticket("SD-1"), queue: [q("SD-1"), q("SD-2", 3), q("SD-3")] });
-  assert.equal(roundActions(queued).find((a) => a.id === "skip")?.sub, "no payout · next SD-3", "the next one without points goes first");
+  assert.equal(
+    roundActions(queued).find((a) => a.id === "skip")?.sub,
+    "no payout · next SD-3",
+    "the next one without points goes first",
+  );
   assert.deepEqual(skipPlan(queued), { t: "load", text: "Skipping to SD-3…" });
 
   const alone = view({ phase: "voting", ticket: ticket("SD-1") });
@@ -38,8 +61,14 @@ test("a player's state: away beats everything; voted or thinking only while voti
 });
 
 test("the players list leaves out the dealer, wherever the role sits", () => {
-  assert.deepEqual(othersOf(view().players).map((p) => p.id), ["ann", "bob"]);
-  assert.deepEqual(othersOf([player("ann", { isDealer: true }), player("deb")]).map((p) => p.id), ["deb"]);
+  assert.deepEqual(
+    othersOf(view().players).map((p) => p.id),
+    ["ann", "bob"],
+  );
+  assert.deepEqual(
+    othersOf([player("ann", { isDealer: true }), player("deb")]).map((p) => p.id),
+    ["deb"],
+  );
   assert.deepEqual(othersOf([player("deb", { isDealer: true })]), []);
   assert.equal(kickConfirm("ANN").title, "Kick ANN from the table?");
 });
@@ -53,18 +82,24 @@ test("the Jira part shows only with Jira; typing a ticket in is always open with
 
 test("queue rows: done, skipped, points or nothing; played ones dimmed; the current one marked", () => {
   const room = view({
-    ticket: ticket("SD-2"), queueLabel: "Epic SD-9", skipped: ["SD-3"], history: [result("SD-1")],
+    ticket: ticket("SD-2"),
+    queueLabel: "Epic SD-9",
+    skipped: ["SD-3"],
+    history: [result("SD-1")],
     queue: [q("SD-1"), q("SD-2"), q("SD-3"), q("SD-4", 5), q("SD-5")],
   });
   const got = queueRows(room);
   assert.equal(got?.title, "Epic SD-9 · tap one to deal it");
-  assert.deepEqual(got?.rows.map((r) => [r.key, r.note, r.played, r.current]), [
-    ["SD-1", "✓ done", true, false],
-    ["SD-2", "", false, true],
-    ["SD-3", "skipped", true, false],
-    ["SD-4", "5 pts", false, false],
-    ["SD-5", "", false, false],
-  ]);
+  assert.deepEqual(
+    got?.rows.map((r) => [r.key, r.note, r.played, r.current]),
+    [
+      ["SD-1", "✓ done", true, false],
+      ["SD-2", "", false, true],
+      ["SD-3", "skipped", true, false],
+      ["SD-4", "5 pts", false, false],
+      ["SD-5", "", false, false],
+    ],
+  );
   assert.equal(got?.rows[3]?.summary, "About SD-4");
 });
 
@@ -98,9 +133,15 @@ test("errors: under the Jira field with Jira (a typo before a failed load), else
   const failed = { status: "failed", reason: "SD-9 doesn't exist" } as const;
   const loading = { status: "loading", text: "Fetching…" } as const;
   assert.deepEqual(pickerErrors({ jira: true, invalid: null, load: idle }), { field: null, form: null });
-  assert.deepEqual(pickerErrors({ jira: true, invalid: null, load: failed }), { field: "SD-9 doesn't exist", form: null });
+  assert.deepEqual(pickerErrors({ jira: true, invalid: null, load: failed }), {
+    field: "SD-9 doesn't exist",
+    form: null,
+  });
   assert.deepEqual(pickerErrors({ jira: true, invalid: BAD_KEY, load: failed }), { field: BAD_KEY, form: null });
-  assert.deepEqual(pickerErrors({ jira: false, invalid: null, load: failed }), { field: null, form: "SD-9 doesn't exist" });
+  assert.deepEqual(pickerErrors({ jira: false, invalid: null, load: failed }), {
+    field: null,
+    form: "SD-9 doesn't exist",
+  });
   assert.deepEqual(pickerErrors({ jira: true, invalid: null, load: loading }), { field: null, form: null });
 });
 
@@ -121,7 +162,14 @@ test("it opens by itself once per stretch without a ticket, and not again after 
 
 test("a dealt ticket closes it and arms it again for the next stretch without one", () => {
   assert.deepEqual(
-    run([seen(true, false), { t: "ticketChanged" }, seen(true, true), seen(true, true), seen(true, false), seen(true, false)]),
+    run([
+      seen(true, false),
+      { t: "ticketChanged" },
+      seen(true, true),
+      seen(true, true),
+      seen(true, false),
+      seen(true, false),
+    ]),
     ["open", "close", null, null, "open", null],
   );
 });
@@ -137,5 +185,9 @@ test("the footer counts everyone but the dealer, with up to eight dots", () => {
   assert.equal(line.dots.length, MAX_DOTS);
   assert.equal(line.text, "10 at the table");
   assert.equal(line.nobody, false);
-  assert.deepEqual(peopleLine([player("deb", { isDealer: true })]), { dots: [], text: "Nobody's here yet", nobody: true });
+  assert.deepEqual(peopleLine([player("deb", { isDealer: true })]), {
+    dots: [],
+    text: "Nobody's here yet",
+    nobody: true,
+  });
 });

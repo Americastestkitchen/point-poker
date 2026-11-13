@@ -26,12 +26,21 @@ export function LeaderboardDialog() {
   };
 
   return (
-    <Dialog open={popup.open} onClose={popup.close} title="Leaderboard" width="md"
-      actions={<>
-        {history.length > 0 && <Button onPress={copyForJira}>📋 Copy for Jira</Button>}
-        {/* focus starts here, not on a "remove" */}
-        <Button variant="primary" data-autofocus onPress={popup.close}>Done</Button>
-      </>}>
+    <Dialog
+      open={popup.open}
+      onClose={popup.close}
+      title="Leaderboard"
+      width="md"
+      actions={
+        <>
+          {history.length > 0 && <Button onPress={copyForJira}>📋 Copy for Jira</Button>}
+          {/* focus starts here, not on a "remove" */}
+          <Button variant="primary" data-autofocus onPress={popup.close}>
+            Done
+          </Button>
+        </>
+      }
+    >
       <ol className={s.board} aria-label="Players by coins">
         {rows.map((row) => (
           <Row key={row.player.id} row={row} onRemove={() => dealerDo(actions.dealer.kick(row.player.id))} />
@@ -40,10 +49,14 @@ export function LeaderboardDialog() {
 
       {history.length > 0 && (
         <section className={s.rounds} aria-label="Rounds played">
-          <h3 className={s.heading}>Rounds played <span className={s.count}>{history.length}</span></h3>
+          <h3 className={s.heading}>
+            Rounds played <span className={s.count}>{history.length}</span>
+          </h3>
           <ScrollArea label="Rounds played, newest first" className={s.scroll}>
             <ul className={s.history}>
-              {roundsNewestFirst(history).map((h, i) => <Round key={`${history.length - i}`} round={h} />)}
+              {roundsNewestFirst(history).map((h, i) => (
+                <Round key={`${history.length - i}`} round={h} />
+              ))}
             </ul>
           </ScrollArea>
         </section>
@@ -57,7 +70,9 @@ function Row({ row, onRemove }: { row: BoardRow; onRemove: () => void }) {
   return (
     <li className={cx(s.row, row.me && s.me, row.away && s.away)}>
       <span className={cx(s.rank, row.rank === "👑" && s.crown)}>{row.rank}</span>
-      <span className={s.dim}><PlayerDot player={player} /></span>
+      <span className={s.dim}>
+        <PlayerDot player={player} />
+      </span>
       <span className={cx(s.name, s.dim)} title={row.name}>
         {player.name}
         {player.isDealer && <span className={s.tag}> · dealer</span>}
@@ -65,10 +80,18 @@ function Row({ row, onRemove }: { row: BoardRow; onRemove: () => void }) {
       </span>
       {row.me && <span className={s.you}>you</span>}
       <span className={cx(s.chips, s.dim)} aria-label={`${player.chips} coins`}>
-        <span className={s.coin} aria-hidden />{player.chips}
+        <span className={s.coin} aria-hidden />
+        {player.chips}
       </span>
       {row.removable && (
-        <Button size="sm" shape="pill" variant="danger" className={s.remove} aria-label={`Remove ${player.name}`} onPress={onRemove}>
+        <Button
+          size="sm"
+          shape="pill"
+          variant="danger"
+          className={s.remove}
+          aria-label={`Remove ${player.name}`}
+          onPress={onRemove}
+        >
           remove
         </Button>
       )}
@@ -80,10 +103,16 @@ function Round({ round }: { round: RoundResult }) {
   return (
     <li className={s.round} title={round.summary}>
       <span className={s.key}>{round.key}</span>
-      <span className={s.arrow} aria-hidden>→</span>
+      <span className={s.arrow} aria-hidden>
+        →
+      </span>
       <span className={s.points}>{round.finalPoints} pts</span>
-      <span className={s.sep} aria-hidden>·</span>
-      <span className={cx(s.outcome, round.houseWon && s.house, !round.winners.length && s.nobody)}>{roundOutcome(round)}</span>
+      <span className={s.sep} aria-hidden>
+        ·
+      </span>
+      <span className={cx(s.outcome, round.houseWon && s.house, !round.winners.length && s.nobody)}>
+        {roundOutcome(round)}
+      </span>
     </li>
   );
 }

@@ -62,7 +62,10 @@ export function defineCommand<const T extends string, R extends Role, S extends 
 export const COMMANDS = [
   /** Put a card down, or swap it; null takes it back. */
   defineCommand({
-    t: "vote", role: "player", move: "vote", input: { value: z.number().nullable() },
+    t: "vote",
+    role: "player",
+    move: "vote",
+    input: { value: z.number().nullable() },
     run({ s, changed, fx }, me, { value }) {
       if (!isVoter(s, me)) return "You're sitting this one out";
       const vote = pickVote(s, value);
@@ -75,7 +78,10 @@ export const COMMANDS = [
   }),
   /** Flick a chip at someone. Has a cooldown. */
   defineCommand({
-    t: "flick", role: "player", move: "anytime", input: { target: z.string() },
+    t: "flick",
+    role: "player",
+    move: "anytime",
+    input: { target: z.string() },
     run({ s, fx, ready }, me, { target }) {
       if (target === me.id) return "You can't flick yourself";
       if (!s.players.some((p) => p.id === target)) return "There's nobody in that seat";
@@ -84,7 +90,10 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "setLook", role: "player", move: "anytime", input: { look: LookInput },
+    t: "setLook",
+    role: "player",
+    move: "anytime",
+    input: { look: LookInput },
     run({ changed }, me, { look }) {
       me.look = validateLook(look);
       changed();
@@ -94,7 +103,10 @@ export const COMMANDS = [
   // ---------- dealer only ----------
 
   defineCommand({
-    t: "loadTicket", role: "dealer", move: "anytime", input: { ref: z.string().max(2000) },
+    t: "loadTicket",
+    role: "dealer",
+    move: "anytime",
+    input: { ref: z.string().max(2000) },
     run(ctx, _me, { ref }) {
       const key = parseIssueKey(ref);
       if (!key) return "That doesn't look like a Jira link or key (like SD-1234)";
@@ -102,7 +114,10 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "manualTicket", role: "dealer", move: "anytime", input: { key: z.string(), summary: z.string(), description: z.string() },
+    t: "manualTicket",
+    role: "dealer",
+    move: "anytime",
+    input: { key: z.string(), summary: z.string(), description: z.string() },
     run({ s, changed, claimTicket }, _me, cmd) {
       const summary = clean(cmd.summary, 300);
       if (!summary) return "The ticket needs a summary";
@@ -112,12 +127,17 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "fetchQueue", role: "dealer", move: "anytime", input: {},
+    t: "fetchQueue",
+    role: "dealer",
+    move: "anytime",
+    input: {},
     async run({ s, changed, claimQueue, upcoming }) {
       const lastProject = s.ticket?.key.split("-")[0];
       const current = claimQueue();
       try {
-        const { label, tickets } = await upcoming(lastProject && /^[A-Z][A-Z0-9_]+$/.test(lastProject) ? lastProject : undefined);
+        const { label, tickets } = await upcoming(
+          lastProject && /^[A-Z][A-Z0-9_]+$/.test(lastProject) ? lastProject : undefined,
+        );
         if (!current()) return; // a newer request (or a clear) won
         s.queue = tickets;
         s.queueLabel = label;
@@ -129,7 +149,10 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "clearQueue", role: "dealer", move: "anytime", input: {},
+    t: "clearQueue",
+    role: "dealer",
+    move: "anytime",
+    input: {},
     run({ s, changed, claimQueue }) {
       claimQueue();
       s.queue = [];
@@ -139,7 +162,10 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "dealerPlays", role: "dealer", move: "anytime", input: { plays: z.boolean() },
+    t: "dealerPlays",
+    role: "dealer",
+    move: "anytime",
+    input: { plays: z.boolean() },
     run({ s, changed }, me, { plays }) {
       s.settings.dealerPlays = plays;
       if (!plays) me.vote = null;
@@ -147,21 +173,30 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "deal", role: "dealer", move: "deal", input: {},
+    t: "deal",
+    role: "dealer",
+    move: "deal",
+    input: {},
     run({ s, changed }) {
       startRound(s);
       changed();
     },
   }),
   defineCommand({
-    t: "reveal", role: "dealer", move: "reveal", input: {},
+    t: "reveal",
+    role: "dealer",
+    move: "reveal",
+    input: {},
     run({ s, changed }) {
       reveal(s);
       changed();
     },
   }),
   defineCommand({
-    t: "settle", role: "dealer", move: "settle", input: { finalPoints: z.number() },
+    t: "settle",
+    role: "dealer",
+    move: "settle",
+    input: { finalPoints: z.number() },
     run({ s, changed, now, log }, _me, { finalPoints }) {
       if (!s.settings.deck.some((c) => c.points === finalPoints)) return "That card isn't in the deck";
       if (s.phase === "settled") {
@@ -175,19 +210,34 @@ export const COMMANDS = [
       settleRound(s, finalPoints, result);
       const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? id;
       s.history.push({
-        key: s.ticket?.key ?? "?", summary: s.ticket?.summary ?? "", finalPoints,
-        pot: result.pot, share: result.share, winners: result.winners.map(name), houseWon: result.houseWon,
+        key: s.ticket?.key ?? "?",
+        summary: s.ticket?.summary ?? "",
+        finalPoints,
+        pot: result.pot,
+        share: result.share,
+        winners: result.winners.map(name),
+        houseWon: result.houseWon,
       });
       // a permanent trail in the server logs (`fly logs`), so a forgotten Jira update can be recovered
-      log("POINTED " + JSON.stringify({
-        at: new Date(now()).toISOString(), room: s.code, key: s.ticket?.key, summary: s.ticket?.summary,
-        points: finalPoints, votes: Object.fromEntries([...votes].map(([id, v]) => [name(id), v])),
-      }));
+      log(
+        "POINTED " +
+          JSON.stringify({
+            at: new Date(now()).toISOString(),
+            room: s.code,
+            key: s.ticket?.key,
+            summary: s.ticket?.summary,
+            points: finalPoints,
+            votes: Object.fromEntries([...votes].map(([id, v]) => [name(id), v])),
+          }),
+      );
       changed();
     },
   }),
   defineCommand({
-    t: "nextRound", role: "dealer", move: "anytime", input: {},
+    t: "nextRound",
+    role: "dealer",
+    move: "anytime",
+    input: {},
     run(ctx) {
       const { s } = ctx;
       ctx.claimTicket();
@@ -199,7 +249,10 @@ export const COMMANDS = [
   }),
   /** Drop the current round (no payout) and go back to picking a ticket. */
   defineCommand({
-    t: "cancelRound", role: "dealer", move: "cancel", input: {},
+    t: "cancelRound",
+    role: "dealer",
+    move: "cancel",
+    input: {},
     run({ s, changed, notice, claimTicket }, me) {
       claimTicket();
       endRound(s);
@@ -209,7 +262,10 @@ export const COMMANDS = [
   }),
   /** Skip the current ticket (no payout) and deal the next one in the queue. */
   defineCommand({
-    t: "skip", role: "dealer", move: "skip", input: {},
+    t: "skip",
+    role: "dealer",
+    move: "skip",
+    input: {},
     run(ctx, me) {
       const { s } = ctx;
       // outside waiting there's always a ticket out; this only tells the compiler
@@ -225,7 +281,10 @@ export const COMMANDS = [
     },
   }),
   defineCommand({
-    t: "kick", role: "dealer", move: "anytime", input: { id: z.string() },
+    t: "kick",
+    role: "dealer",
+    move: "anytime",
+    input: { id: z.string() },
     run({ s, changed, notice, remove }, me, { id }) {
       const p = s.players.find((x) => x.id === id);
       if (!p) return "They're not at this table";

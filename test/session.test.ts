@@ -35,13 +35,22 @@ class Server {
   private proc: ChildProcess | null = null;
   readonly dataDir = mkdtempSync(join(tmpdir(), "pp-e2e-"));
   port = 0;
-  get http() { return `http://127.0.0.1:${this.port}`; }
-  get ws() { return `ws://127.0.0.1:${this.port}/ws`; }
+  get http() {
+    return `http://127.0.0.1:${this.port}`;
+  }
+  get ws() {
+    return `ws://127.0.0.1:${this.port}/ws`;
+  }
 
   /** Starts the server; a restart keeps the same port so clients can find it again. */
   async start() {
     this.port ||= await freePort();
-    const env: NodeJS.ProcessEnv = { ...process.env, PORT: String(this.port), DATA_DIR: this.dataDir, HOST_PASSCODE: PASSCODE };
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      PORT: String(this.port),
+      DATA_DIR: this.dataDir,
+      HOST_PASSCODE: PASSCODE,
+    };
     for (const k of Object.keys(env)) if (k.startsWith("JIRA_")) delete env[k];
     const proc = spawn(process.execPath, [ENTRY], { env, stdio: ["ignore", "pipe", "pipe"] });
     this.proc = proc;
@@ -50,11 +59,17 @@ class Server {
       const timer = setTimeout(() => reject(new Error(`server didn't start:\n${out}`)), WAIT_MS);
       const onData = (b: Buffer) => {
         out += b;
-        if (out.includes("Point Poker on")) { clearTimeout(timer); resolve(); }
+        if (out.includes("Point Poker on")) {
+          clearTimeout(timer);
+          resolve();
+        }
       };
       proc.stdout!.on("data", onData);
       proc.stderr!.on("data", (b: Buffer) => (out += b));
-      proc.once("exit", (code) => { clearTimeout(timer); reject(new Error(`server exited (${code}):\n${out}`)); });
+      proc.once("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`server exited (${code}):\n${out}`));
+      });
     });
   }
 
@@ -63,10 +78,15 @@ class Server {
     const proc = this.proc;
     if (!proc || proc.exitCode !== null) return;
     this.proc = null;
-    await new Promise<void>((resolve) => { proc.once("exit", () => resolve()); proc.kill("SIGINT"); });
+    await new Promise<void>((resolve) => {
+      proc.once("exit", () => resolve());
+      proc.kill("SIGINT");
+    });
   }
 
-  cleanup() { rmSync(this.dataDir, { recursive: true, force: true }); }
+  cleanup() {
+    rmSync(this.dataDir, { recursive: true, force: true });
+  }
 }
 
 /** One player: the real client store, session and actions, plus a tap on the raw socket. */
@@ -96,44 +116,82 @@ class Player {
         ws.addEventListener("close", (e) => (this.closeCode = e.code));
         return ws;
       },
-      storage: this.storage, store: this.store, url: server.ws, retryDelay: () => 50,
+      storage: this.storage,
+      store: this.store,
+      url: server.ws,
+      retryDelay: () => 50,
     });
     this.actions = createActions(this.session, this.store);
-    this.store.events.on((e) => { this.events.push(e); this.check(); });
+    this.store.events.on((e) => {
+      this.events.push(e);
+      this.check();
+    });
     this.store.subscribe((s, prev) => {
       if (s.room !== prev.room) this.events.push(...s.changes);
       this.check();
     });
   }
 
-  static async join(server: Server, room: string, profile: Profile, extra: { dealerKey?: string; token?: string } = {}) {
+  static async join(
+    server: Server,
+    room: string,
+    profile: Profile,
+    extra: { dealerKey?: string; token?: string } = {},
+  ) {
     const p = new Player(server, room, profile, extra);
     p.session.join(room);
     await p.until((x) => (!!x.me && !!x.state) || x.closed, "welcome");
     return p;
   }
 
-  get me() { return this.store.getState().me!; }
-  get id() { return this.me.id; }
-  get state() { return this.store.getState().room!; }
-  get isDealer() { return !!this.player(this.id)?.isDealer; }
-  get closed() { return this.store.getState().connection.status === "closed"; }
-  get token() { return this.storage.token(this.room)!; }
-  player(id: string) { return this.state.players.find((p) => p.id === id); }
-  toasts() { return this.events.flatMap((e) => (e.t === "toast" ? [e.text] : [])); }
+  get me() {
+    return this.store.getState().me!;
+  }
+  get id() {
+    return this.me.id;
+  }
+  get state() {
+    return this.store.getState().room!;
+  }
+  get isDealer() {
+    return !!this.player(this.id)?.isDealer;
+  }
+  get closed() {
+    return this.store.getState().connection.status === "closed";
+  }
+  get token() {
+    return this.storage.token(this.room)!;
+  }
+  player(id: string) {
+    return this.state.players.find((p) => p.id === id);
+  }
+  toasts() {
+    return this.events.flatMap((e) => (e.t === "toast" ? [e.text] : []));
+  }
 
   async leave() {
     this.session.close();
     await this.until((x) => x.closed, "leave");
   }
 
-  private check() { for (const c of [...this.checks]) c(); }
+  private check() {
+    for (const c of [...this.checks]) c();
+  }
 
   /** Resolves once `pred` holds, checking again after every change. */
   until(pred: (p: Player) => boolean, label: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const done = () => { if (pred(this)) { clearTimeout(timer); this.checks.delete(done); resolve(); } };
-      const timer = setTimeout(() => { this.checks.delete(done); reject(new Error(`timed out waiting for ${label}`)); }, WAIT_MS);
+      const done = () => {
+        if (pred(this)) {
+          clearTimeout(timer);
+          this.checks.delete(done);
+          resolve();
+        }
+      };
+      const timer = setTimeout(() => {
+        this.checks.delete(done);
+        reject(new Error(`timed out waiting for ${label}`));
+      }, WAIT_MS);
       this.checks.add(done);
       done();
     });
@@ -144,8 +202,10 @@ class Player {
   }
 }
 
-const look = (name: string, extra: Partial<Profile["look"]> = {}): Profile =>
-  ({ name, look: { color: "#3bceac", body: "bean", cosmetics: ["tophat"], ...extra } });
+const look = (name: string, extra: Partial<Profile["look"]> = {}): Profile => ({
+  name,
+  look: { color: "#3bceac", body: "bean", cosmetics: ["tophat"], ...extra },
+});
 
 test("a whole session over real sockets, including a restart", async (t) => {
   const server = new Server();
@@ -155,7 +215,11 @@ test("a whole session over real sockets, including a restart", async (t) => {
     everyone.push(p);
     return p;
   };
-  t.after(async () => { for (const p of everyone) p.session.close(); await server.stop(); server.cleanup(); });
+  t.after(async () => {
+    for (const p of everyone) p.session.close();
+    await server.stop();
+    server.cleanup();
+  });
   await server.start();
 
   // ---- opening a table needs the host passcode
@@ -184,8 +248,12 @@ test("a whole session over real sockets, including a restart", async (t) => {
   // ---- commands get answers: only the dealer runs the round, and failures say why
   await assert.rejects(ann.actions.dealer.reveal(), { message: "Only the dealer can do that" });
   await assert.rejects(deb.actions.dealer.deal(), { message: "Load a ticket first" });
-  await assert.rejects(deb.actions.dealer.load("nope"), { message: "That doesn't look like a Jira link or key (like SD-1234)" });
-  await assert.rejects(deb.actions.dealer.load("https://x.atlassian.net/browse/SD-9"), { message: "SD-9: Jira isn't configured on the server" });
+  await assert.rejects(deb.actions.dealer.load("nope"), {
+    message: "That doesn't look like a Jira link or key (like SD-1234)",
+  });
+  await assert.rejects(deb.actions.dealer.load("https://x.atlassian.net/browse/SD-9"), {
+    message: "SD-9: Jira isn't configured on the server",
+  });
 
   // ---- a new look is one object
   bob.actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: ["fez"] });
@@ -207,14 +275,20 @@ test("a whole session over real sockets, including a restart", async (t) => {
   ann.actions.vote(3);
   assert.equal(ann.store.getState().ui.myVote, 3);
   await bob.until((p) => p.events.some((e) => e.t === "fx" && e.fx.kind === "adjust" && e.from === ann.id), "adjust");
-  assert.ok(!ann.wire.some((m) => m.t === "fx" && m.fx.kind === "adjust"), "the voter isn't told about their own adjust");
+  assert.ok(
+    !ann.wire.some((m) => m.t === "fx" && m.fx.kind === "adjust"),
+    "the voter isn't told about their own adjust",
+  );
 
   await ann.untilState((s) => s.players.find((p) => p.id === ann.id)?.vote === 3, "ann sees her own card");
   // nobody sees anyone else's card before the reveal; you do see your own
   for (const p of [deb, ann, bob]) {
     for (const m of p.wire) {
       if (m.t !== "view") continue;
-      assert.ok(m.view.players.every((x) => x.vote === null || x.id === p.id) && m.view.pot === 0, "vote leaked before reveal");
+      assert.ok(
+        m.view.players.every((x) => x.vote === null || x.id === p.id) && m.view.pot === 0,
+        "vote leaked before reveal",
+      );
     }
   }
 
@@ -240,7 +314,13 @@ test("a whole session over real sockets, including a restart", async (t) => {
   const [result] = ann.state.history;
   assert.ok(result);
   assert.equal(result.finalPoints, 2);
-  assert.deepEqual(ann.events.filter((e) => e.t === "settled"), [{ t: "settled", resettled: false }, { t: "settled", resettled: true }]);
+  assert.deepEqual(
+    ann.events.filter((e) => e.t === "settled"),
+    [
+      { t: "settled", resettled: false },
+      { t: "settled", resettled: true },
+    ],
+  );
 
   // ---- nobody close enough: the house rakes it in
   await deb.actions.dealer.next();
@@ -320,17 +400,26 @@ test("a whole session over real sockets, including a restart", async (t) => {
   // ---- restart: saved tables come back and everyone reconnects to their seat on their own
   const before = { deb: deb.id, ann: ann3.id, bob: bob.id };
   await server.stop();
-  await Promise.all([deb, bob, ann3].map((p) => p.until((x) => x.store.getState().connection.status === "connecting", "line dropped")));
+  await Promise.all(
+    [deb, bob, ann3].map((p) => p.until((x) => x.store.getState().connection.status === "connecting", "line dropped")),
+  );
   await server.start();
   const back = TableInfo.parse(await (await fetch(`${server.http}/api/rooms/${code}`)).json());
   assert.equal(back.exists, true);
-  for (const p of [deb, bob, ann3]) await p.until((x) => x.store.getState().connection.status === "open", "reconnected");
+  for (const p of [deb, bob, ann3])
+    await p.until((x) => x.store.getState().connection.status === "open", "reconnected");
   await deb.untilState((s) => s.players.length === 3 && s.players.every((p) => p.connected), "everyone back");
   assert.deepEqual({ deb: deb.id, ann: ann3.id, bob: bob.id }, before);
   assert.equal(deb.isDealer, true);
   assert.equal(deb.player(ann.id)?.chips, 8);
   assert.equal(deb.player(deb.id)?.chips, 2);
-  assert.deepEqual(deb.state.history.map((h) => [h.key, h.finalPoints]), [["TICKET", 2], ["SD-2", 8]]);
+  assert.deepEqual(
+    deb.state.history.map((h) => [h.key, h.finalPoints]),
+    [
+      ["TICKET", 2],
+      ["SD-2", 8],
+    ],
+  );
   assert.deepEqual(deb.state.skipped, ["SD-3"]);
   const catAfter = await join(code, look("Cat"), { token: cat.token });
   assert.equal(catAfter.closeCode, 4001, "bans survive a restart");

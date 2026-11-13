@@ -27,10 +27,14 @@ function useLatest<T>(value: T) {
 export function useViewChanges(handler: (change: ViewChange, state: AppState) => void) {
   const { store } = useGame();
   const latest = useLatest(handler);
-  useEffect(() => store.subscribe((s, prev) => {
-    if (s.room === prev.room || !s.room) return;
-    for (const c of s.changes) latest.current(c, s);
-  }), [store, latest]);
+  useEffect(
+    () =>
+      store.subscribe((s, prev) => {
+        if (s.room === prev.room || !s.room) return;
+        for (const c of s.changes) latest.current(c, s);
+      }),
+    [store, latest],
+  );
 }
 
 export function useGameEvents(handler: (event: GameEvent, state: AppState) => void) {

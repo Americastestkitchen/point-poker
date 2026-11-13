@@ -27,13 +27,34 @@ export interface PlayingCardProps {
   onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
 }
 
-export function PlayingCard({ value, selected = false, dimmed = false, ribbon, voters = [], index = 0, onPress, roving, onKeyDown }: PlayingCardProps) {
+export function PlayingCard({
+  value,
+  selected = false,
+  dimmed = false,
+  ribbon,
+  voters = [],
+  index = 0,
+  onPress,
+  roving,
+  onKeyDown,
+}: PlayingCardProps) {
   const face = cardFace(value);
   const focus = useFocusable();
   const about = useId();
-  const said = [ribbon, voters.length ? `${voters.length === 1 ? "1 vote" : `${voters.length} votes`}: ${names(voters.map((p) => p.name))}` : ""]
-    .filter(Boolean).join(". ");
-  const corner = <><span>{value}</span><span>{face.glyph}</span></>;
+  const said = [
+    ribbon,
+    voters.length
+      ? `${voters.length === 1 ? "1 vote" : `${voters.length} votes`}: ${names(voters.map((p) => p.name))}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
+  const corner = (
+    <>
+      <span>{value}</span>
+      <span>{face.glyph}</span>
+    </>
+  );
   return (
     <button
       type="button"
@@ -53,13 +74,23 @@ export function PlayingCard({ value, selected = false, dimmed = false, ribbon, v
         <span className={s.num}>{value}</span>
         <span className={cx(s.corner, s.br)}>{corner}</span>
       </span>
-      {ribbon && <span className={s.ribbon} aria-hidden>{ribbon}</span>}
-      {voters.length > 0 && (
-        <span className={s.votes} aria-hidden>
-          {voters.map((p) => <PlayerDot key={p.id} player={p} size="sm" />)}
+      {ribbon && (
+        <span className={s.ribbon} aria-hidden>
+          {ribbon}
         </span>
       )}
-      {said && <span id={about} className={s.hidden}>{said}</span>}
+      {voters.length > 0 && (
+        <span className={s.votes} aria-hidden>
+          {voters.map((p) => (
+            <PlayerDot key={p.id} player={p} size="sm" />
+          ))}
+        </span>
+      )}
+      {said && (
+        <span id={about} className={s.hidden}>
+          {said}
+        </span>
+      )}
     </button>
   );
 }

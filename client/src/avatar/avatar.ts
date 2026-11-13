@@ -56,7 +56,10 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   const group = new THREE.Group();
   const body = new THREE.Group();
   group.add(buildChair(dealer));
-  const hitbox = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 1.0), new THREE.MeshBasicMaterial({ visible: false }));
+  const hitbox = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.34, 1.0),
+    new THREE.MeshBasicMaterial({ visible: false }),
+  );
   hitbox.position.y = 1.0;
   group.add(hitbox, body);
   const labels = createLabels(group);
@@ -74,7 +77,11 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     torso.castShadow = true;
     body.add(torso);
     if (shape.belly) {
-      const belly = mesh(new THREE.SphereGeometry(0.2, 16, 12), toon("#ffffff", { transparent: true, opacity: 0.25 }), false);
+      const belly = mesh(
+        new THREE.SphereGeometry(0.2, 16, 12),
+        toon("#ffffff", { transparent: true, opacity: 0.25 }),
+        false,
+      );
       belly.scale.set(shape.belly.sx, shape.belly.sy, 0.5);
       belly.position.set(0, shape.belly.y, shape.belly.z);
       body.add(belly);
@@ -82,12 +89,22 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     const face = buildFace(shape, body);
     const arms = buildArms(shape, material, body);
     // empty markers where things can be attached; the head is where hats stand
-    const head = marker(A.head), eyes = marker(A.eyes), mouth = marker(A.mouth), chest = marker(A.chest);
+    const head = marker(A.head),
+      eyes = marker(A.eyes),
+      mouth = marker(A.mouth),
+      chest = marker(A.chest);
     body.add(head, eyes, mouth, chest);
     const anchors: Record<AnchorId, THREE.Object3D> = {
-      head, eyes, mouth, chest,
-      eyeL: face.eyeL, eyeR: face.eyeR,
-      shoulderL: arms.shoulderL, shoulderR: arms.shoulderR, handL: arms.handL, handR: arms.handR,
+      head,
+      eyes,
+      mouth,
+      chest,
+      eyeL: face.eyeL,
+      eyeR: face.eyeR,
+      shoulderL: arms.shoulderL,
+      shoulderR: arms.shoulderR,
+      handL: arms.handL,
+      handR: arms.handR,
     };
     if (dealer) for (const gear of DEALER_GEAR) anchors[gear.anchor].add(gear.build());
     parts = { face, arms, anchors };
@@ -114,7 +131,9 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   return {
     group,
     hitbox,
-    get busyWithCard() { return animator.busyWithCard; },
+    get busyWithCard() {
+      return animator.busyWithCard;
+    },
 
     setLook(next) {
       const prev = look;
@@ -129,7 +148,9 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       if (isEmote(clip)) labels.showEmoji(EMOTE[clip].emoji);
     },
 
-    setHandPose(pose) { animator.handPose = pose; },
+    setHandPose(pose) {
+      animator.handPose = pose;
+    },
     anchor: (name) => parts.anchors[name],
     setGaze: (yaw, pitch) => animator.setGaze(yaw, pitch),
     setTalk: (level) => animator.setTalk(level),

@@ -24,7 +24,18 @@ export interface CodeSlotsProps {
  * A row of letter slots for a table code. The typing goes into a real (invisible) input
  * over the slots, so phones bring up their keyboard and pasting a whole code works.
  */
-export function CodeSlots({ label, value, onChange, onComplete, length = 4, alphabet = LETTERS, error, disabled, autoFocus, demoState }: CodeSlotsProps) {
+export function CodeSlots({
+  label,
+  value,
+  onChange,
+  onComplete,
+  length = 4,
+  alphabet = LETTERS,
+  error,
+  disabled,
+  autoFocus,
+  demoState,
+}: CodeSlotsProps) {
   const { sounds } = useUi();
   const focus = useFocusable(disabled);
   const input = useRef<HTMLInputElement>(null);
@@ -32,7 +43,9 @@ export function CodeSlots({ label, value, onChange, onComplete, length = 4, alph
   const cursor = cursorOf(value, length);
   const showFocus = (focused || demoState === "focus") && !disabled;
 
-  useEffect(() => { if (autoFocus) input.current?.focus({ preventScroll: true }); }, [autoFocus]);
+  useEffect(() => {
+    if (autoFocus) input.current?.focus({ preventScroll: true });
+  }, [autoFocus]);
 
   return (
     <label className={cx(s.slots, error && s.error, disabled && s.disabled)} data-demo={demoState}>

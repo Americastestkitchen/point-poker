@@ -7,7 +7,15 @@ import { useEffect, useRef, useState } from "react";
 import { Button, ConfirmDialog, Dialog, ScrollArea, Toggle } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
-import { CANCEL_CONFIRM, kickConfirm, othersOf, playerState, roundActions, skipPlan, type RoundActionId } from "./panel.ts";
+import {
+  CANCEL_CONFIRM,
+  kickConfirm,
+  othersOf,
+  playerState,
+  roundActions,
+  skipPlan,
+  type RoundActionId,
+} from "./panel.ts";
 import { Section } from "./Section.tsx";
 import s from "./DealerPanel.module.css";
 
@@ -38,7 +46,8 @@ function PanelBody() {
   const others = othersOf(room?.players ?? []);
   // a kicked player's row goes, and its Kick had the focus: keep the keyboard in the panel
   useEffect(() => {
-    if (document.activeElement === document.body) box.current?.querySelector<HTMLElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+    if (document.activeElement === document.body)
+      box.current?.querySelector<HTMLElement>("button:not(:disabled)")?.focus({ preventScroll: true });
   }, [others.length]);
   if (!room) return null;
 
@@ -71,8 +80,14 @@ function PanelBody() {
       <Section title="This round">
         <div className={s.actions}>
           {roundActions(room).map((a) => (
-            <Button key={a.id} variant={a.danger ? "danger" : "default"} disabled={!a.enabled} sub={a.sub}
-              className={s.action} onPress={() => press(a.id)}>
+            <Button
+              key={a.id}
+              variant={a.danger ? "danger" : "default"}
+              disabled={!a.enabled}
+              sub={a.sub}
+              className={s.action}
+              onPress={() => press(a.id)}
+            >
               {a.label}
             </Button>
           ))}
@@ -80,49 +95,74 @@ function PanelBody() {
       </Section>
 
       <Section title={`Players (${others.length})`}>
-        {others.length === 0
-          ? <p className={s.empty}>Nobody else here yet. Send the invite link.</p>
-          : (
-            <ScrollArea className={s.players}>
-              <ul className={s.list}>
-                {others.map((p) => {
-                  const state = playerState(p, room.phase);
-                  return (
-                    <li key={p.id} className={s.player} data-away={!p.connected || undefined}>
-                      <PlayerDot player={p} filled={p.connected} />
-                      <span className={s.name} title={p.name}>{p.name}</span>
-                      {state && <span className={s.state} data-voted={p.hasVoted && p.connected || undefined}>{state}</span>}
-                      <Button variant="danger" shape="pill" size="md" className={s.kick} aria-label={`Kick ${p.name}`}
-                        onPress={() => setConfirm({ t: "kick", id: p.id })}>
-                        Kick
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </ScrollArea>
-          )}
+        {others.length === 0 ? (
+          <p className={s.empty}>Nobody else here yet. Send the invite link.</p>
+        ) : (
+          <ScrollArea className={s.players}>
+            <ul className={s.list}>
+              {others.map((p) => {
+                const state = playerState(p, room.phase);
+                return (
+                  <li key={p.id} className={s.player} data-away={!p.connected || undefined}>
+                    <PlayerDot player={p} filled={p.connected} />
+                    <span className={s.name} title={p.name}>
+                      {p.name}
+                    </span>
+                    {state && (
+                      <span className={s.state} data-voted={(p.hasVoted && p.connected) || undefined}>
+                        {state}
+                      </span>
+                    )}
+                    <Button
+                      variant="danger"
+                      shape="pill"
+                      size="md"
+                      className={s.kick}
+                      aria-label={`Kick ${p.name}`}
+                      onPress={() => setConfirm({ t: "kick", id: p.id })}
+                    >
+                      Kick
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </ScrollArea>
+        )}
       </Section>
 
-      <Toggle label="🃏 I play a card too" checked={room.settings.dealerPlays}
-        onChange={(on) => dealerDo(actions.dealer.setPlays(on))} />
+      <Toggle
+        label="🃏 I play a card too"
+        checked={room.settings.dealerPlays}
+        onChange={(on) => dealerDo(actions.dealer.setPlays(on))}
+      />
 
-      <ConfirmDialog open={confirm?.t === "cancel"} title={CANCEL_CONFIRM.title} confirmLabel={CANCEL_CONFIRM.confirm} tone="danger"
+      <ConfirmDialog
+        open={confirm?.t === "cancel"}
+        title={CANCEL_CONFIRM.title}
+        confirmLabel={CANCEL_CONFIRM.confirm}
+        tone="danger"
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           setConfirm(null);
           dealerDo(actions.dealer.cancel());
           done();
-        }}>
+        }}
+      >
         <p className={s.confirm}>{CANCEL_CONFIRM.body}</p>
       </ConfirmDialog>
 
-      <ConfirmDialog open={!!kick} title={<span className={s.wrap}>{kick?.title}</span>} confirmLabel={kick?.confirm ?? "Kick"} tone="danger"
+      <ConfirmDialog
+        open={!!kick}
+        title={<span className={s.wrap}>{kick?.title}</span>}
+        confirmLabel={kick?.confirm ?? "Kick"}
+        tone="danger"
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           setConfirm(null);
           if (kicking) dealerDo(actions.dealer.kick(kicking.id));
-        }}>
+        }}
+      >
         <p className={s.confirm}>{kick?.body}</p>
       </ConfirmDialog>
     </div>

@@ -64,7 +64,10 @@ export function bindInput(stage: Stage, deps: InputDeps) {
     if (e.defaultPrevented || !allowsWorldKeys()) return;
     const k = e.key.toLowerCase();
     const emote = EMOTES.find((x) => x.key === k);
-    if (emote) { actions.emote(emote.id); return; }
+    if (emote) {
+      actions.emote(emote.id);
+      return;
+    }
     if (k === "r") rig.recenter();
   });
 }

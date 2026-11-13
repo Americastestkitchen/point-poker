@@ -16,9 +16,13 @@ export function feltTexture(): THREE.CanvasTexture {
     }
     g.strokeStyle = "rgba(230,190,90,0.65)";
     g.lineWidth = 6;
-    g.beginPath(); g.ellipse(512, 512, 330, 330, 0, 0, Math.PI * 2); g.stroke();
+    g.beginPath();
+    g.ellipse(512, 512, 330, 330, 0, 0, Math.PI * 2);
+    g.stroke();
     g.lineWidth = 2;
-    g.beginPath(); g.ellipse(512, 512, 345, 345, 0, 0, Math.PI * 2); g.stroke();
+    g.beginPath();
+    g.ellipse(512, 512, 345, 345, 0, 0, Math.PI * 2);
+    g.stroke();
     g.fillStyle = "rgba(230,190,90,0.7)";
     g.font = `bold 34px ${FONT}`;
     g.textAlign = "center";
@@ -42,9 +46,12 @@ export function wallpaperTexture(): THREE.CanvasTexture {
     g.fillStyle = "#231b2a";
     for (let x = 0; x < 256; x += 32) g.fillRect(x, 0, 14, 256);
     g.fillStyle = "rgba(200,160,90,0.12)";
-    for (let y = 16; y < 256; y += 64) for (let x = 23; x < 256; x += 64) {
-      g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
-    }
+    for (let y = 16; y < 256; y += 64)
+      for (let x = 23; x < 256; x += 64) {
+        g.beginPath();
+        g.arc(x, y, 5, 0, Math.PI * 2);
+        g.fill();
+      }
     for (let i = 0; i < 1500; i++) {
       g.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`;
       g.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);

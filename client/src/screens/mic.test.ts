@@ -11,15 +11,29 @@ function setup({ savedOn = false, allow = true } = {}) {
   if (savedOn) storage.setMic(true);
   const input: MicInput = { rms: () => 0, close() {} };
   let asks = 0;
-  const mic = createMic(async () => { asks++; if (!allow) throw new Error("NotAllowedError"); return input; });
+  const mic = createMic(async () => {
+    asks++;
+    if (!allow) throw new Error("NotAllowedError");
+    return input;
+  });
   const toasts: { text: string; tone?: string }[] = [];
   const talked: number[] = [];
   const timers: { ms: number; fn: () => void; cancelled: boolean }[] = [];
   const control = createMicControl({
-    mic, storage,
+    mic,
+    storage,
     actions: { talk: (level) => void talked.push(level) },
-    toasts: { show: (text, o) => { toasts.push({ text, tone: o?.tone }); return toasts.length; } },
-    after: (ms, fn) => { const t = { ms, fn, cancelled: false }; timers.push(t); return () => void (t.cancelled = true); },
+    toasts: {
+      show: (text, o) => {
+        toasts.push({ text, tone: o?.tone });
+        return toasts.length;
+      },
+    },
+    after: (ms, fn) => {
+      const t = { ms, fn, cancelled: false };
+      timers.push(t);
+      return () => void (t.cancelled = true);
+    },
   });
   return { storage, mic, control, toasts, talked, timers, asks: () => asks };
 }

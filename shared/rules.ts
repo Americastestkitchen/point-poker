@@ -38,15 +38,23 @@ export function tally<P extends { vote: number | null }>(players: readonly P[]):
 
 /** The card most people played, when there clearly is one (two or more, no tie). */
 export function favourite(counts: Map<number, unknown[]>): number | null {
-  let top = -1, best = 0;
-  for (const [v, ps] of counts) if (ps.length > best || (ps.length === best && v > top)) { best = ps.length; top = v; }
+  let top = -1,
+    best = 0;
+  for (const [v, ps] of counts)
+    if (ps.length > best || (ps.length === best && v > top)) {
+      best = ps.length;
+      top = v;
+    }
   if (best < 2 || [...counts.values()].filter((ps) => ps.length === best).length > 1) return null;
   return top;
 }
 
 /** First queued ticket that hasn't been played, skipped or dealt yet, preferring ones with no points. */
 export function nextInQueue<Q extends { key: string; points: number | null }>(t: {
-  queue: readonly Q[]; history: readonly { key: string }[]; skipped: readonly string[]; ticket: { key: string } | null;
+  queue: readonly Q[];
+  history: readonly { key: string }[];
+  skipped: readonly string[];
+  ticket: { key: string } | null;
 }): Q | undefined {
   const played = new Set([...t.history.map((h) => h.key), ...t.skipped]);
   if (t.ticket) played.add(t.ticket.key);

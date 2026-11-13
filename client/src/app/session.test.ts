@@ -12,12 +12,24 @@ class FakeSocket implements SocketLike {
   onmessage: ((e: { data: unknown }) => void) | null = null;
   onclose: ((e: { code: number; reason: string }) => void) | null = null;
   readonly url: string;
-  constructor(url: string) { this.url = url; }
-  send(data: string) { this.sent.push(JSON.parse(data)); }
+  constructor(url: string) {
+    this.url = url;
+  }
+  send(data: string) {
+    this.sent.push(JSON.parse(data));
+  }
   close() {}
-  open() { this.readyState = 1; this.onopen?.({}); }
-  receive(m: unknown) { this.onmessage?.({ data: JSON.stringify(m) }); }
-  drop(code = 1006, reason = "") { this.readyState = 3; this.onclose?.({ code, reason }); }
+  open() {
+    this.readyState = 1;
+    this.onopen?.({});
+  }
+  receive(m: unknown) {
+    this.onmessage?.({ data: JSON.stringify(m) });
+  }
+  drop(code = 1006, reason = "") {
+    this.readyState = 3;
+    this.onclose?.({ code, reason });
+  }
 }
 
 function setup() {
@@ -26,8 +38,15 @@ function setup() {
   storage.setProfile({ name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] } });
   const store = createStore();
   const session = createSession({
-    connect: (url) => { const s = new FakeSocket(url); sockets.push(s); return s; },
-    storage, store, url: "ws://x/ws", retryDelay: () => 0,
+    connect: (url) => {
+      const s = new FakeSocket(url);
+      sockets.push(s);
+      return s;
+    },
+    storage,
+    store,
+    url: "ws://x/ws",
+    retryDelay: () => 0,
   });
   return { sockets, storage, store, session };
 }
@@ -41,7 +60,9 @@ test("joins with your profile and seat token, and keeps the new token", () => {
   assert.equal(socket.url, "ws://x/ws?room=ABCD");
   assert.equal(store.getState().connection.status, "connecting");
   socket.open();
-  assert.deepEqual(socket.sent, [{ t: "join", name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] }, token: "old-token" }]);
+  assert.deepEqual(socket.sent, [
+    { t: "join", name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] }, token: "old-token" },
+  ]);
   socket.receive({ t: "welcome", playerId: "ann", token: "new-token" });
   socket.receive({ t: "view", view: view() });
   assert.equal(storage.token("ABCD"), "new-token");

@@ -17,8 +17,14 @@ export function StatusLine() {
     <div className={s.status}>
       <ol className={cx(s.steps, status.idle && s.idle)} aria-label="Round">
         {status.steps.map((step, i) => (
-          <li key={step.label} className={cx(s.step, s[step.state])} aria-current={step.state === "current" ? "step" : undefined}>
-            <b className={s.mark} aria-hidden>{step.state === "done" ? "✓" : i + 1}</b>
+          <li
+            key={step.label}
+            className={cx(s.step, s[step.state])}
+            aria-current={step.state === "current" ? "step" : undefined}
+          >
+            <b className={s.mark} aria-hidden>
+              {step.state === "done" ? "✓" : i + 1}
+            </b>
             {step.label}
           </li>
         ))}
@@ -27,7 +33,9 @@ export function StatusLine() {
         <span className={s.text}>{status.line}</span>
         {status.voters && status.voters.length > 0 && (
           <span className={s.dots}>
-            {status.voters.map((v) => <PlayerDot key={v.player.id} player={v.player} filled={v.voted} title={v.label} />)}
+            {status.voters.map((v) => (
+              <PlayerDot key={v.player.id} player={v.player} filled={v.voted} title={v.label} />
+            ))}
           </span>
         )}
       </p>

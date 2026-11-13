@@ -8,7 +8,8 @@ const run = (...actions: ProfileAction[]) => actions.reduce(editProfile, start);
 
 test("each pick changes just that part of you", () => {
   assert.deepEqual(run({ t: "name", name: "Ann" }, { t: "color", color: "#3bceac" }, { t: "body", body: "pear" }), {
-    name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] },
+    name: "Ann",
+    look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] },
   });
 });
 

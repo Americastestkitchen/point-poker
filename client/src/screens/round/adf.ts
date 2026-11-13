@@ -5,12 +5,45 @@ import { safeUrl } from "../text.ts";
 
 /** The elements a description can use. */
 export type AdfTag =
-  | "div" | "p" | "h3" | "h4" | "h5" | "h6" | "ul" | "ol" | "li" | "blockquote" | "pre" | "code" | "hr" | "br"
-  | "span" | "strong" | "em" | "s" | "u" | "a" | "table" | "tbody" | "tr" | "th" | "td";
+  | "div"
+  | "p"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "ul"
+  | "ol"
+  | "li"
+  | "blockquote"
+  | "pre"
+  | "code"
+  | "hr"
+  | "br"
+  | "span"
+  | "strong"
+  | "em"
+  | "s"
+  | "u"
+  | "a"
+  | "table"
+  | "tbody"
+  | "tr"
+  | "th"
+  | "td";
 
 /** What an element is for, beyond its tag; Adf.tsx styles each one. */
 export type AdfRole =
-  | "tasks" | "task" | "taskDone" | "mention" | "lozenge" | "cardLink" | "media" | "tableWrap" | "expand" | "expandTitle" | "empty"
+  | "tasks"
+  | "task"
+  | "taskDone"
+  | "mention"
+  | "lozenge"
+  | "cardLink"
+  | "media"
+  | "tableWrap"
+  | "expand"
+  | "expandTitle"
+  | "empty"
   | `panel-${PanelType}`;
 
 export type PanelType = "info" | "note" | "warning" | "error" | "success";
@@ -43,12 +76,18 @@ function read(v: unknown): Node | null {
     type: v.type,
     text: str(v.text),
     attrs: isObject(v.attrs) ? v.attrs : {},
-    marks: Array.isArray(v.marks) ? v.marks.filter(isObject).map((m) => ({ type: str(m.type) ?? "", attrs: isObject(m.attrs) ? m.attrs : {} })) : [],
+    marks: Array.isArray(v.marks)
+      ? v.marks.filter(isObject).map((m) => ({ type: str(m.type) ?? "", attrs: isObject(m.attrs) ? m.attrs : {} }))
+      : [],
     content: Array.isArray(v.content) ? v.content : undefined,
   };
 }
 
-const el = (tag: AdfTag, children: AdfOut[] = [], extra: Partial<AdfElement> = {}): AdfElement => ({ tag, children, ...extra });
+const el = (tag: AdfTag, children: AdfOut[] = [], extra: Partial<AdfElement> = {}): AdfElement => ({
+  tag,
+  children,
+  ...extra,
+});
 
 const MARKS: Record<string, AdfTag> = { strong: "strong", em: "em", code: "code", strike: "s", underline: "u" };
 
@@ -84,29 +123,44 @@ function render(raw: unknown): AdfOut | null {
   if (!node) return null;
   const a = node.attrs;
   switch (node.type) {
-    case "doc": return el("div", kids(node));
-    case "text": return text(node);
-    case "paragraph": return el("p", kids(node));
-    case "heading": return el(heading(a.level), kids(node));
-    case "bulletList": return el("ul", kids(node));
-    case "orderedList": return el("ol", kids(node));
-    case "listItem": return el("li", kids(node));
-    case "taskList": return el("ul", kids(node), { role: "tasks" });
+    case "doc":
+      return el("div", kids(node));
+    case "text":
+      return text(node);
+    case "paragraph":
+      return el("p", kids(node));
+    case "heading":
+      return el(heading(a.level), kids(node));
+    case "bulletList":
+      return el("ul", kids(node));
+    case "orderedList":
+      return el("ol", kids(node));
+    case "listItem":
+      return el("li", kids(node));
+    case "taskList":
+      return el("ul", kids(node), { role: "tasks" });
     case "taskItem": {
       const done = a.state === "DONE";
       return el("li", [done ? "☑ " : "☐ ", ...kids(node)], { role: done ? "taskDone" : "task" });
     }
-    case "blockquote": return el("blockquote", kids(node));
-    case "codeBlock": return el("pre", [el("code", kids(node))]);
-    case "rule": return el("hr");
-    case "hardBreak": return el("br");
+    case "blockquote":
+      return el("blockquote", kids(node));
+    case "codeBlock":
+      return el("pre", [el("code", kids(node))]);
+    case "rule":
+      return el("hr");
+    case "hardBreak":
+      return el("br");
     case "panel": {
       const type = PANELS.find((p) => p === a.panelType) ?? "info";
       return el("div", kids(node), { role: `panel-${type}` });
     }
-    case "mention": return el("span", [str(a.text) ?? "@someone"], { role: "mention" });
-    case "emoji": return str(a.text) ?? str(a.shortName) ?? "";
-    case "status": return el("span", [str(a.text) ?? ""], { role: "lozenge" });
+    case "mention":
+      return el("span", [str(a.text) ?? "@someone"], { role: "mention" });
+    case "emoji":
+      return str(a.text) ?? str(a.shortName) ?? "";
+    case "status":
+      return el("span", [str(a.text) ?? ""], { role: "lozenge" });
     case "date": {
       const when = Number(a.timestamp);
       return a.timestamp && Number.isFinite(when) ? new Date(when).toLocaleDateString() : "";
@@ -120,17 +174,26 @@ function render(raw: unknown): AdfOut | null {
       return node.type === "inlineCard" ? link : el("p", [link]);
     }
     case "mediaSingle":
-    case "mediaGroup": return el("div", ["📎 Attachment (open in Jira to view)"], { role: "media" });
-    case "media": return null;
-    case "table": return el("div", [el("table", [el("tbody", kids(node))])], { role: "tableWrap" });
-    case "tableRow": return el("tr", kids(node));
-    case "tableHeader": return el("th", kids(node));
-    case "tableCell": return el("td", kids(node));
+    case "mediaGroup":
+      return el("div", ["📎 Attachment (open in Jira to view)"], { role: "media" });
+    case "media":
+      return null;
+    case "table":
+      return el("div", [el("table", [el("tbody", kids(node))])], { role: "tableWrap" });
+    case "tableRow":
+      return el("tr", kids(node));
+    case "tableHeader":
+      return el("th", kids(node));
+    case "tableCell":
+      return el("td", kids(node));
     // shown open, with its title: there's nothing to unfold on a printed ticket
     case "expand":
     case "nestedExpand":
-      return el("div", [el("p", [str(a.title) || "Details"], { role: "expandTitle" }), ...kids(node)], { role: "expand" });
-    default: return node.content ? el("div", kids(node)) : null;
+      return el("div", [el("p", [str(a.title) || "Details"], { role: "expandTitle" }), ...kids(node)], {
+        role: "expand",
+      });
+    default:
+      return node.content ? el("div", kids(node)) : null;
   }
 }
 

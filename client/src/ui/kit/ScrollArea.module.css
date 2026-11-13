@@ -1,13 +1,31 @@
 .area {
-  min-height: 0; overflow: auto; overscroll-behavior: contain;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin; scrollbar-color: var(--pp-color-edge) transparent;
-  outline: none; border-radius: inherit;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pp-color-edge) transparent;
+  outline: none;
+  border-radius: inherit;
 }
-.area:focus-visible { box-shadow: var(--pp-glow-focus); }
+.area:focus-visible {
+  box-shadow: var(--pp-glow-focus);
+}
 /* browsers without scrollbar-color get the same thin rail */
-.area::-webkit-scrollbar { width: 8px; height: 8px; }
-.area::-webkit-scrollbar-track { background: transparent; }
-.area::-webkit-scrollbar-thumb { background: var(--pp-color-edge); border-radius: var(--pp-radius-pill); }
-.area::-webkit-scrollbar-thumb:hover { background: var(--pp-color-gold); }
-.area::-webkit-scrollbar-corner { background: transparent; }
+.area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.area::-webkit-scrollbar-thumb {
+  background: var(--pp-color-edge);
+  border-radius: var(--pp-radius-pill);
+}
+.area::-webkit-scrollbar-thumb:hover {
+  background: var(--pp-color-gold);
+}
+.area::-webkit-scrollbar-corner {
+  background: transparent;
+}

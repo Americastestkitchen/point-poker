@@ -10,10 +10,21 @@ export function makeChip(color: string): THREE.Mesh {
   let mat = chipMats.get(color);
   if (!mat) {
     const tex = canvasTex(64, 64, (g) => {
-      g.fillStyle = color; g.fillRect(0, 0, 64, 64);
+      g.fillStyle = color;
+      g.fillRect(0, 0, 64, 64);
       g.fillStyle = "#f3e7cf";
-      for (let i = 0; i < 6; i++) { g.save(); g.translate(32, 32); g.rotate((i / 6) * Math.PI * 2); g.fillRect(-4, -32, 8, 10); g.restore(); }
-      g.strokeStyle = "#f3e7cf"; g.lineWidth = 2; g.beginPath(); g.arc(32, 32, 16, 0, Math.PI * 2); g.stroke();
+      for (let i = 0; i < 6; i++) {
+        g.save();
+        g.translate(32, 32);
+        g.rotate((i / 6) * Math.PI * 2);
+        g.fillRect(-4, -32, 8, 10);
+        g.restore();
+      }
+      g.strokeStyle = "#f3e7cf";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(32, 32, 16, 0, Math.PI * 2);
+      g.stroke();
     });
     mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4 });
     chipMats.set(color, mat);
@@ -28,7 +39,10 @@ export function chipBreakdown(amount: number, cap = 40): string[] {
   const out: string[] = [];
   let left = Math.floor(amount);
   for (const d of [100, 25, 5, 1] as const) {
-    while (left >= d && out.length < cap) { out.push(CHIP_COLORS[d]); left -= d; }
+    while (left >= d && out.length < cap) {
+      out.push(CHIP_COLORS[d]);
+      left -= d;
+    }
   }
   return out;
 }
@@ -37,14 +51,18 @@ export function stackChips(group: THREE.Group, amount: number, seed = 1) {
   group.clear();
   const colors = chipBreakdown(amount);
   let rnd = seed;
-  const rand = () => ((rnd = (rnd * 16807) % 2147483647) / 2147483647);
+  const rand = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
   const perStack = 8;
   colors.forEach((c, i) => {
     const stack = Math.floor(i / perStack);
     const chip = makeChip(c);
     const a = stack * 2.4;
     const r = stack === 0 ? 0 : 0.06 + stack * 0.012;
-    chip.position.set(Math.cos(a) * r + (rand() - 0.5) * 0.006, 0.006 + (i % perStack) * 0.0125, Math.sin(a) * r + (rand() - 0.5) * 0.006);
+    chip.position.set(
+      Math.cos(a) * r + (rand() - 0.5) * 0.006,
+      0.006 + (i % perStack) * 0.0125,
+      Math.sin(a) * r + (rand() - 0.5) * 0.006,
+    );
     chip.rotation.y = rand() * 6;
     group.add(chip);
   });

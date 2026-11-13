@@ -33,7 +33,11 @@ export const micPressed = (status: MicStatus) => status === "on" || status === "
  * otherwise it shows your chips straight away. Your share is the round's `share` (the house's
  * whole pot when the house won and you're the dealer: you're its winner then).
  */
-export function walletWin(changes: readonly ViewChange[], room: Pick<TableView, "winners" | "share">, meId: string | undefined): number | null {
+export function walletWin(
+  changes: readonly ViewChange[],
+  room: Pick<TableView, "winners" | "share">,
+  meId: string | undefined,
+): number | null {
   if (!meId || !changes.some((c) => c.t === "settled") || !room.winners.includes(meId)) return null;
   return room.share;
 }
@@ -44,14 +48,18 @@ export const BURST_DELAY_MS = 350;
 /** More coins for a bigger win, but always a handful and never a flood. */
 export const burstSize = (amount: number) => Math.max(8, Math.min(28, Math.round(amount)));
 
-export interface Point { x: number; y: number }
+export interface Point {
+  x: number;
+  y: number;
+}
 
 /**
  * One coin's flight: out of `from` to a random spot around it (`angle`, `radius`), a little
  * hover, then into `to`. `i` staggers the coins so they stream in one after another.
  */
 export function coinFlight(i: number, from: Point, to: Point, angle: number, radius: number) {
-  const bx = from.x + Math.cos(angle) * radius, by = from.y + Math.sin(angle) * radius * 0.7;
+  const bx = from.x + Math.cos(angle) * radius,
+    by = from.y + Math.sin(angle) * radius * 0.7;
   return {
     keyframes: [
       { transform: `translate(${from.x}px, ${from.y}px) scale(.3)`, opacity: 0 },
@@ -82,14 +90,16 @@ export interface BoardRow {
 
 /** Players by chips, most first (ties keep their seat order). */
 export function boardRows(players: readonly PublicPlayer[], meId: string | undefined, iAmDealer: boolean): BoardRow[] {
-  return [...players].sort((a, b) => b.chips - a.chips).map((p, i) => ({
-    player: p,
-    rank: i === 0 && p.chips > 0 ? "👑" : String(i + 1),
-    name: `${p.name}${p.isDealer ? " · dealer" : ""}${p.connected ? "" : " · away"}`,
-    me: p.id === meId,
-    away: !p.connected,
-    removable: iAmDealer && !p.isDealer && !p.connected,
-  }));
+  return [...players]
+    .sort((a, b) => b.chips - a.chips)
+    .map((p, i) => ({
+      player: p,
+      rank: i === 0 && p.chips > 0 ? "👑" : String(i + 1),
+      name: `${p.name}${p.isDealer ? " · dealer" : ""}${p.connected ? "" : " · away"}`,
+      me: p.id === meId,
+      away: !p.connected,
+      removable: iAmDealer && !p.isDealer && !p.connected,
+    }));
 }
 
 /** How a round turned out: "house wins · Ann +12", "Ann & Bob +3", "no cards played". */

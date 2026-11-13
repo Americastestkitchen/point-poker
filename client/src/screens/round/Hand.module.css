@@ -5,18 +5,36 @@
  */
 .scroller {
   --gap: var(--pp-space-2);
-  --card-w: clamp(46px, min(
-    calc((100vw - 56px - (var(--cards, 5) - 1) * var(--gap)) / var(--cards, 5)),
-    calc(var(--dock-max, 300px) * .44 / 1.42)
-  ), 78px);
-  flex: 0 1 auto; min-width: 0; max-width: 100%;
-  overflow-x: auto; overflow-y: hidden;
+  --card-w: clamp(
+    46px,
+    min(
+      calc((100vw - 56px - (var(--cards, 5) - 1) * var(--gap)) / var(--cards, 5)),
+      calc(var(--dock-max, 300px) * 0.44 / 1.42)
+    ),
+    78px
+  );
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
   /* room above for the lifted card and its ribbon, below for the vote dots */
   padding: 26px var(--pp-space-2) var(--pp-space-3);
 }
-.settle { --card-w: clamp(44px, min(
-    calc((100vw - 56px - (var(--cards, 5) - 1) * var(--gap)) / var(--cards, 5)),
-    calc(var(--dock-max, 300px) * .4 / 1.42)
-  ), 70px); }
+.settle {
+  --card-w: clamp(
+    44px,
+    min(
+      calc((100vw - 56px - (var(--cards, 5) - 1) * var(--gap)) / var(--cards, 5)),
+      calc(var(--dock-max, 300px) * 0.4 / 1.42)
+    ),
+    70px
+  );
+}
 
-.hand { display: flex; gap: var(--gap); width: max-content; margin: 0 auto; }
+.hand {
+  display: flex;
+  gap: var(--gap);
+  width: max-content;
+  margin: 0 auto;
+}

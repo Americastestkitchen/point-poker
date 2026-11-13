@@ -15,18 +15,31 @@ if (!["patch", "minor", "major"].includes(bump)) {
   console.error(`Unknown bump "${bump}". Use patch, minor or major.`);
   process.exit(1);
 }
-const sh = (cmd) => execSync(cmd, { stdio: ["ignore", "pipe", "inherit"] }).toString().trim();
-const run = (cmd) => { console.log(`\n$ ${cmd}`); execSync(cmd, { stdio: "inherit" }); };
-const fail = (msg) => { console.error(`\n✖ ${msg}`); process.exit(1); };
+const sh = (cmd) =>
+  execSync(cmd, { stdio: ["ignore", "pipe", "inherit"] })
+    .toString()
+    .trim();
+const run = (cmd) => {
+  console.log(`\n$ ${cmd}`);
+  execSync(cmd, { stdio: "inherit" });
+};
+const fail = (msg) => {
+  console.error(`\n✖ ${msg}`);
+  process.exit(1);
+};
 
 if (sh("git rev-parse --abbrev-ref HEAD") !== "main") fail("Releases are cut from main. Run `git switch main` first.");
 if (sh("git status --porcelain")) fail("You have uncommitted changes. Commit or stash them first.");
 run("git fetch origin");
 const ahead = sh("git rev-list --count origin/main..main");
-if (ahead !== "0") fail(`You have ${ahead} commit(s) on main that aren't pushed. Push first, so what you release is what you tried on the dev site.`);
+if (ahead !== "0")
+  fail(
+    `You have ${ahead} commit(s) on main that aren't pushed. Push first, so what you release is what you tried on the dev site.`,
+  );
 run("git merge --ff-only origin/main");
 const lastTag = sh("git describe --tags --abbrev=0 2>/dev/null || true");
-if (lastTag && sh(`git rev-list --count ${lastTag}..HEAD`) === "0") fail(`Nothing to release: main hasn't changed since ${lastTag}.`);
+if (lastTag && sh(`git rev-list --count ${lastTag}..HEAD`) === "0")
+  fail(`Nothing to release: main hasn't changed since ${lastTag}.`);
 
 run("npm run check");
 run(`npm version ${bump} -m "Release v%s"`);

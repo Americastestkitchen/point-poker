@@ -47,7 +47,9 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
   let state: PotState = "empty";
 
   return {
-    get state() { return state; },
+    get state() {
+      return state;
+    },
 
     fill(amount) {
       state = "full";
@@ -55,13 +57,26 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
       group.children.forEach((c, i) => {
         const to = c.position.clone();
         c.position.y += 0.6 + i * 0.01;
-        flights.add({ obj: c, from: c.position.clone(), to, t: -i * 0.03, dur: 0.35, arc: 0, spin: 0, done: () => i % 3 === 0 && audio.chip() });
+        flights.add({
+          obj: c,
+          from: c.position.clone(),
+          to,
+          t: -i * 0.03,
+          dur: 0.35,
+          arc: 0,
+          spin: 0,
+          done: () => i % 3 === 0 && audio.chip(),
+        });
       });
     },
 
     payOut(to, landed) {
       const chips = [...group.children];
-      if (!to.length) { group.clear(); state = "empty"; return; }
+      if (!to.length) {
+        group.clear();
+        state = "empty";
+        return;
+      }
       state = "payingOut";
       chips.forEach((chip, i) => {
         const winner = to[i % to.length];
@@ -71,9 +86,17 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
         stage.scene.add(chip);
         chip.position.copy(from);
         flights.add({
-          obj: chip, from, to: () => winner.stackPosition().setY(layout.table.y + 0.05),
-          t: -0.6 - i * 0.04, dur: 0.6, arc: 0.4, spin: 8,
-          done: () => { stage.scene.remove(chip); if (i % 2 === 0) audio.chip(); },
+          obj: chip,
+          from,
+          to: () => winner.stackPosition().setY(layout.table.y + 0.05),
+          t: -0.6 - i * 0.04,
+          dur: 0.6,
+          arc: 0.4,
+          spin: 8,
+          done: () => {
+            stage.scene.remove(chip);
+            if (i % 2 === 0) audio.chip();
+          },
         });
       });
       const total = 0.6 + chips.length * 0.04 + 0.7;
@@ -84,6 +107,9 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
       });
     },
 
-    clear() { group.clear(); state = "empty"; },
+    clear() {
+      group.clear();
+      state = "empty";
+    },
   };
 }

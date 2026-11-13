@@ -4,7 +4,8 @@ import * as THREE from "three";
 import { cardBack, cardFront } from "../art/textures.ts";
 import type { Layout } from "../layout/layout.ts";
 
-const CARD_W = 0.16, CARD_H = 0.23;
+const CARD_W = 0.16,
+  CARD_H = 0.23;
 
 export interface TableCard {
   readonly group: THREE.Group;
@@ -19,7 +20,11 @@ export interface TableCard {
    * from `from`, a point or a moving hand; `delay` holds it in the hand first, and
    * `gentle` sets it down low and flat instead of tossing it.
    */
-  show(value: number | null, from?: THREE.Vector3 | (() => THREE.Vector3), opts?: { delay?: number; gentle?: boolean }): void;
+  show(
+    value: number | null,
+    from?: THREE.Vector3 | (() => THREE.Vector3),
+    opts?: { delay?: number; gentle?: boolean },
+  ): void;
   /** Where the card lies for this seat at this table size. */
   placeAt(slot: number, count: number, mine: boolean): void;
   /** Someone fiddles with the card after `delay` seconds: it wiggles and ends up (mostly) straight. */
@@ -86,7 +91,8 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
   let floatT = 0;
   let yaw = 0;
   /** How crooked the card sits; adjusting squares it back up. */
-  let skew = 0, skewTarget = 0;
+  let skew = 0,
+    skewTarget = 0;
   const shift = new THREE.Vector3();
   const shiftTarget = new THREE.Vector3();
   let wiggle = 0;
@@ -101,16 +107,25 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
 
   const self: TableCard = {
     group,
-    get value() { return value; },
-    get isFaceUp() { return facing.side !== "down"; },
+    get value() {
+      return value;
+    },
+    get isFaceUp() {
+      return facing.side !== "down";
+    },
     noFloat: false,
 
     show(next, fromWorld, opts = {}) {
       if (place.at === "hidden") {
         const gentle = !!opts.gentle;
         if (typeof fromWorld === "function") place = { at: "hand", wait: opts.delay ?? 0, hand: fromWorld, gentle };
-        else if (fromWorld) { from.copy(fromWorld); place = { at: "landing", t: 0, gentle }; }
-        else { base.copy(home); place = { at: "felt" }; }
+        else if (fromWorld) {
+          from.copy(fromWorld);
+          place = { at: "landing", t: 0, gentle };
+        } else {
+          base.copy(home);
+          place = { at: "felt" };
+        }
         // land a little crooked, like a real person dropping a card
         skew = skewTarget = (Math.random() - 0.5) * 0.5;
         shift.set((Math.random() - 0.5) * 0.06, 0, (Math.random() - 0.5) * 0.05);
@@ -126,7 +141,9 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
       yaw = y;
     },
 
-    nudge(delay = 0) { nudgeIn = delay; },
+    nudge(delay = 0) {
+      nudgeIn = delay;
+    },
 
     hide() {
       place = { at: "hidden" };
@@ -139,13 +156,18 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
     },
 
     turnUp(next, { delay = 0, onTurn } = {}) {
-      if (delay > 0) { facing = { side: "waiting to turn", in: delay, value: next, onTurn }; return; }
+      if (delay > 0) {
+        facing = { side: "waiting to turn", in: delay, value: next, onTurn };
+        return;
+      }
       setValue(next);
       facing = { side: "up" };
       onTurn?.();
     },
 
-    turnDown() { facing = { side: "down" }; },
+    turnDown() {
+      facing = { side: "down" };
+    },
 
     update(dt) {
       if (place.at === "hidden") return;
@@ -194,7 +216,8 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
       const target = facing.side === "up" ? 1 : 0;
       flip += Math.sign(target - flip) * Math.min(Math.abs(target - flip), dt * 2.6);
       // landing: an eased slide from where it left the hand (or was tossed from) to its spot
-      let e = 1, gentle = false;
+      let e = 1,
+        gentle = false;
       if (place.at === "landing") {
         place.t = Math.min(1, place.t + dt * 2.4);
         e = 1 - Math.pow(1 - place.t, 3);
@@ -206,7 +229,8 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
       group.position.copy(base).add(shift);
       const jiggle = Math.sin(wiggle * 30) * wiggle;
       group.position.x += jiggle * 0.012;
-      group.position.y += Math.sin(e * Math.PI) * (gentle ? 0.05 : 0.25) + Math.sin(flip * Math.PI) * 0.12 + Math.abs(jiggle) * 0.006;
+      group.position.y +=
+        Math.sin(e * Math.PI) * (gentle ? 0.05 : 0.25) + Math.sin(flip * Math.PI) * 0.12 + Math.abs(jiggle) * 0.006;
       group.rotation.y = yaw + skew + jiggle * 0.12;
       // face down = front pointing at the felt
       card.object.rotation.x = Math.PI / 2 - flip * Math.PI;

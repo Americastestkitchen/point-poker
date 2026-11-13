@@ -2,9 +2,16 @@
 // environment: an environment changes how things look, never where they are.
 // Plain numbers (no three.js), so it's easy to test.
 
-export interface Vec3 { x: number; y: number; z: number }
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
 /** A spot for a prop: where it stands and which way it faces (rotation about y). */
-export interface Anchor { position: Vec3; yaw: number }
+export interface Anchor {
+  position: Vec3;
+  yaw: number;
+}
 
 const vec = (x: number, y: number, z: number): Vec3 => ({ x, y, z });
 

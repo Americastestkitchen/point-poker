@@ -35,10 +35,14 @@ function useNotices() {
   };
   useGameEvents((e) => show(eventNotice(e)));
   useViewChanges((c, s) => show(viewNotice(c, s.me?.id)));
-  useEffect(() => store.subscribe((s, prev) => {
-    const n = connectionNotice(prev.connection, s.connection);
-    if (n) toasts.show(n.text, { tone: n.tone });
-  }), [store, toasts]);
+  useEffect(
+    () =>
+      store.subscribe((s, prev) => {
+        const n = connectionNotice(prev.connection, s.connection);
+        if (n) toasts.show(n.text, { tone: n.tone });
+      }),
+    [store, toasts],
+  );
 }
 
 /** Clicking the ticket on the table opens it full size (TicketSheet draws the popup). */
