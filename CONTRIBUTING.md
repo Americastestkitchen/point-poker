@@ -72,16 +72,20 @@ GitHub Actions then:
 
 ## Secrets
 
-- **Fly (runtime):** set per app with `fly secrets set -a point-poker` / `-a point-poker-dev`:
+- **Fly (runtime):** the deploy workflows copy these from GitHub secrets onto each app, so
+  nobody runs `fly secrets set` for them:
   - `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET`: the Atlassian app (see below).
-  - `TOKEN_KEY`: a long random string (`openssl rand -base64 32`) that seals dealers' Jira
-    sign-ins on the `/data` volume. Changing it signs everyone out.
-  - `JIRA_SITES`: the Jira site hosts tables may use, comma-separated, like
-    `acme.atlassian.net`. Without it any Atlassian account could open a table.
-  - Optional: `JIRA_POINTS_FIELD` (story points field ID), `JIRA_PROJECT` (default project).
+  - `JIRA_SITES`: the Jira site hosts tables may use, comma-separated
+    (`bostoncommonpress.atlassian.net`). Without it any Atlassian account could open a table.
+  - `TOKEN_KEY` (production only, from the `TOKEN_KEY_PROD` secret): seals dealers' Jira
+    sign-ins on the `/data` volume. Changing it signs everyone out. The dev site keeps no volume,
+    so its sign-ins last until it sleeps.
+  - Optional, by hand with `fly secrets set`: `JIRA_POINTS_FIELD` (story points field ID),
+    `JIRA_PROJECT` (default project), and `HOST_PASSCODE` for an app without Jira sign-in.
 - **GitHub (deploys):** `FLY_API_TOKEN_DEV` and `FLY_API_TOKEN_PROD` are app-scoped Fly deploy tokens.
   `FLY_API_TOKEN_PREVIEW` can create and delete apps in the Fly org, which previews need.
-  `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` and `JIRA_SITES` are copied to each preview
+  `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` and `JIRA_SITES` are copied to dev, production
+  and each preview, and `TOKEN_KEY_PROD` to production
   (without them, previews fall back to `HOST_PASSCODE` and hand-typed tickets). The repository
   variable `PREVIEW_SIGN_IN=own` makes previews use their own callback URL instead of the dev
   site's relay; add `https://point-poker-pr-<number>.fly.dev/auth/jira/callback` to the app then.

@@ -26,6 +26,20 @@ jobs:
       - run: npm ci
       - run: npm run check
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+      # Dealers sign in with Jira (see CONTRIBUTING.md). The dev site keeps no volume, so no
+      # TOKEN_KEY: sign-ins last until it sleeps. Staged: the deploy below applies them.
+      - name: Set the Jira sign-in secrets
+        if: env.ATLASSIAN_CLIENT_ID != ''
+        run: |
+          flyctl secrets set --config fly.dev.toml --stage \
+            ATLASSIAN_CLIENT_ID="$ATLASSIAN_CLIENT_ID" \
+            ATLASSIAN_CLIENT_SECRET="$ATLASSIAN_CLIENT_SECRET" \
+            JIRA_SITES="$JIRA_SITES"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV }}
+          ATLASSIAN_CLIENT_ID: ${{ secrets.ATLASSIAN_CLIENT_ID }}
+          ATLASSIAN_CLIENT_SECRET: ${{ secrets.ATLASSIAN_CLIENT_SECRET }}
+          JIRA_SITES: ${{ secrets.JIRA_SITES }}
       - run: flyctl deploy --remote-only --ha=false --config fly.dev.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV }}

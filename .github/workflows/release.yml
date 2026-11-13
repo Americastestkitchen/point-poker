@@ -35,6 +35,23 @@ jobs:
       - run: npm ci
       - run: npm run check
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+      # Dealers sign in with Jira (see CONTRIBUTING.md). TOKEN_KEY_PROD seals their logins on the
+      # volume: it must stay the same, or everyone is signed out. Staged: the deploy applies them.
+      - name: Set the Jira sign-in secrets
+        if: env.ATLASSIAN_CLIENT_ID != ''
+        run: |
+          [ -n "$TOKEN_KEY" ] || { echo "::error::Set the TOKEN_KEY_PROD secret first"; exit 1; }
+          flyctl secrets set --config fly.toml --stage \
+            ATLASSIAN_CLIENT_ID="$ATLASSIAN_CLIENT_ID" \
+            ATLASSIAN_CLIENT_SECRET="$ATLASSIAN_CLIENT_SECRET" \
+            JIRA_SITES="$JIRA_SITES" \
+            TOKEN_KEY="$TOKEN_KEY"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_PROD }}
+          ATLASSIAN_CLIENT_ID: ${{ secrets.ATLASSIAN_CLIENT_ID }}
+          ATLASSIAN_CLIENT_SECRET: ${{ secrets.ATLASSIAN_CLIENT_SECRET }}
+          JIRA_SITES: ${{ secrets.JIRA_SITES }}
+          TOKEN_KEY: ${{ secrets.TOKEN_KEY_PROD }}
       - name: Deploy production
         run: flyctl deploy --remote-only --ha=false --config fly.toml
         env:
