@@ -58,8 +58,10 @@
 .wallet.wallet:focus {
   box-shadow: var(--pp-glow-focus);
 }
+/* taller than the kit's counter, so the coin needs as much room at its side as above and below it */
 .wallet [role="status"] {
   min-height: 44px;
+  padding-left: var(--pp-space-3);
   padding-right: var(--pp-space-4);
 }
 
