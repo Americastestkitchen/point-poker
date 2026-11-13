@@ -1,5 +1,6 @@
 // Read-only Jira Cloud client. Only issues GET requests.
-import type { Ticket, TicketSummary } from "../../shared/protocol.ts";
+import { z } from "zod";
+import { Ticket, type TicketSummary } from "../../shared/protocol.ts";
 import { parseIssueKey } from "../../shared/rules.ts";
 import type { TicketQuery, TicketSource } from "./source.ts";
 
@@ -13,7 +14,40 @@ export interface JiraConfig {
   pointsField?: string;
   /** Project used for "current & upcoming sprints" when there's no ticket to go by. */
   defaultProject?: string;
+  /** Tests pass a fake; otherwise the global fetch. */
+  fetch?: typeof fetch;
 }
+
+// ---- Jira's replies, checked at the edge. An issue needs a key and fields;
+// any field that's missing or odd falls back to a blank, so a strange issue
+// still loads. Fields we don't name (like the points field) are kept as unknown.
+const text = z.string().catch("");
+const named = z.object({ name: text }).catch({ name: "" });
+const person = z.object({ displayName: text }).nullable().catch(null);
+const points = z.number().nullable().catch(null);
+
+const Issue = z.object({
+  key: z.string(),
+  fields: z.looseObject({
+    summary: text,
+    /** Atlassian Document Format. */
+    description: z.json().catch(null),
+    issuetype: named,
+    status: z.object({
+      name: text,
+      statusCategory: z.object({ key: Ticket.shape.statusCategory.catch("") }).catch({ key: "" }),
+    }).catch({ name: "", statusCategory: { key: "" } }),
+    priority: named,
+    assignee: person,
+    reporter: person,
+    labels: z.array(z.string()).catch([]),
+    parent: z.object({ key: z.string(), fields: z.object({ summary: text }).catch({ summary: "" }) }).nullable().catch(null),
+  }),
+});
+
+const Search = z.object({
+  issues: z.array(z.object({ key: z.string(), fields: z.looseObject({ summary: text, status: named }) })).default([]),
+});
 
 /** Flattens Atlassian Document Format into readable plain text. */
 export function adfToText(node: any): string {
@@ -45,8 +79,10 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
   const base = cfg.baseUrl.replace(/\/+$/, "");
   const pointsField = cfg.pointsField ?? "customfield_10004";
   const authorization = "Basic " + Buffer.from(`${cfg.auth.email}:${cfg.auth.token}`).toString("base64");
+  const fetch = cfg.fetch ?? globalThis.fetch;
 
-  async function get(path: string, params: Record<string, string> = {}): Promise<any> {
+  /** GETs a Jira endpoint and checks the reply against `schema`. */
+  async function get<S extends z.ZodType>(schema: S, path: string, params: Record<string, string> = {}): Promise<z.infer<S>> {
     const url = new URL(base + path);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     const res = await fetch(url, {
@@ -56,17 +92,14 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
     });
     if (res.status === 404) throw new Error("Ticket not found (or no access)");
     if (!res.ok) throw new Error(`Jira answered ${res.status}`);
-    return res.json();
+    const parsed = schema.safeParse(await res.json().catch(() => undefined));
+    if (!parsed.success) throw new Error("Jira sent a reply we couldn't read");
+    return parsed.data;
   }
 
   async function search(jql: string): Promise<TicketSummary[]> {
-    const j = await get("/rest/api/3/search/jql", { jql, fields: `summary,status,${pointsField}`, maxResults: "50" });
-    return (j.issues ?? []).map((i: any) => ({
-      key: i.key,
-      summary: i.fields?.summary ?? "",
-      status: i.fields?.status?.name ?? "",
-      points: typeof i.fields?.[pointsField] === "number" ? i.fields[pointsField] : null,
-    }));
+    const j = await get(Search, "/rest/api/3/search/jql", { jql, fields: `summary,status,${pointsField}`, maxResults: "50" });
+    return j.issues.map(({ key, fields: f }) => ({ key, summary: f.summary, status: f.status.name, points: points.parse(f[pointsField]) }));
   }
 
   return {
@@ -75,23 +108,22 @@ export function jiraSource(cfg: JiraConfig): TicketSource {
       const key = parseIssueKey(ref);
       if (!key) throw new Error("That doesn't look like a ticket link or key");
       const fields = ["summary", "description", "issuetype", "status", "priority", "assignee", "reporter", "labels", "parent", pointsField];
-      const j = await get(`/rest/api/3/issue/${encodeURIComponent(key)}`, { fields: fields.join(",") });
-      const f = j.fields ?? {};
+      const { key: issueKey, fields: f } = await get(Issue, `/rest/api/3/issue/${encodeURIComponent(key)}`, { fields: fields.join(",") });
       return {
-        key: j.key,
-        summary: f.summary ?? "",
+        key: issueKey,
+        summary: f.summary,
         description: adfToText(f.description).replace(/\n{3,}/g, "\n\n").trim().slice(0, 6000),
-        type: f.issuetype?.name ?? "",
-        status: f.status?.name ?? "",
-        priority: f.priority?.name ?? "",
+        type: f.issuetype.name,
+        status: f.status.name,
+        priority: f.priority.name,
         assignee: f.assignee?.displayName ?? "Unassigned",
         reporter: f.reporter?.displayName ?? "",
-        labels: f.labels ?? [],
-        currentPoints: typeof f[pointsField] === "number" ? f[pointsField] : null,
-        url: `${base}/browse/${j.key}`,
+        labels: f.labels,
+        currentPoints: points.parse(f[pointsField]),
+        url: `${base}/browse/${issueKey}`,
         adf: f.description && JSON.stringify(f.description).length < 300_000 ? f.description : null,
-        statusCategory: ["new", "indeterminate", "done"].includes(f.status?.statusCategory?.key) ? f.status.statusCategory.key : "",
-        parent: f.parent ? { key: f.parent.key, summary: f.parent.fields?.summary ?? "" } : null,
+        statusCategory: f.status.statusCategory.key,
+        parent: f.parent && { key: f.parent.key, summary: f.parent.fields.summary },
       } satisfies Ticket;
     },
     async find(q: TicketQuery) {
