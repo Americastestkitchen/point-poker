@@ -42,6 +42,7 @@ function Said({ words }: { words: Words }) {
     typeof w === "string" ? (
       w
     ) : (
+      // oxlint-disable-next-line react/no-array-index-key -- a part of a fixed sentence is its position
       <b key={i} className={s.strong}>
         {w.strong}
       </b>

@@ -7,7 +7,7 @@
 // pickerCue), and waits its turn if another popup or the look editor is open. It's always dismissable, even with no ticket: the dock's
 // "＋ Add a Jira ticket" opens it again, and the Esc game menu stays reachable.
 // Dealer only: it follows the role. The decisions live in picker.ts.
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import type { TableView } from "../../../../shared/protocol.ts";
 import {
   Button,
@@ -58,8 +58,9 @@ export function TicketPicker() {
   });
   // it waits its turn: never over the look editor, never replacing a popup you're reading
   const free = useAppState((st) => st.ui.popup === null && !st.ui.lookOpen);
+  const cueFromEffect = useEffectEvent(cue);
   useEffect(() => {
-    if (free) cue({ t: "seen", isDealer, hasTicket });
+    if (free) cueFromEffect({ t: "seen", isDealer, hasTicket });
   }, [isDealer, hasTicket, free]);
 
   // closed: a failure it showed is old news next time
@@ -264,6 +265,7 @@ function Queue({ room, disabled, onPick }: { room: TableView; disabled: boolean;
   return (
     <Section title={queue.title}>
       <ScrollArea className={s.queue}>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow keys bubble up from the rows, the focus stops (roving tabindex) */}
         <div role="list" aria-label={queue.title} className={s.rows} onKeyDown={roving.onKeyDown}>
           {queue.rows.map((r, i) => (
             <QueueItem key={r.key} row={r} roving={roving.item(i)} disabled={disabled} onPick={onPick} />

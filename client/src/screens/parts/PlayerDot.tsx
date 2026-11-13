@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { PublicPlayer } from "../../../../shared/protocol.ts";
 import { cx } from "../../ui/index.ts";
 import s from "./PlayerDot.module.css";
@@ -17,7 +16,7 @@ export function PlayerDot({ player, filled = true, size = "md", title }: PlayerD
   return (
     <span
       className={cx(s.dot, s[size], filled && s.filled)}
-      style={{ "--dot": player.look.color } as CSSProperties}
+      style={{ "--dot": player.look.color }}
       title={title ?? player.name}
       role="img"
       aria-label={title ?? player.name}

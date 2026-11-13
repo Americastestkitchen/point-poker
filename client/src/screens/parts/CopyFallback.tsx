@@ -14,6 +14,7 @@ export function CopyFallback() {
 
   // select it all, so Ctrl+C (or a long press) copies straight away
   useLayoutEffect(() => {
+    if (!shown) return;
     const el = text.current;
     const sel = el?.ownerDocument.getSelection();
     if (!el || !sel) return;

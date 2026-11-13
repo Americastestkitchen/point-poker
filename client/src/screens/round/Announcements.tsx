@@ -3,7 +3,7 @@
 // takes the pot on the call. They pass over the table, they don't stay on it; a newer one
 // replaces the one showing. announce.ts decides the words.
 // (The coin burst into the wallet belongs to the top bar: chrome/wallet.ts.)
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "../../ui/index.ts";
 import { useGame } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
@@ -26,11 +26,11 @@ export function Announcements() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const seq = useRef(0);
 
-  const clear = () => {
+  const clear = useCallback(() => {
     for (const t of timers.current) clearTimeout(t);
     timers.current = [];
-  };
-  useEffect(() => clear, []);
+  }, []);
+  useEffect(() => clear, [clear]);
 
   useViewChanges((change, state) => {
     if (change.t === "revealed") audio.flip();

@@ -17,7 +17,9 @@ export function TopBar() {
   const wallet = useRef<HTMLButtonElement>(null);
   const coins = useWallet(wallet, s.flyCoin ?? "pp-fly-coin");
   const iAmDealer = me?.isDealer ?? false;
-  const tap = useLetGoAfterTouch();
+  const dealerTap = useLetGoAfterTouch(dealer.show);
+  const boardTap = useLetGoAfterTouch(board.show);
+  const menuTap = useLetGoAfterTouch(menu.show);
 
   return (
     <nav className={s.bar} aria-label="Table">
@@ -27,7 +29,7 @@ export function TopBar() {
           // its tip opens to the right: it's the leftmost button, and on a phone that's mid-screen
           <span className={s.tipStart}>
             <Tooltip text="Dealer controls: skip, cancel, kick" side="bottom">
-              <Button shape="pill" size="md" className={s.dealer} aria-label="Dealer controls" {...tap(dealer.show)}>
+              <Button shape="pill" size="md" className={s.dealer} aria-label="Dealer controls" {...dealerTap}>
                 <span aria-hidden>🎩</span>
                 <span className={s.wide} aria-hidden>
                   Dealer
@@ -44,21 +46,14 @@ export function TopBar() {
               size="md"
               className={s.wallet}
               aria-label={`${coins} coins: open the leaderboard`}
-              {...tap(board.show)}
+              {...boardTap}
             >
               <CoinCounter value={coins} />
             </Button>
           </Tooltip>
         )}
         <MicButton />
-        <Button
-          shape="pill"
-          size="md"
-          className={s.menu}
-          aria-label="Menu"
-          aria-keyshortcuts="Escape"
-          {...tap(menu.show)}
-        >
+        <Button shape="pill" size="md" className={s.menu} aria-label="Menu" aria-keyshortcuts="Escape" {...menuTap}>
           <span aria-hidden className={s.burger}>
             ☰
           </span>
@@ -80,9 +75,9 @@ export function TopBar() {
  * the mouse and the keyboard keep the kit's focus model. It lets go after the press, not on
  * pointerup: a tap focuses the button with the mouse events the browser makes up after it.
  */
-function useLetGoAfterTouch() {
+function useLetGoAfterTouch(action: () => void) {
   const touched = useRef(false);
-  return (action: () => void) => ({
+  return {
     onPointerDown: (e: PointerEvent<HTMLElement>) => {
       touched.current = e.pointerType !== "mouse";
     },
@@ -93,25 +88,25 @@ function useLetGoAfterTouch() {
       const el = document.activeElement;
       if (el instanceof HTMLElement) el.blur();
     },
-  });
+  };
 }
 
 /** On/off for the mic. Your voice's loudness glows around it (written straight to the element). */
 function MicButton() {
-  const { mic } = useGame();
+  const { meter, toggle } = useGame().mic;
   const status = useMicStatus();
   const on = micPressed(status);
-  const tap = useLetGoAfterTouch();
+  const tap = useLetGoAfterTouch(toggle);
   return (
     <Tooltip text={micTip(status)} side="bottom">
       <Button
-        ref={mic.meter}
+        ref={meter}
         shape="round"
         size="md"
         className={cx(s.mic, status === "on" && s.live, status === "starting" && s.asking)}
         aria-label="Mic"
         aria-pressed={on}
-        {...tap(mic.toggle)}
+        {...tap}
       >
         <span className={s.micIcon} aria-hidden>
           🎙️

@@ -2,7 +2,7 @@
 // root registers that (GameRoot.tsx useMenuKey), so this file only draws the menu and acts.
 // It holds what you set rather than need at a glance: Character, Options (sound, mic),
 // How to play and Invite, plus Leave table.
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ConfirmDialog, Dialog, KeyHint, MenuList, type MenuItem } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, usePopup } from "../game.tsx";
 import s from "./GameMenu.module.css";
@@ -10,23 +10,27 @@ import s from "./GameMenu.module.css";
 type Choice = "resume" | "look" | "options" | "help" | "invite" | "leave";
 
 export function GameMenu() {
-  const { store, openLook, invite, leaveTable } = useGame();
   const popup = usePopup("menu");
+  return (
+    <Dialog open={popup.open} onClose={popup.close} title="Menu" width="sm">
+      <MenuBody close={popup.close} />
+    </Dialog>
+  );
+}
+
+/** Mounted only while the menu is open, so a half-asked "leave?" is gone next time. */
+function MenuBody({ close }: { close: () => void }) {
+  const { store, openLook, invite, leaveTable } = useGame();
   const code = useAppState((st) => st.room?.code);
   const me = useMe();
   // the "are you sure?" over the menu: a nested dialog, local to it
   const [leaving, setLeaving] = useState(false);
-  useEffect(() => {
-    if (!popup.open) setLeaving(false);
-  }, [popup.open]);
 
   const items: readonly MenuItem<Choice>[] = [
     { id: "resume", label: <Label icon="▶">Resume</Label>, hint: <Hint>Back to the table</Hint> },
     {
       id: "look",
-      label: (
-        <Label icon={<span className={s.bean} style={{ "--me": me?.look.color } as CSSProperties} />}>Character</Label>
-      ),
+      label: <Label icon={<span className={s.bean} style={{ "--me": me?.look.color }} />}>Character</Label>,
       hint: <Hint>Body, color & hat</Hint>,
     },
     { id: "options", label: <Label icon="⚙️">Options</Label>, hint: <Hint>Sound & mic</Hint> },
@@ -38,9 +42,9 @@ export function GameMenu() {
   const choose = (id: Choice) => {
     switch (id) {
       case "resume":
-        return popup.close();
+        return close();
       case "look":
-        popup.close();
+        close();
         return openLook();
       case "options":
         return store.popupOpened("options");
@@ -55,12 +59,13 @@ export function GameMenu() {
   };
 
   return (
-    <Dialog open={popup.open} onClose={popup.close} title="Menu" width="sm">
+    <>
       {code && (
         <p className={s.table}>
           <span className={s.tableLabel}>Table</span>
           <span className={s.code} aria-label={`Table code ${code.split("").join(" ")}`}>
             {code.split("").map((ch, i) => (
+              // oxlint-disable-next-line react/no-array-index-key -- a slot is its position; letters repeat
               <span key={i} className={s.slot} aria-hidden>
                 {ch}
               </span>
@@ -88,7 +93,7 @@ export function GameMenu() {
       >
         <p className={s.confirm}>You'll go back to the start screen.</p>
       </ConfirmDialog>
-    </Dialog>
+    </>
   );
 }
 
