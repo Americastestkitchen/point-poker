@@ -60,7 +60,8 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 
 ### Where to go next
 
-- [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets.
+- [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets and the UI gallery.
+- [AGENTS.md](AGENTS.md): feature integration recipes and the planned screen contract.
 - [GitHub issues](https://github.com/JaiiR320/point-poker/issues): what we're thinking about next.
 - The code: `shared/protocol.ts` (the messages between server and browser, as Zod schemas)
   is the best place to start reading. Next to it, `shared/rules.ts` has the rules both sides
@@ -74,13 +75,16 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
   - `server/tickets/` (Jira, or none), `server/store/` (saving tables), `server/auth/`
     (the host passcode) and `server/transport/` (HTTP and WebSocket) are the adapters.
   - `client/src/main.ts` builds the browser side the same way. `client/src/app/` holds the
-    store, the event stream (`diff`), `actions`, the session (socket + reconnect) and storage.
+    store, view diffing and the event stream (`events.ts`), `actions`, the session
+    (socket + reconnect) and storage.
     The 3D world (`scene/`, `avatar/`, `environments/`) and the UI (`hud.ts`, `lobby.ts`,
-    `ui/`) only read the store, call `actions` and talk over the event stream; neither imports
-    the other (bar the lobby's preview, until #4). `test/boundaries.test.ts` checks that and
-    the other import rules.
-  - `client/src/scene/layout.ts` says where everything goes (seats, cards, the ticket, the pot,
-    props). `client/src/environments/` says how it looks: the Backlog Basement lives in
+    `ui/`) have separate roles: world and legacy HUD/lobby read the store, call `actions`
+    and use the event stream. The generic React kit in `ui/` takes props and injected
+    services; it imports no app/game code. Its gallery alone wires app storage and audio.
+    World and UI do not import each other (bar the lobby's preview, until #4).
+    `test/boundaries.test.ts` checks these import rules.
+  - `client/src/scene/layout/layout.ts` says where everything goes (seats, cards,
+    the ticket, the pot, props). `client/src/environments/` says how it looks: the Backlog Basement lives in
     `environments/basement/`, and a new place is a new folder there.
   - `client/src/avatar/` is the bean: one file per body shape in `bodies/`, one per hat in
     `cosmetics/`, the parts every bean has (face, arms, labels, chair) in `parts/`, and an

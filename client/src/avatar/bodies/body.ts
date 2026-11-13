@@ -1,6 +1,6 @@
 // What a body shape is: its mesh, and where the face, arms and hat go on it.
-// One file per shape in this folder; a new shape is a new file here plus an
-// entry in shared/catalog/bodies.ts (its id, label and icon).
+// Add each shape here, in BODY_SHAPES in index.ts, and in
+// shared/catalog/bodies.ts (its id, label and icon).
 import type * as THREE from "three";
 import type { BodyId } from "../../../../shared/catalog/bodies.ts";
 

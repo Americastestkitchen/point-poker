@@ -1,5 +1,6 @@
-// One builder per cosmetic in shared/catalog/cosmetics.ts. A new item is a
-// catalog entry plus a file here; the rig puts it on the anchor its slot uses.
+// BUILDERS covers shared/catalog/cosmetics.ts; register each new item here.
+// DEALER_GEAR adds fixed visor/bowtie builders outside the selectable catalog.
+// The rig puts each item on the anchor its slot uses.
 import type * as THREE from "three";
 import type { CosmeticId, Slot } from "../../../../shared/catalog/cosmetics.ts";
 import type { AnchorId } from "../bodies/anchors.ts";

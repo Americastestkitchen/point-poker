@@ -1,5 +1,5 @@
 // The game UI kit: design tokens, primitives and one shared input model.
-// Screens import from here; see gallery.html (dev only) for every primitive in every state.
+// Screens import from here; gallery.html demos the kit in dev and is bundled by build:gallery.
 export { tokens } from "./tokens.ts";
 export { mountUi, installTokens } from "./root.tsx";
 export { UiProvider, useUi, useBack, silent, type UiSounds } from "./context.tsx";
