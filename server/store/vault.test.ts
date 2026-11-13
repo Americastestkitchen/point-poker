@@ -15,6 +15,11 @@ test("sealed secrets come back only with the same key, and only unchanged", () =
   const changed = JSON.stringify({ ...JSON.parse(sealed), data: Buffer.from("{}").toString("base64") });
   assert.equal(unseal(changed, "key"), null);
   assert.equal(unseal("not json", "key"), null);
+  const short = JSON.stringify({
+    ...JSON.parse(sealed),
+    tag: Buffer.from(JSON.parse(sealed).tag, "base64").subarray(0, 4).toString("base64"),
+  });
+  assert.equal(unseal(short, "key"), null, "a cut-down tag isn't enough");
 });
 
 test("the file vault keeps what was saved across restarts, and starts fresh when it can't open it", () => {

@@ -14,12 +14,15 @@ export interface Vault {
 
 const Sealed = z.object({ v: z.literal(1), iv: z.string(), tag: z.string(), data: z.string() });
 
+/** GCM's full 16-byte tag: anything shorter is refused, so a cut-down tag can't pass. */
+const TAG_BYTES = 16;
+
 /** Any passphrase becomes a 32-byte key. */
 const keyFrom = (secret: string) => createHash("sha256").update(secret).digest();
 
 export function seal(value: unknown, secret: string): string {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", keyFrom(secret), iv);
+  const cipher = createCipheriv("aes-256-gcm", keyFrom(secret), iv, { authTagLength: TAG_BYTES });
   const data = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
   return JSON.stringify({
     v: 1,
@@ -33,7 +36,9 @@ export function seal(value: unknown, secret: string): string {
 export function unseal(text: string, secret: string): unknown {
   try {
     const sealed = Sealed.parse(JSON.parse(text));
-    const decipher = createDecipheriv("aes-256-gcm", keyFrom(secret), Buffer.from(sealed.iv, "base64"));
+    const decipher = createDecipheriv("aes-256-gcm", keyFrom(secret), Buffer.from(sealed.iv, "base64"), {
+      authTagLength: TAG_BYTES,
+    });
     decipher.setAuthTag(Buffer.from(sealed.tag, "base64"));
     const plain = Buffer.concat([decipher.update(Buffer.from(sealed.data, "base64")), decipher.final()]);
     return JSON.parse(plain.toString("utf8"));

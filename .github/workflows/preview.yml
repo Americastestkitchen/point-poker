@@ -24,16 +24,16 @@ env:
 jobs:
   # One job for the whole PR lifecycle: deploy while the PR is open, delete when it closes.
   preview:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       OPEN: ${{ github.event.action != 'closed' }}
     steps:
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
 
       # PR open: build, check, deploy, and comment the link.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.OPEN == 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: env.OPEN == 'true'
         with:
           node-version: 26
