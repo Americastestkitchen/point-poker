@@ -2,15 +2,14 @@
 // carousels, a name and a randomize button on the other. The title screens use it before you
 // sit down, and the game menu's "Change look" opens it over the table (without the name, which
 // the table already knows you by). The draft is local until Done.
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { BODIES } from "../../../../shared/catalog/bodies.ts";
 import { COLOR_NAMES, COLORS } from "../../../../shared/catalog/colors.ts";
 import { COSMETICS, type CosmeticId } from "../../../../shared/catalog/cosmetics.ts";
 import { randomLook, wornIn } from "../../../../shared/look.ts";
 import { editProfile, readyToSit, type ProfileAction } from "../../app/profile.ts";
 import type { Profile } from "../../app/storage.ts";
-import { Button, Carousel, KeyHint, Panel, TextField, useBack } from "../../ui/index.ts";
-import { focusOf } from "../keys.ts";
+import { Button, Carousel, Panel, TextField, useBack } from "../../ui/index.ts";
 import { useShowcase } from "./showcase.ts";
 import s from "./CharacterEditor.module.css";
 
@@ -51,17 +50,8 @@ export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, 
     if (!ready) return setNameError(true);
     onDone(ready);
   };
-  // R shuffles, unless you're typing your name
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key.toLowerCase() !== "r" || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-    if (focusOf(e.target instanceof Element ? e.target : null) === "field") return;
-    e.preventDefault();
-    randomize();
-  };
-
   return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- R is a shortcut for the Randomize button, which is focusable on its own
-    <section className={s.screen} aria-label="Character" onKeyDown={onKeyDown}>
+    <section className={s.screen} aria-label="Character">
       <h1 className={s.title}>Character</h1>
       <div ref={stage} className={s.stage} aria-hidden />
       <Panel className={s.panel} title={withName ? "Your bean" : "Change your look"}>
@@ -120,11 +110,6 @@ export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, 
         <Button variant="primary" size="lg" onPress={done}>
           {doneLabel}
         </Button>
-        <div className={s.hints}>
-          <KeyHint keys={["ArrowLeft", "ArrowRight"]}>change</KeyHint>
-          <KeyHint keys={["R"]}>randomize</KeyHint>
-          <KeyHint keys={["Escape"]}>back</KeyHint>
-        </div>
       </footer>
     </section>
   );

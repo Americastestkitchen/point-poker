@@ -61,12 +61,6 @@
   flex-wrap: wrap;
   gap: var(--pp-space-3);
 }
-.hints {
-  display: flex;
-  gap: var(--pp-space-4);
-  color: var(--pp-color-dim);
-  font-size: var(--pp-size-sm);
-}
 
 /* phones: the bean up top, the choices under it, Back and Done in thumb reach */
 @media (max-width: 600px) {
@@ -109,8 +103,5 @@
   }
   .actions > button {
     flex: 1;
-  }
-  .hints {
-    display: none;
   }
 }

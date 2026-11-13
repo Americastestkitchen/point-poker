@@ -51,12 +51,6 @@
   }
 }
 
-.hints {
-  display: flex;
-  gap: var(--pp-space-4);
-  color: var(--pp-color-dim);
-  font-size: var(--pp-size-sm);
-}
 .muted {
   margin: 0 0 var(--pp-space-4);
   color: var(--pp-color-dim);
@@ -239,9 +233,6 @@
   }
   .menuColumn .logo {
     margin: 0 auto;
-  }
-  .hints {
-    display: none;
   }
   .me {
     display: none;

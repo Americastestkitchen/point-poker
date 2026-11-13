@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { randomLook } from "../../../../shared/look.ts";
 import { TABLE_CODE } from "../../../../shared/rules.ts";
 import type { Profile, Storage } from "../../app/storage.ts";
-import { Button, CodeSlots, Dialog, KeyHint, MenuList, Panel, Spinner, TextField, useBack } from "../../ui/index.ts";
+import { Button, CodeSlots, Dialog, MenuList, Panel, Spinner, TextField, useBack } from "../../ui/index.ts";
 import { CharacterEditor } from "../character/CharacterEditor.tsx";
 import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
@@ -207,32 +207,23 @@ function Menu(props: {
       <div className={s.menuColumn}>
         <img className={s.logo} src={logo} alt="Point Poker" />
         <MenuList label="Main menu" autoFocus={!joining} items={items} onSelect={onPick} />
-        <div className={s.hints}>
-          <KeyHint keys={["ArrowUp", "ArrowDown"]}>move</KeyHint>
-          <KeyHint keys={["Enter"]}>pick</KeyHint>
-        </div>
       </div>
       {joining ? (
         <JoinPanel checking={joining.checking} error={joining.error} onCode={props.onCode} onBack={props.onBack} />
       ) : (
-        <Me profile={profile} saved={saved} onChange={() => onPick("character")} />
+        <Me profile={profile} saved={saved} />
       )}
     </section>
   );
 }
 
-/** Your bean on its turntable, with your name under it. */
-function Me({ profile, saved, onChange }: { profile: Profile; saved: boolean; onChange(): void }) {
+/** Your bean on its turntable, with your name under it once you have one (Character changes it). */
+function Me({ profile, saved }: { profile: Profile; saved: boolean }) {
   const stage = useShowcase(profile.look, false);
   return (
     <div className={s.me}>
       <div ref={stage} className={s.meStage} aria-hidden />
-      <div className={s.nameplate}>
-        {saved && <strong>{profile.name}</strong>}
-        <Button variant="link" size="sm" onPress={onChange}>
-          {saved ? "change look" : "make your bean"}
-        </Button>
-      </div>
+      {saved && <strong className={s.nameplate}>{profile.name}</strong>}
     </div>
   );
 }
@@ -297,9 +288,6 @@ function Invite(props: { code: string; profile: Profile; onJoin(): void; onChang
           <Button variant="link" onPress={props.onChange}>
             change look
           </Button>
-          <div className={s.hints}>
-            <KeyHint keys={["Enter"]}>join</KeyHint>
-          </div>
         </div>
       </div>
     </section>
