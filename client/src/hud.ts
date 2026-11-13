@@ -1,6 +1,6 @@
-// Everything drawn on top of the 3D scene: the action dock, the dealer's
-// ticket picker, the ticket sheet, announcements and the wallet. It reads the
-// store and the event stream, and acts only through `actions`.
+// Legacy in-game DOM UI until #11: the action dock, dealer ticket picker,
+// ticket sheet, announcements and wallet. Reads the store and event stream,
+// sends commands through actions, and manages local UI, storage and audio.
 import { CARD_SUIT } from "../../shared/catalog/decks.ts";
 import type { TableView } from "../../shared/protocol.ts";
 import { cardValues, favourite, nextInQueue, parseIssueKey, tally, voters } from "../../shared/rules.ts";

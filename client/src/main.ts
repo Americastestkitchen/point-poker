@@ -1,5 +1,5 @@
-// Entry point: the only file that touches browser globals. It builds the
-// adapters and wires them together; everything else gets them passed in.
+// Browser composition root: builds adapters and wires app, world and legacy UI.
+// Browser APIs also live in rendering, input, audio and DOM UI modules.
 import { createActions } from "./app/actions.ts";
 import { createSession } from "./app/session.ts";
 import { createStorage } from "./app/storage.ts";

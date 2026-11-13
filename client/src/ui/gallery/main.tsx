@@ -1,4 +1,4 @@
-// The UI kit gallery (dev only): gallery.html.
+// The UI kit gallery: gallery.html in dev; build:gallery checks its standalone bundle.
 import { createStorage } from "../../app/storage.ts";
 import { createAudio } from "../../audio/sfx.ts";
 import { mountUi } from "../root.tsx";

@@ -1,4 +1,5 @@
-// The one WebGL renderer: scene, camera, the frame loop and picking.
+// The main-stage WebGL renderer: scene, camera, frame loop and picking.
+// The legacy lobby turntable has a separate renderer until #4.
 import * as THREE from "three";
 import type { Audio } from "../../audio/sfx.ts";
 import { createDelays } from "./delays.ts";

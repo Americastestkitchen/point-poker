@@ -32,11 +32,13 @@ closes. Previews have no Jira, so type tickets in by hand.
 
 ## UI kit
 
-Screens are built from the game UI kit in `client/src/ui/` (React, drawn on top of the canvas;
-the 3D world stays plain Three.js). Colours, fonts, spacing and glows live in
-`client/src/ui/tokens.ts` only: the kit's stylesheets use the `--pp-*` variables, and a test
+The React UI kit in `client/src/ui/` supplies primitives for the planned screens (#4/#11);
+today the game still uses the plain DOM lobby and `Hud`. The 3D world stays plain Three.js.
+See [AGENTS.md](AGENTS.md) for the screen integration contract. Colours, fonts, spacing
+and glows live in `client/src/ui/tokens.ts` only: the kit's stylesheets use the `--pp-*` variables, and a test
 fails on raw colours. To see every primitive in every state, run `npm run dev` and open
-`/gallery.html` (dev only; it isn't built).
+`/gallery.html`. `npm run check` also builds it to `node_modules/.gallery`; the game
+build in `dist` excludes it.
 
 ## Releasing
 

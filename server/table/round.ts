@@ -6,7 +6,7 @@
 // waiting ──deal──▶ voting ──reveal──▶ revealed ──settle──▶ settled
 //    ▲  (a ticket)    │ ▲                  │                  │ settle again
 //    │                │ └──deal (restart)──┴──────────────────┘ replaces the call
-//    └──cancel, skip, next round (from anywhere): endRound()
+//    └──cancel/skip (voting or revealed), next round (any phase): endRound()
 //
 // A table is waiting exactly when there's no ticket out.
 import type { Phase, Ticket } from "../../shared/protocol.ts";

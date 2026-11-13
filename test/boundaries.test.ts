@@ -23,7 +23,8 @@ interface Rule {
 }
 
 const WORLD = ["client/src/scene/", "client/src/avatar/", "client/src/environments/"];
-// New React screens go here as they replace hud.ts and lobby.ts.
+// Current UI paths. Add client/src/screens/ here when #4/#11 introduce screens;
+// keep app-aware screens outside the independent ui/ kit.
 const UI = ["client/src/hud.ts", "client/src/lobby.ts", "client/src/ui/"];
 
 const RULES: Rule[] = [
