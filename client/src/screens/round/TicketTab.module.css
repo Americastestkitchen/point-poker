@@ -13,7 +13,9 @@
   font-family: var(--pp-font-sheet);
   text-align: left;
   color: var(--pp-color-sheet-ink);
-  background: linear-gradient(170deg, var(--pp-color-sheet), var(--pp-color-paper));
+  /* a colour under the gradient: hovering swaps to a plain colour, and the fade between the two
+     would otherwise start from see-through (a dark flash) */
+  background: linear-gradient(170deg, var(--pp-color-sheet), var(--pp-color-paper)) var(--pp-color-sheet);
   border: 0;
   border-radius: var(--pp-radius-md);
   box-shadow: var(--pp-shadow-sheet);
@@ -23,7 +25,7 @@
   touch-action: manipulation;
   transition:
     transform var(--pp-motion-base) var(--pp-motion-spring),
-    background var(--pp-motion-base),
+    background-color var(--pp-motion-base),
     box-shadow var(--pp-motion-base);
 }
 .tab:hover,
