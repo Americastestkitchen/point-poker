@@ -105,14 +105,15 @@
   background: var(--pp-color-panel-raised);
 }
 
-/* square, so the scrolling body does not clip its first heading or focus glows with the panel's corners;
-   and a few pixels of room past its edges (given back by the margin), so a field or button
-   touching the side keeps its whole focus ring instead of losing it to the scroll edge */
+/* The scrolling body clips what it holds, glows included. So it reaches out over the empty room
+   around it (the panel's padding at the sides and bottom, the title's margin above, the buttons'
+   margin below) and pads itself by as much: its content stays where it was, and a field or
+   button at its edge keeps its whole glow. Square, so the panel's corners don't clip it either. */
 .body {
   flex: 0 1 auto;
   border-radius: 0;
-  padding: var(--pp-space-1);
-  margin: calc(-1 * var(--pp-space-1));
+  padding: var(--pp-space-4) var(--pp-space-6) var(--pp-space-5);
+  margin: calc(-1 * var(--pp-space-4)) calc(-1 * var(--pp-space-6)) calc(-1 * var(--pp-space-5));
 }
 /* a finger needs a bigger ✕ */
 @media (pointer: coarse) {
@@ -143,5 +144,10 @@
   }
   .actions {
     margin-top: var(--pp-space-3);
+  }
+  /* the room above and below is smaller here, so the body reaches less far */
+  .body {
+    padding-block: var(--pp-space-2) var(--pp-space-3);
+    margin-block: calc(-1 * var(--pp-space-2)) calc(-1 * var(--pp-space-3));
   }
 }
