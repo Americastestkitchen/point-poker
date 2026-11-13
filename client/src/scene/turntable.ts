@@ -1,12 +1,10 @@
 // The spinning character preview in the look editor. It keeps its own small
 // renderer for now; the title screen (#4) moves it onto the main stage.
 import * as THREE from "three";
-import type { Body, Hat } from "../../../shared/protocol.ts";
+import { wornIn, type Look } from "../../../shared/look.ts";
 import { Avatar } from "../avatar.ts";
 
-export interface TurntableLook { color: string; hat: Hat; body: Body }
-
-export function createTurntable(canvas: HTMLCanvasElement, look: TurntableLook, opts: { dealer: boolean; visible(): boolean }) {
+export function createTurntable(canvas: HTMLCanvasElement, look: Look, opts: { dealer: boolean; visible(): boolean }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   const scene = new THREE.Scene();
@@ -17,7 +15,8 @@ export function createTurntable(canvas: HTMLCanvasElement, look: TurntableLook, 
   const key = new THREE.DirectionalLight("#fff0d8", 2.2);
   key.position.set(1.5, 3, 2);
   scene.add(key);
-  let avatar = new Avatar("preview", look.color, look.hat, opts.dealer, look.body);
+  const hat = (l: Look) => wornIn(l, "head") ?? "none";
+  let avatar = new Avatar("preview", look.color, hat(look), opts.dealer, look.body);
   scene.add(avatar.group);
 
   const clock = new THREE.Clock();
@@ -40,13 +39,13 @@ export function createTurntable(canvas: HTMLCanvasElement, look: TurntableLook, 
   loop();
 
   return {
-    setLook(next: TurntableLook) {
+    setLook(next: Look) {
       if (avatar.shape !== next.body) {
         scene.remove(avatar.group);
-        avatar = new Avatar("preview", next.color, next.hat, opts.dealer, next.body);
+        avatar = new Avatar("preview", next.color, hat(next), opts.dealer, next.body);
         scene.add(avatar.group);
       }
-      avatar.setStyle(next.color, next.hat);
+      avatar.setStyle(next.color, hat(next));
     },
     wave() { avatar.playEmote("wave"); },
   };

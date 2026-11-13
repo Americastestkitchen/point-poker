@@ -23,7 +23,7 @@ class FakeSocket implements SocketLike {
 function setup() {
   const sockets: FakeSocket[] = [];
   const storage = createStorage(memoryStorage());
-  storage.setProfile({ name: "Ann", color: "#3bceac", hat: "fez", body: "pear" });
+  storage.setProfile({ name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] } });
   const store = createStore();
   const session = createSession({
     connect: (url) => { const s = new FakeSocket(url); sockets.push(s); return s; },
@@ -39,24 +39,52 @@ test("joins with your profile and seat token, and keeps the new token", () => {
   assert.equal(sockets[0].url, "ws://x/ws?room=ABCD");
   assert.equal(store.getState().connection.status, "connecting");
   sockets[0].open();
-  assert.deepEqual(sockets[0].sent, [{ t: "join", name: "Ann", color: "#3bceac", hat: "fez", body: "pear", token: "old-token" }]);
-  sockets[0].receive({ t: "welcome", playerId: "ann", token: "new-token", isDealer: false });
-  sockets[0].receive({ t: "state", state: view() });
+  assert.deepEqual(sockets[0].sent, [{ t: "join", name: "Ann", look: { color: "#3bceac", body: "pear", cosmetics: ["fez"] }, token: "old-token" }]);
+  sockets[0].receive({ t: "welcome", playerId: "ann", token: "new-token" });
+  sockets[0].receive({ t: "view", view: view() });
   assert.equal(storage.token("ABCD"), "new-token");
-  assert.deepEqual(store.getState().me, { id: "ann", isDealer: false });
+  assert.deepEqual(store.getState().me, { id: "ann" });
   assert.equal(store.getState().room?.code, "ABCD");
 });
 
 test("server effects go on the event stream; nonsense is ignored", () => {
   const { sockets, store, session } = setup();
-  const seen: string[] = [];
-  store.events.on((e) => seen.push(e.t));
+  const seen: unknown[] = [];
+  store.events.on((e) => seen.push(e));
   session.join("ABCD");
   sockets[0].open();
-  sockets[0].receive({ t: "emote", id: "bob", kind: "wave" });
-  sockets[0].receive({ t: "emote", id: "bob", kind: "moonwalk" });
+  sockets[0].receive({ t: "fx", from: "bob", fx: { kind: "emote", emote: "wave" } });
+  sockets[0].receive({ t: "fx", from: "bob", fx: { kind: "emote", emote: "moonwalk" } });
+  sockets[0].receive({ t: "fx", from: "bob", fx: { kind: "flick", to: "ann" } });
+  sockets[0].receive({ t: "fx", from: "bob", fx: { kind: "adjust" } });
   sockets[0].receive({ t: "toast", text: "hi" });
-  assert.deepEqual(seen, ["emote", "toast"]);
+  assert.deepEqual(seen, [
+    { t: "emote", id: "bob", emote: "wave" },
+    { t: "flick", from: "bob", to: "ann" },
+    { t: "adjust", id: "bob" },
+    { t: "toast", text: "hi" },
+  ]);
+});
+
+test("commands get an id and settle when their result comes back", async () => {
+  const { sockets, session } = setup();
+  await assert.rejects(session.request({ t: "reveal" }), /Not connected/);
+  session.join("ABCD");
+  sockets[0].open();
+  const ok = session.request({ t: "reveal" });
+  const bad = session.request({ t: "loadTicket", ref: "SD-1" });
+  const lost = session.request({ t: "deal" });
+  assert.deepEqual(sockets[0].sent.slice(1), [
+    { t: "cmd", id: 1, cmd: { t: "reveal" } },
+    { t: "cmd", id: 2, cmd: { t: "loadTicket", ref: "SD-1" } },
+    { t: "cmd", id: 3, cmd: { t: "deal" } },
+  ]);
+  sockets[0].receive({ t: "result", id: 2, error: "SD-1: Jira answered 500" });
+  sockets[0].receive({ t: "result", id: 1 });
+  await ok;
+  await assert.rejects(bad, { message: "SD-1: Jira answered 500" });
+  sockets[0].drop();
+  await assert.rejects(lost, /Lost the connection/);
 });
 
 test("reconnects after a dropped line, but not after being kicked", async () => {
@@ -72,6 +100,7 @@ test("reconnects after a dropped line, but not after being kicked", async () => 
   await new Promise((r) => setTimeout(r, 5));
   assert.equal(sockets.length, 2);
   assert.deepEqual(store.getState().connection, { room: "ABCD", status: "closed", reason: "Removed by the dealer" });
-  session.send({ t: "reveal" });
+  session.fx({ kind: "emote", emote: "wave" });
+  await assert.rejects(session.request({ t: "reveal" }));
   assert.equal(sockets[1].sent.length, 1, "nothing goes out once closed for good");
 });

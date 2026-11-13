@@ -1,5 +1,5 @@
 // Every pp-* key the browser keeps, typed. The only module that knows the key names.
-import { BODIES, COLORS, HATS, type Body, type Hat } from "../../../shared/protocol.ts";
+import { Look } from "../../../shared/look.ts";
 
 /** The subset of the Web Storage API we use; tests pass an in-memory one. */
 export interface StorageLike {
@@ -10,9 +10,7 @@ export interface StorageLike {
 
 export interface Profile {
   name: string;
-  color: string;
-  hat: Hat;
-  body: Body;
+  look: Look;
 }
 
 export function memoryStorage(): StorageLike {
@@ -24,20 +22,14 @@ export function memoryStorage(): StorageLike {
   };
 }
 
-const oneOf = <T extends string>(list: readonly T[], v: unknown): T | undefined => (list as readonly unknown[]).includes(v) ? (v as T) : undefined;
-
 export function createStorage(s: StorageLike) {
   return {
-    /** What we remember about you: name and look. Unknown or missing parts come back undefined. */
+    /** What we remember about you: name and look. Missing or unreadable parts come back undefined. */
     profile(): Partial<Profile> {
       let saved: Record<string, unknown> = {};
       try { saved = JSON.parse(s.getItem("pp-me") ?? "{}") ?? {}; } catch { /* start over */ }
-      return {
-        name: typeof saved.name === "string" ? saved.name : undefined,
-        color: oneOf(COLORS, saved.color),
-        hat: oneOf(HATS, saved.hat),
-        body: oneOf(BODIES, saved.body),
-      };
+      const look = Look.safeParse(saved.look);
+      return { name: typeof saved.name === "string" ? saved.name : undefined, look: look.success ? look.data : undefined };
     },
     setProfile: (p: Profile) => s.setItem("pp-me", JSON.stringify(p)),
 

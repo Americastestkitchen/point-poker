@@ -63,7 +63,9 @@ For hot reload while coding, run `npm run dev:server` and `npm run dev` together
 - [CONTRIBUTING.md](CONTRIBUTING.md): branches, releasing, secrets.
 - [GitHub issues](https://github.com/JaiiR320/point-poker/issues): what we're thinking about next.
 - The code: `shared/protocol.ts` (the messages between server and browser, as Zod schemas)
-  is the best place to start reading. Then:
+  is the best place to start reading. Next to it, `shared/rules.ts` has the rules both sides
+  use, `shared/look.ts` what a bean looks like, and `shared/catalog/` the content (decks,
+  colours, bodies, hats, emotes, environments). Then:
   - `server/main.ts` reads the environment and wires everything together.
   - `server/table/` is one poker table: its state, rules, commands and payouts (`coins.ts`).
     It's plain logic with unit tests, no sockets.

@@ -1,59 +1,53 @@
 // Everything the player can do. The UI and the scene call these; nothing else
-// sends messages to the server.
-import type { Body, ClientMsg, Emote, Hat } from "../../../shared/protocol.ts";
+// talks to the server. Dealer actions return promises that settle when the
+// server answers, and reject with its reason (like a Jira error).
+import type { EmoteId } from "../../../shared/catalog/emotes.ts";
+import type { Look } from "../../../shared/look.ts";
+import type { Command } from "../../../shared/protocol.ts";
 import type { Session } from "./session.ts";
-import type { Store } from "./store.ts";
+import { myPlayer, type Store } from "./store.ts";
 
-/** How long you wait between chip flicks. */
-export const FLICK_COOLDOWN_MS = 600;
-
-export function createActions(session: Pick<Session, "send">, store: Store, clock: { now(): number } = performance) {
-  const send = (m: ClientMsg) => session.send(m);
-  let lastFlick = -Infinity;
-
-  const me = () => {
-    const { room, me } = store.getState();
-    return room?.players.find((p) => p.id === me?.id);
-  };
+export function createActions(session: Pick<Session, "request" | "fx">, store: Store) {
+  const run = (cmd: Command) => session.request(cmd);
+  /** For actions nobody waits on: a failure shows up as a toast. */
+  const report = (e: Error) => store.events.emit({ t: "toast", text: e.message, level: "error" });
 
   return {
     /** Put a card down (or swap the one you put down). */
     vote(value: number) {
-      const { room, ui } = store.getState();
-      if (room?.phase !== "voting" || !me()?.plays || ui.myVote === value) return;
-      const changed = ui.myVote !== null;
+      const s = store.getState();
+      if (s.room?.phase !== "voting" || !myPlayer(s)?.plays || s.ui.myVote === value) return;
+      const changed = s.ui.myVote !== null;
       store.setUi({ myVote: value });
-      send({ t: "vote", value });
       store.events.emit({ t: "played", value, changed });
+      run({ t: "vote", value }).catch(report);
     },
-    /** Flick a chip at someone's head. */
+    /** Flick a chip at someone's head. Too soon after the last one and nothing happens. */
     flick(target: string) {
-      const now = clock.now();
-      if (now - lastFlick < FLICK_COOLDOWN_MS) return;
-      lastFlick = now;
-      send({ t: "flick", target });
+      run({ t: "flick", target }).catch(() => {});
     },
-    emote: (kind: Emote) => send({ t: "emote", kind }),
+    emote: (emote: EmoteId) => session.fx({ kind: "emote", emote }),
     /** Where you're looking, relative to facing the table. */
-    gaze: (yaw: number, pitch: number) => send({ t: "look", yaw, pitch }),
+    gaze: (yaw: number, pitch: number) => session.fx({ kind: "gaze", yaw, pitch }),
     /** Mic loudness 0..1 (never audio). */
-    talk: (level: number) => send({ t: "talk", level }),
-    restyle: (look: { color: string; hat: Hat; body: Body }) => send({ t: "style", ...look }),
+    talk: (level: number) => session.fx({ kind: "talk", level }),
+    setLook: (look: Look) => { run({ t: "setLook", look }).catch(report); },
     openTicket: () => store.events.emit({ t: "openTicket" }),
 
     dealer: {
-      load: (ref: string) => send({ t: "loadTicket", ref }),
-      typeIn: (summary: string) => send({ t: "manualTicket", key: "", summary, description: "" }),
-      loadSprint: () => send({ t: "fetchQueue" }),
-      clearQueue: () => send({ t: "clearQueue" }),
-      setPlays: (plays: boolean) => send({ t: "dealerPlays", plays }),
-      deal: () => send({ t: "deal" }),
-      reveal: () => send({ t: "reveal" }),
-      settle: (finalPoints: number) => send({ t: "settle", finalPoints }),
-      next: () => send({ t: "nextRound" }),
-      cancel: () => send({ t: "cancelRound" }),
-      skip: () => send({ t: "skip" }),
-      kick: (id: string) => send({ t: "kick", id }),
+      /** Loads a Jira ticket (or an epic's tickets) and deals it. */
+      load: (ref: string) => run({ t: "loadTicket", ref }),
+      typeIn: (summary: string) => run({ t: "manualTicket", key: "", summary, description: "" }),
+      loadSprint: () => run({ t: "fetchQueue" }),
+      clearQueue: () => run({ t: "clearQueue" }),
+      setPlays: (plays: boolean) => run({ t: "dealerPlays", plays }),
+      deal: () => run({ t: "deal" }),
+      reveal: () => run({ t: "reveal" }),
+      settle: (finalPoints: number) => run({ t: "settle", finalPoints }),
+      next: () => run({ t: "nextRound" }),
+      cancel: () => run({ t: "cancelRound" }),
+      skip: () => run({ t: "skip" }),
+      kick: (id: string) => run({ t: "kick", id }),
     },
   };
 }

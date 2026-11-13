@@ -1,12 +1,13 @@
 // One poker table. It owns the round's state and rules; transport/ moves
 // messages in and out, and adapters (tickets, clock, log) come in as deps.
 import { randomUUID } from "node:crypto";
-import type { Command, JoinMsg, RoomState } from "../../shared/protocol.ts";
+import { validateLook } from "../../shared/look.ts";
+import type { Command, JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { COMMANDS, type CommandSpec, type Ctx } from "./commands.ts";
-import { clean, findPlayer, freeSeat, pickBody, pickColor, pickHat, startRound } from "./rules.ts";
+import { clean, findPlayer, freeSeat, startRound } from "./rules.ts";
 import type { TableState } from "./state.ts";
-import { publicView } from "./view.ts";
+import { viewFor } from "./view.ts";
 
 export interface Log {
   info(...args: unknown[]): void;
@@ -47,6 +48,8 @@ export class Table {
   private readonly deps: TableDeps;
   private readonly online = new Set<string>();
   private readonly listeners = new Set<(e: TableEvent) => void>();
+  /** When each player last did something with a cooldown ("id:what" → ms). Not saved. */
+  private readonly lastUsed = new Map<string, number>();
   private ticketSeq = 0;
   private queueSeq = 0;
   private readonly ctx: Ctx;
@@ -66,6 +69,12 @@ export class Table {
         this.s.players = this.s.players.filter((x) => x !== p);
         this.online.delete(p.id);
         emit({ t: "removed", playerId: p.id, reason });
+      },
+      ready: (playerId, what, cooldownMs) => {
+        const key = `${playerId}:${what}`, now = deps.now();
+        if (now - (this.lastUsed.get(key) ?? -Infinity) < cooldownMs) return false;
+        this.lastUsed.set(key, now);
+        return true;
       },
       claimTicket: () => { const seq = ++this.ticketSeq; return () => seq === this.ticketSeq; },
       claimQueue: () => { const seq = ++this.queueSeq; return () => seq === this.queueSeq; },
@@ -94,18 +103,13 @@ export class Table {
     if (!me) {
       const seat = isDealer ? -1 : freeSeat(s);
       if (seat === -2) return { ok: false, code: 4003, reason: "Table full", text: "The table is full" };
-      me = {
-        id: this.newId(), token: randomUUID(), name: "", color: pickColor(null), hat: "none", body: "bean",
-        seat, vote: null, chips: 0, lastWin: 0,
-      };
+      me = { id: this.newId(), token: randomUUID(), name: "", look: validateLook(undefined), seat, vote: null, chips: 0, lastWin: 0 };
       s.players.push(me);
       if (isDealer) s.dealerId = me.id;
     }
     const dealer = me.id === s.dealerId;
     me.name = clean(req.name, 18) || (dealer ? "Dealer" : "Mystery Bean");
-    me.color = pickColor(req.color);
-    me.hat = pickHat(req.hat);
-    me.body = pickBody(req.body);
+    me.look = validateLook(req.look);
     this.online.add(me.id);
     s.lastActive = this.deps.now();
     this.ctx.changed();
@@ -138,9 +142,9 @@ export class Table {
     }
   }
 
-  /** What this player may see. */
-  viewFor(_playerId: string | null): RoomState {
-    return publicView(this.s, this.online, this.tickets().enabled);
+  /** What this player may see: everything public, plus their own card. */
+  viewFor(playerId: string | null): TableView {
+    return viewFor(this.s, playerId, this.online, this.tickets().enabled);
   }
 
   /** The whole state as plain JSON, for saving. */

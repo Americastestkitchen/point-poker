@@ -1,24 +1,30 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { ClientMsg } from "../../../shared/protocol.ts";
-import { createActions, FLICK_COOLDOWN_MS } from "./actions.ts";
+import type { ClientFx, Command } from "../../../shared/protocol.ts";
+import { createActions } from "./actions.ts";
 import type { GameEvent } from "./events.ts";
-import { ticket, view, withPlayers } from "./fixtures.ts";
+import { ticket, view } from "./fixtures.ts";
 import { createStore } from "./store.ts";
 
-/** A fake session that records what would have gone over the wire. */
-function setup(me = "ann") {
-  const sent: ClientMsg[] = [];
+/** A fake session: records what would have gone over the wire and answers with `reply`. */
+function setup(me = "ann", reply: (cmd: Command) => string | undefined = () => undefined) {
+  const sent: (Command | ClientFx)[] = [];
   const store = createStore();
   const events: GameEvent[] = [];
   store.events.on((e) => events.push(e));
-  let now = 1000;
-  const clock = { now: () => now };
-  const actions = createActions({ send: (m) => sent.push(m) }, store, clock);
-  store.setState({ me: { id: me, isDealer: me === "deb" } });
+  const session = {
+    request: (cmd: Command) => {
+      sent.push(cmd);
+      const error = reply(cmd);
+      return error ? Promise.reject(new Error(error)) : Promise.resolve();
+    },
+    fx: (fx: ClientFx) => void sent.push(fx),
+  };
+  const actions = createActions(session, store);
+  store.setState({ me: { id: me } });
   store.receive(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }));
   events.length = 0;
-  return { sent, store, events, actions, tick: (ms: number) => (now += ms) };
+  return { sent, store, events, actions };
 }
 
 test("playing a card sends the vote, remembers it and tells the scene", () => {
@@ -40,43 +46,42 @@ test("no voting outside a round, or for a dealer who sits out", () => {
   const dealer = setup("deb");
   dealer.actions.vote(3);
   assert.deepEqual([...sent, ...dealer.sent], []);
-  assert.equal(store.getState().ui.myVote, null);
 });
 
-test("your vote is forgotten when a new round starts, or when the server says you haven't voted", () => {
-  const { store, actions } = setup();
-  actions.vote(3);
-  store.receive(withPlayers(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }), (p) => ({ hasVoted: p.id === "ann" })));
-  assert.equal(store.getState().ui.myVote, 3);
+test("your card comes from your view, so a fresh page still knows it", () => {
+  const { store } = setup();
+  const mine = view({ phase: "voting", round: 1, ticket: ticket("SD-1") });
+  mine.players = mine.players.map((p) => (p.id === "ann" ? { ...p, hasVoted: true, vote: 5 } : p));
+  store.receive(mine);
+  assert.equal(store.getState().ui.myVote, 5);
   store.receive(view({ phase: "voting", round: 2, ticket: ticket("SD-1") }));
-  assert.equal(store.getState().ui.myVote, null);
+  assert.equal(store.getState().ui.myVote, null, "a new round starts empty-handed");
 });
 
-test("chip flicks are rate-limited", () => {
-  const { sent, actions, tick } = setup();
-  actions.flick("bob");
-  actions.flick("bob");
-  tick(FLICK_COOLDOWN_MS);
-  actions.flick("deb");
-  assert.deepEqual(sent, [{ t: "flick", target: "bob" }, { t: "flick", target: "deb" }]);
-});
-
-test("dealer actions become the matching commands", () => {
-  const { sent, actions } = setup("deb");
-  actions.dealer.load("SD-7");
-  actions.dealer.typeIn("Fix the thing");
-  actions.dealer.reveal();
-  actions.dealer.settle(5);
-  actions.dealer.next();
-  actions.dealer.kick("bob");
+test("dealer actions resolve when the server says yes and reject with its reason", async () => {
+  const { sent, actions } = setup("deb", (cmd) => (cmd.t === "loadTicket" && cmd.ref === "SD-404" ? "SD-404: Ticket not found (or no access)" : undefined));
+  await actions.dealer.load("SD-7");
+  await assert.rejects(actions.dealer.load("SD-404"), { message: "SD-404: Ticket not found (or no access)" });
+  await actions.dealer.reveal();
+  await actions.dealer.settle(5);
+  await actions.dealer.next();
+  await actions.dealer.kick("bob");
   assert.deepEqual(sent, [
     { t: "loadTicket", ref: "SD-7" },
-    { t: "manualTicket", key: "", summary: "Fix the thing", description: "" },
+    { t: "loadTicket", ref: "SD-404" },
     { t: "reveal" },
     { t: "settle", finalPoints: 5 },
     { t: "nextRound" },
     { t: "kick", id: "bob" },
   ]);
+});
+
+test("a failed action nobody waits on becomes a toast; a flick that's too soon stays quiet", async () => {
+  const { events, actions } = setup("ann", (cmd) => (cmd.t === "flick" ? "Not so fast" : cmd.t === "setLook" ? "Nope" : undefined));
+  actions.flick("bob");
+  actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: [] });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(events, [{ t: "toast", text: "Nope", level: "error" }]);
 });
 
 test("small talk goes out as effects", () => {
@@ -85,6 +90,6 @@ test("small talk goes out as effects", () => {
   actions.gaze(0.2, -0.1);
   actions.talk(0.5);
   actions.openTicket();
-  assert.deepEqual(sent, [{ t: "emote", kind: "wave" }, { t: "look", yaw: 0.2, pitch: -0.1 }, { t: "talk", level: 0.5 }]);
+  assert.deepEqual(sent, [{ kind: "emote", emote: "wave" }, { kind: "gaze", yaw: 0.2, pitch: -0.1 }, { kind: "talk", level: 0.5 }]);
   assert.deepEqual(events, [{ t: "openTicket" }]);
 });

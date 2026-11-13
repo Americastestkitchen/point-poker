@@ -1,7 +1,9 @@
 // The connection to a table: joins with your seat token, reconnects when the
-// line drops, and feeds what the server says into the store. The socket and
-// storage are injected, so it runs in Node tests as well as the browser.
-import { ServerMsg, type ClientMsg } from "../../../shared/protocol.ts";
+// line drops, sends commands and matches up their replies, and feeds what the
+// server says into the store. The socket and storage are injected, so it runs
+// in Node tests as well as the browser.
+import { DEFAULT_LOOK } from "../../../shared/look.ts";
+import { ServerMsg, type ClientFx, type ClientMsg, type Command } from "../../../shared/protocol.ts";
 import type { Storage } from "./storage.ts";
 import type { AppState, Store } from "./store.ts";
 
@@ -30,7 +32,10 @@ export interface SessionDeps {
 
 export interface Session {
   join(room: string): void;
-  send(msg: ClientMsg): void;
+  /** Sends a command; resolves when the server says it worked, rejects with its reason if not. */
+  request(cmd: Command): Promise<void>;
+  /** Sends an effect (looking around, talking, emotes). No reply. */
+  fx(fx: ClientFx): void;
   close(): void;
 }
 
@@ -46,27 +51,45 @@ export function createSession(deps: SessionDeps): Session {
   let attempt = 0;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let nextId = 1;
+  const pending = new Map<number, { resolve(): void; reject(e: Error): void }>();
 
   const status = (connection: AppState["connection"]) => store.setState({ connection });
+  const live = () => ws?.readyState === OPEN && !stopped;
+  const send = (msg: ClientMsg) => ws!.send(JSON.stringify(msg));
 
   function hello(): ClientMsg {
     const p = storage.profile();
-    return {
-      t: "join", name: p.name ?? "", color: p.color ?? "", hat: p.hat ?? "none", body: p.body,
-      token: storage.token(room), dealerKey: storage.dealerKey(room),
-    };
+    return { t: "join", name: p.name ?? "", look: p.look ?? DEFAULT_LOOK, token: storage.token(room), dealerKey: storage.dealerKey(room) };
   }
 
   function receive(m: ServerMsg) {
     switch (m.t) {
       case "welcome":
         storage.setToken(room, m.token);
-        store.setState({ me: { id: m.playerId, isDealer: m.isDealer } });
+        store.setState({ me: { id: m.playerId } });
         return;
-      case "state":
-        return store.receive(m.state);
-      default:
+      case "view":
+        return store.receive(m.view);
+      case "result": {
+        const p = pending.get(m.id);
+        pending.delete(m.id);
+        if (m.error) p?.reject(new Error(m.error));
+        else p?.resolve();
+        return;
+      }
+      case "toast":
         return store.events.emit(m);
+      case "fx": {
+        const { from, fx } = m;
+        switch (fx.kind) {
+          case "gaze": return store.events.emit({ t: "gaze", id: from, yaw: fx.yaw, pitch: fx.pitch });
+          case "talk": return store.events.emit({ t: "talk", id: from, level: fx.level });
+          case "emote": return store.events.emit({ t: "emote", id: from, emote: fx.emote });
+          case "flick": return store.events.emit({ t: "flick", from, to: fx.to });
+          case "adjust": return store.events.emit({ t: "adjust", id: from });
+        }
+      }
     }
   }
 
@@ -88,6 +111,9 @@ export function createSession(deps: SessionDeps): Session {
     sock.onclose = (e: { code: number; reason: string }) => {
       if (ws !== sock) return;
       ws = null;
+      // anything still waiting for an answer won't get one now
+      for (const p of pending.values()) p.reject(new Error("Lost the connection. Try again?"));
+      pending.clear();
       if (stopped || FINAL(e.code)) {
         stopped = true;
         status({ room, status: "closed", reason: e.reason });
@@ -104,8 +130,15 @@ export function createSession(deps: SessionDeps): Session {
       stopped = false;
       connect();
     },
-    send(msg) {
-      if (ws?.readyState === OPEN && !stopped) ws.send(JSON.stringify(msg));
+    request(cmd) {
+      if (!live()) return Promise.reject(new Error("Not connected right now. Try again in a moment."));
+      const id = nextId++;
+      const reply = new Promise<void>((resolve, reject) => pending.set(id, { resolve, reject }));
+      send({ t: "cmd", id, cmd });
+      return reply;
+    },
+    fx(fx) {
+      if (live()) send({ t: "fx", fx });
     },
     close() {
       stopped = true;

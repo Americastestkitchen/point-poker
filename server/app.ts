@@ -21,7 +21,7 @@ export function createApp(deps: AppDeps) {
   const { store, auth, distDir, ...tableDeps } = deps;
   const rooms = new Rooms(tableDeps, store.load());
   const server = createServer(httpHandler({ rooms, auth, distDir }));
-  attachSockets(server, rooms, deps.log);
+  attachSockets(server, rooms, { log: deps.log, now: deps.now });
   return {
     server,
     rooms,

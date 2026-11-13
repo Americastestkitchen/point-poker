@@ -1,6 +1,12 @@
 // "Pointlings": googly-eyed bean creatures that sit at the table.
 import * as THREE from "three";
-import type { Body, Emote, Hat } from "../../shared/protocol.ts";
+import type { BodyId } from "../../shared/catalog/bodies.ts";
+import type { CosmeticId } from "../../shared/catalog/cosmetics.ts";
+import { EMOTES, type EmoteId } from "../../shared/catalog/emotes.ts";
+
+type Body = BodyId;
+type Emote = EmoteId;
+type Hat = CosmeticId | "none";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { FONT, canvasTex } from "./scene/textures.ts";
 
@@ -64,7 +70,7 @@ const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, shadow = true) => 
   return m;
 };
 
-const EMOJI: Record<Emote, string> = { wave: "👋", laugh: "😂", think: "🤔", shock: "😱" };
+const EMOJI = Object.fromEntries(EMOTES.map((e) => [e.id, e.emoji])) as Record<Emote, string>;
 
 function buildHat(hat: Hat | "visor"): THREE.Group {
   const g = new THREE.Group();

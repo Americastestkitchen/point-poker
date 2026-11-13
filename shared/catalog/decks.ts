@@ -15,7 +15,3 @@ export const DECKS = {
 } satisfies Record<string, Deck>;
 
 export type DeckId = keyof typeof DECKS;
-
-/** The values you can actually play from a deck (cards with points). */
-export const cardValues = (cards: readonly Card[]): number[] =>
-  cards.flatMap((c) => (c.points === null ? [] : [c.points]));

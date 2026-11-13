@@ -8,7 +8,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { RoomState, ServerMsg } from "../shared/protocol.ts";
+import type { ServerMsg, TableView } from "../shared/protocol.ts";
 import { createActions, type Actions } from "../client/src/app/actions.ts";
 import type { GameEvent } from "../client/src/app/events.ts";
 import { createSession, type Session } from "../client/src/app/session.ts";
@@ -112,6 +112,7 @@ class Player {
   get me() { return this.store.getState().me!; }
   get id() { return this.me.id; }
   get state() { return this.store.getState().room!; }
+  get isDealer() { return !!this.player(this.id)?.isDealer; }
   get closed() { return this.store.getState().connection.status === "closed"; }
   get token() { return this.storage.token(this.room)!; }
   player(id: string) { return this.state.players.find((p) => p.id === id); }
@@ -134,12 +135,13 @@ class Player {
     });
   }
 
-  untilState(pred: (s: RoomState) => boolean, label: string) {
+  untilState(pred: (s: TableView) => boolean, label: string) {
     return this.until((p) => !!p.store.getState().room && pred(p.state), label);
   }
 }
 
-const look = (name: string, extra: Partial<Profile> = {}): Profile => ({ name, color: "#3bceac", hat: "tophat", body: "bean", ...extra });
+const look = (name: string, extra: Partial<Profile["look"]> = {}): Profile =>
+  ({ name, look: { color: "#3bceac", body: "bean", cosmetics: ["tophat"], ...extra } });
 
 test("a whole session over real sockets, including a restart", async (t) => {
   const server = new Server();
@@ -165,22 +167,29 @@ test("a whole session over real sockets, including a restart", async (t) => {
 
   // ---- everyone sits down
   const deb = await join(code, look("Deb"), { dealerKey });
-  assert.equal(deb.me.isDealer, true);
+  assert.equal(deb.isDealer, true);
   const ann = await join(code, look("Ann"));
-  const bob = await join(code, look("Bob", { hat: "crown", body: "chonk" }));
-  assert.equal(ann.me.isDealer, false);
+  const bob = await join(code, look("Bob", { cosmetics: ["crown"], body: "chonk" }));
+  assert.equal(ann.isDealer, false);
   await deb.untilState((s) => s.players.length === 3, "three players");
   assert.equal(deb.player(deb.id)?.seat, -1);
   assert.deepEqual([ann, bob].map((p) => deb.player(p.id)?.seat).sort(), [0, 1]);
-  assert.equal(deb.player(bob.id)?.body, "chonk");
+  assert.deepEqual(deb.player(bob.id)?.look, { color: "#3bceac", body: "chonk", cosmetics: ["crown"] });
   await deb.until((p) => p.events.some((e) => e.t === "joined" && e.player.id === bob.id), "joined event");
 
-  // ---- only the dealer runs the round
-  ann.actions.dealer.reveal();
-  await ann.until((p) => p.toasts().includes("Only the dealer can do that"), "role error");
+  // ---- commands get answers: only the dealer runs the round, and failures say why
+  await assert.rejects(ann.actions.dealer.reveal(), { message: "Only the dealer can do that" });
+  await assert.rejects(deb.actions.dealer.deal(), { message: "Load a ticket first" });
+  await assert.rejects(deb.actions.dealer.load("nope"), { message: "That doesn't look like a Jira link or key (like SD-1234)" });
+  await assert.rejects(deb.actions.dealer.load("https://x.atlassian.net/browse/SD-9"), { message: "SD-9: Jira isn't configured on the server" });
+
+  // ---- a new look is one object
+  bob.actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: ["fez"] });
+  await ann.until((p) => p.events.some((e) => e.t === "reshaped" && e.player.id === bob.id), "bob reshaped");
+  assert.deepEqual(ann.player(bob.id)?.look, { color: "#ffd23f", body: "pear", cosmetics: ["fez"] });
 
   // ---- a round: vote, change a vote, reveal, settle, re-settle
-  deb.actions.dealer.typeIn("Login page");
+  await deb.actions.dealer.typeIn("Login page");
   await ann.untilState((s) => s.phase === "voting" && s.round === 1, "voting");
   await bob.untilState((s) => s.phase === "voting", "bob sees voting");
   assert.equal(ann.state.ticket?.key, "TICKET");
@@ -194,12 +203,14 @@ test("a whole session over real sockets, including a restart", async (t) => {
   ann.actions.vote(3);
   assert.equal(ann.store.getState().ui.myVote, 3);
   await bob.until((p) => p.events.some((e) => e.t === "adjust" && e.id === ann.id), "adjust");
-  assert.ok(!ann.wire.some((m) => m.t === "adjust"), "the voter isn't told about their own adjust");
+  assert.ok(!ann.wire.some((m) => m.t === "fx" && m.fx.kind === "adjust"), "the voter isn't told about their own adjust");
 
-  // nobody's card leaks before the reveal
+  await ann.untilState((s) => s.players.find((p) => p.id === ann.id)?.vote === 3, "ann sees her own card");
+  // nobody sees anyone else's card before the reveal; you do see your own
   for (const p of [deb, ann, bob]) {
     for (const m of p.wire) {
-      if (m.t === "state") assert.ok(m.state.players.every((x) => x.vote === null) && m.state.pot === 0, "vote leaked before reveal");
+      if (m.t !== "view") continue;
+      assert.ok(m.view.players.every((x) => x.vote === null || x.id === p.id) && m.view.pot === 0, "vote leaked before reveal");
     }
   }
 
@@ -226,9 +237,9 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.deepEqual(ann.events.filter((e) => e.t === "settled"), [{ t: "settled", resettled: false }, { t: "settled", resettled: true }]);
 
   // ---- nobody close enough: the house rakes it in
-  deb.actions.dealer.next();
+  await deb.actions.dealer.next();
   await ann.untilState((s) => s.phase === "waiting" && !s.ticket, "back to waiting");
-  deb.session.send({ t: "manualTicket", key: "SD-2", summary: "Search", description: "" });
+  await deb.session.request({ t: "manualTicket", key: "SD-2", summary: "Search", description: "" });
   await ann.untilState((s) => s.phase === "voting" && s.round === 2, "round 2");
   await bob.untilState((s) => s.round === 2, "bob sees round 2");
   assert.equal(ann.store.getState().ui.myVote, null, "a new round forgets your last card");
@@ -242,37 +253,53 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.deepEqual(bob.state.winners, [deb.id]);
   assert.equal(bob.player(deb.id)?.chips, 2);
 
-  // ---- skip and cancel pay nobody
-  deb.actions.dealer.next();
-  deb.session.send({ t: "manualTicket", key: "SD-3", summary: "Signup", description: "" });
+  // ---- reloading mid-vote keeps your card
+  await deb.actions.dealer.next();
+  await deb.session.request({ t: "manualTicket", key: "SD-3", summary: "Signup", description: "" });
   await ann.untilState((s) => s.round === 3 && s.phase === "voting", "round 3");
   ann.actions.vote(5);
-  deb.actions.dealer.skip();
-  await ann.untilState((s) => s.phase === "waiting" && s.skipped.includes("SD-3"), "skipped");
-  await ann.until((p) => p.toasts().includes("⏭️ The dealer skipped SD-3"), "skip toast");
-  assert.equal(ann.player(ann.id)?.chips, 8);
+  await deb.untilState((s) => !!s.players.find((p) => p.id === ann.id)?.hasVoted, "ann voted");
+  const reloaded = await join(code, look("Ann"), { token: ann.token });
+  await ann.until((p) => p.closed, "the old page lets go");
+  assert.equal(reloaded.id, ann.id);
+  assert.equal(reloaded.store.getState().ui.myVote, 5, "the reloaded page remembers your card");
+  assert.equal(bob.player(ann.id)?.vote, null, "and still nobody else sees it");
 
-  deb.session.send({ t: "manualTicket", key: "SD-4", summary: "Cancel me", description: "" });
-  await ann.untilState((s) => s.ticket?.key === "SD-4", "round 4");
-  deb.actions.dealer.cancel();
-  await ann.untilState((s) => s.phase === "waiting" && !s.ticket, "cancelled");
+  // ---- chip flicks have a cooldown the server enforces
+  await reloaded.session.request({ t: "flick", target: bob.id });
+  await assert.rejects(reloaded.session.request({ t: "flick", target: bob.id }), { message: "Not so fast" });
+  await bob.until((p) => p.events.some((e) => e.t === "flick"), "bob gets bonked");
+  await new Promise((r) => setTimeout(r, 100));
+  assert.equal(bob.events.filter((e) => e.t === "flick").length, 1, "only one chip flew");
+
+  // ---- skip and cancel pay nobody
+  await deb.actions.dealer.skip();
+  await reloaded.untilState((s) => s.phase === "waiting" && s.skipped.includes("SD-3"), "skipped");
+  await reloaded.until((p) => p.toasts().includes("⏭️ The dealer skipped SD-3"), "skip toast");
+  assert.equal(reloaded.player(ann.id)?.chips, 8);
+  assert.equal(reloaded.store.getState().ui.myVote, null);
+
+  await deb.session.request({ t: "manualTicket", key: "SD-4", summary: "Cancel me", description: "" });
+  await reloaded.untilState((s) => s.ticket?.key === "SD-4", "round 4");
+  await deb.actions.dealer.cancel();
+  await reloaded.untilState((s) => s.phase === "waiting" && !s.ticket, "cancelled");
   await bob.until((p) => p.toasts().includes("🎩 The dealer cancelled this round"), "cancel toast");
 
   // ---- kick: the player is gone and can't come back
   const cat = await join(code, look("Cat"));
   await deb.untilState((s) => s.players.length === 4, "cat sat down");
-  deb.actions.dealer.kick(cat.id);
+  await deb.actions.dealer.kick(cat.id);
   await cat.until((p) => p.closed, "cat kicked");
   assert.equal(cat.closeCode, 4001);
   assert.equal(cat.store.getState().connection.reason, "Removed by the dealer");
-  await ann.untilState((s) => s.players.length === 3, "cat gone");
-  await ann.until((p) => p.toasts().includes("👋 Cat was removed from the table"), "kick toast");
-  await ann.until((p) => p.events.some((e) => e.t === "left" && e.player.id === cat.id), "left event");
+  await reloaded.untilState((s) => s.players.length === 3, "cat gone");
+  await reloaded.until((p) => p.toasts().includes("👋 Cat was removed from the table"), "kick toast");
+  await reloaded.until((p) => p.events.some((e) => e.t === "left" && e.player.id === cat.id), "left event");
   const catAgain = await join(code, look("Cat"), { token: cat.token });
   assert.equal(catAgain.closeCode, 4001);
 
   // ---- reconnect with a seat token
-  await ann.leave();
+  await reloaded.leave();
   await deb.untilState((s) => s.players.find((p) => p.id === ann.id)?.connected === false, "ann away");
   const ann2 = await join(code, look("Ann"), { token: ann.token });
   assert.equal(ann2.id, ann.id);
@@ -294,7 +321,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   for (const p of [deb, bob, ann3]) await p.until((x) => x.store.getState().connection.status === "open", "reconnected");
   await deb.untilState((s) => s.players.length === 3 && s.players.every((p) => p.connected), "everyone back");
   assert.deepEqual({ deb: deb.id, ann: ann3.id, bob: bob.id }, before);
-  assert.equal(deb.me.isDealer, true);
+  assert.equal(deb.isDealer, true);
   assert.equal(deb.player(ann.id)?.chips, 8);
   assert.equal(deb.player(deb.id)?.chips, 2);
   assert.deepEqual(deb.state.history.map((h) => [h.key, h.finalPoints]), [["TICKET", 2], ["SD-2", 8]]);

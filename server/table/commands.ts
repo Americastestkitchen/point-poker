@@ -1,12 +1,11 @@
 // Every command a player can send, as data: who may run it, what it looks
 // like, and what it does. A new command is one new entry.
 import type { z } from "zod";
+import { validateLook } from "../../shared/look.ts";
 import { Commands, type Command } from "../../shared/protocol.ts";
-import { parseIssueKey } from "../../shared/rules.ts";
+import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
 import { payOut, potOf, takeBack } from "./coins.ts";
-import {
-  clean, isVoter, manualTicket, nextInQueue, pickBody, pickColor, pickHat, pickVote, resetTable, startRound,
-} from "./rules.ts";
+import { clean, isVoter, manualTicket, pickVote, resetTable, startRound } from "./rules.ts";
 import type { PlayerState, TableState } from "./state.ts";
 import type { TableFx } from "./table.ts";
 
@@ -21,6 +20,8 @@ export interface Ctx {
   notice(text: string, opts?: { level?: "error"; except?: string }): void;
   fx(fx: TableFx, except?: string): void;
   remove(player: PlayerState, reason: string): void;
+  /** True (and starts the clock) when `what` is off cooldown for this player. */
+  ready(playerId: string, what: string, cooldownMs: number): boolean;
   /** Starts a ticket change and returns a check that turns false once a newer one starts. */
   claimTicket(): () => boolean;
   claimQueue(): () => boolean;
@@ -46,16 +47,16 @@ export const COMMANDS: { [K in Command["t"]]: Spec<K> } = {
   },
   flick: {
     role: "player", schema: Commands.flick,
-    run({ s, fx }, me, { target }) {
-      if (target !== me.id && s.players.some((p) => p.id === target)) fx({ kind: "flick", from: me.id, to: target });
+    run({ s, fx, ready }, me, { target }) {
+      if (target === me.id || !s.players.some((p) => p.id === target)) return;
+      if (!ready(me.id, "flick", FLICK_COOLDOWN_MS)) return "Not so fast";
+      fx({ kind: "flick", from: me.id, to: target });
     },
   },
-  style: {
-    role: "player", schema: Commands.style,
-    run({ changed }, me, cmd) {
-      me.color = pickColor(cmd.color);
-      me.hat = pickHat(cmd.hat);
-      me.body = pickBody(cmd.body);
+  setLook: {
+    role: "player", schema: Commands.setLook,
+    run({ changed }, me, { look }) {
+      me.look = validateLook(look);
       changed();
     },
   },

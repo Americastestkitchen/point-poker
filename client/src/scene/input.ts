@@ -1,11 +1,10 @@
 // Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote.
-import type { Emote } from "../../../shared/protocol.ts";
+import { EMOTES } from "../../../shared/catalog/emotes.ts";
 import type { Actions } from "../app/actions.ts";
 import type { Store } from "../app/store.ts";
 import type { CameraRig } from "./camera.ts";
 import type { Stage } from "./stage.ts";
 
-const EMOTE_KEYS: Record<string, Emote> = { z: "wave", x: "laugh", c: "think", v: "shock" };
 
 export function bindInput(stage: Stage, deps: { store: Store; actions: Actions; rig: CameraRig }) {
   const { store, actions, rig } = deps;
@@ -40,7 +39,8 @@ export function bindInput(stage: Stage, deps: { store: Store; actions: Actions; 
     const { screen, ui } = store.getState();
     if (screen !== "table" || ui.lookOpen || (e.target as HTMLElement).closest("input, textarea")) return;
     const k = e.key.toLowerCase();
-    if (EMOTE_KEYS[k]) { actions.emote(EMOTE_KEYS[k]); return; }
+    const emote = EMOTES.find((x) => x.key === k);
+    if (emote) { actions.emote(emote.id); return; }
     if (k === "r") rig.recenter();
   });
 }

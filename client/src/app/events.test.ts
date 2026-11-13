@@ -12,12 +12,12 @@ test("the first view is just 'synced'", () => {
 test("people arriving, leaving and changing shape", () => {
   const before = view();
   const after = { ...before, players: [...before.players.filter((p) => p.id !== "bob"), player("cat")] };
-  after.players = after.players.map((p) => (p.id === "ann" ? { ...p, body: "pear" as const } : p));
+  after.players = after.players.map((p) => (p.id === "ann" ? { ...p, look: { ...p.look, body: "pear" as const } } : p));
   const evs = diff(before, after);
   assert.deepEqual(evs.filter((e) => e.t === "joined").map((e) => e.t === "joined" && e.player.id), ["cat"]);
   assert.deepEqual(evs.filter((e) => e.t === "left").map((e) => e.t === "left" && e.player.id), ["bob"]);
-  assert.deepEqual(evs.filter((e) => e.t === "reshaped").map((e) => e.t === "reshaped" && e.player.body), ["pear"]);
-  assert.deepEqual(diff(before, withPlayers(before, () => ({ color: "#ff6b4a", hat: "crown" }))), [], "a new colour or hat isn't news");
+  assert.deepEqual(evs.filter((e) => e.t === "reshaped").map((e) => e.t === "reshaped" && e.player.look.body), ["pear"]);
+  assert.deepEqual(diff(before, withPlayers(before, (p) => ({ look: { ...p.look, color: "#ff6b4a", cosmetics: ["crown"] } }))), [], "a new colour or hat isn't news");
 });
 
 test("a deal, and a re-deal of the same ticket", () => {
@@ -49,9 +49,3 @@ test("reveal, settle and a change of mind", () => {
   assert.deepEqual(diff(settled, { ...settled }), []);
 });
 
-test("a queue arriving", () => {
-  const v = view();
-  const q = { ...v, queue: [{ key: "SD-1", summary: "", points: null, status: "" }], queueLabel: "Epic SD-9" };
-  assert.deepEqual(kinds(diff(v, q)), ["queueChanged"]);
-  assert.deepEqual(kinds(diff(q, { ...q })), []);
-});

@@ -2,26 +2,48 @@
 // One hub per table keeps the sockets; the Table never sees them.
 import type { Server } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
-import { FxMsg, JoinMsg, type Command, type ServerMsg } from "../../shared/protocol.ts";
+import { ClientMsg, type ClientFx, type ServerMsg } from "../../shared/protocol.ts";
 import type { Rooms } from "../rooms.ts";
-import { ROLE_ERROR, type Log, type Table, type TableEvent } from "../table/table.ts";
+import type { Log, Table, TableEvent } from "../table/table.ts";
 
 const send = (ws: WebSocket | undefined, msg: ServerMsg) => {
   if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 };
 
-/** Commands whose failures show up in the dealer's ticket picker rather than as a toast. */
-const LOADS = new Set<Command["t"]>(["loadTicket", "fetchQueue", "nextRound", "skip"]);
+/** How many of each effect a player may send: a burst, then a steady rate per second. */
+const FX_LIMITS: Record<ClientFx["kind"], { burst: number; perSecond: number }> = {
+  gaze: { burst: 20, perSecond: 20 },
+  talk: { burst: 20, perSecond: 20 },
+  emote: { burst: 3, perSecond: 2 },
+};
+
+/** A token bucket per player and effect: relays never outpace what a person can do. */
+function rateLimiter(now: () => number) {
+  const buckets = new Map<string, { tokens: number; at: number }>();
+  return (playerId: string, kind: ClientFx["kind"]) => {
+    const { burst, perSecond } = FX_LIMITS[kind];
+    const key = `${playerId}:${kind}`, t = now();
+    const b = buckets.get(key) ?? { tokens: burst, at: t };
+    b.tokens = Math.min(burst, b.tokens + ((t - b.at) / 1000) * perSecond);
+    b.at = t;
+    buckets.set(key, b);
+    if (b.tokens < 1) return false;
+    b.tokens -= 1;
+    return true;
+  };
+}
 
 class Hub {
   private readonly sockets = new Map<string, WebSocket>();
   private pushQueued = false;
-  readonly table: Table;
+  private readonly table: Table;
   private readonly log: Log;
+  private readonly allow: ReturnType<typeof rateLimiter>;
 
-  constructor(table: Table, log: Log) {
+  constructor(table: Table, deps: { log: Log; now(): number }) {
     this.table = table;
-    this.log = log;
+    this.log = deps.log;
+    this.allow = rateLimiter(deps.now);
     table.on((e) => this.onTableEvent(e));
   }
 
@@ -30,21 +52,19 @@ class Hub {
     ws.on("message", (raw) => {
       let data: unknown;
       try { data = JSON.parse(String(raw)); } catch { return; }
-      const t = (data as { t?: unknown })?.t;
-      if (typeof t !== "string") return;
+      const parsed = ClientMsg.safeParse(data);
+      if (!parsed.success) return;
+      const msg = parsed.data;
       if (!me) {
-        const hello = JoinMsg.safeParse(data);
-        if (hello.success) me = this.join(ws, hello.data);
+        if (msg.t === "join") me = this.join(ws, msg);
         return;
       }
-      const fx = FxMsg.safeParse(data);
-      if (fx.success) return this.relay(me, fx.data);
-      const playerId = me;
-      this.table.run(playerId, data as Command).then((r) => {
-        if (!r.error) return;
-        if (r.error !== ROLE_ERROR && LOADS.has(t as Command["t"])) send(ws, { t: "loadFailed", text: r.error });
-        else send(ws, { t: "toast", text: r.error, level: "error" });
-      }, (e) => this.log.error("message failed", t, e));
+      if (msg.t === "fx") return this.relay(me, msg.fx);
+      if (msg.t !== "cmd") return;
+      this.table.run(me, msg.cmd).then(
+        (r) => send(ws, { t: "result", id: msg.id, ...(r.error ? { error: r.error } : {}) }),
+        (e) => this.log.error("command failed", msg.cmd.t, e),
+      );
     });
     ws.on("close", () => {
       if (me && this.sockets.get(me) === ws) {
@@ -54,7 +74,7 @@ class Hub {
     });
   }
 
-  private join(ws: WebSocket, hello: JoinMsg): string | null {
+  private join(ws: WebSocket, hello: Extract<ClientMsg, { t: "join" }>): string | null {
     const r = this.table.join(hello);
     if (!r.ok) {
       if (r.text) send(ws, { t: "toast", text: r.text, level: "error" });
@@ -64,20 +84,16 @@ class Hub {
     const old = this.sockets.get(r.playerId);
     if (old && old !== ws) old.close(4002, "Joined from another tab");
     this.sockets.set(r.playerId, ws);
-    send(ws, { t: "welcome", playerId: r.playerId, token: r.token, isDealer: r.isDealer });
+    send(ws, { t: "welcome", playerId: r.playerId, token: r.token });
     return r.playerId;
   }
 
-  /** Looking around, talking and emotes: relayed, never stored. */
-  private relay(from: string, fx: FxMsg) {
-    switch (fx.t) {
-      case "look": return this.broadcast({ t: "look", id: from, yaw: fx.yaw, pitch: fx.pitch }, from);
-      case "talk": {
-        const level = Math.round(Math.min(1, Math.max(0, fx.level)) * 100) / 100;
-        return this.broadcast({ t: "talk", id: from, level }, from);
-      }
-      case "emote": return this.broadcast({ t: "emote", id: from, kind: fx.kind });
-    }
+  /** Looking around, talking and emotes: rate-limited, relayed, never stored. */
+  private relay(from: string, fx: ClientFx) {
+    if (!this.allow(from, fx.kind)) return;
+    if (fx.kind === "talk") fx = { kind: "talk", level: Math.round(Math.min(1, Math.max(0, fx.level)) * 100) / 100 };
+    // you see your own emote; your own gaze and voice you already know
+    this.broadcast({ t: "fx", from, fx }, fx.kind === "emote" ? undefined : from);
   }
 
   private onTableEvent(e: TableEvent) {
@@ -88,8 +104,8 @@ class Hub {
         return;
       case "notice": return this.broadcast({ t: "toast", text: e.text, level: e.level }, e.except);
       case "fx":
-        if (e.fx.kind === "adjust") return this.broadcast({ t: "adjust", id: e.fx.id }, e.except);
-        return this.broadcast({ t: "flick", from: e.fx.from, to: e.fx.to }, e.except);
+        if (e.fx.kind === "adjust") return this.broadcast({ t: "fx", from: e.fx.id, fx: { kind: "adjust" } }, e.except);
+        return this.broadcast({ t: "fx", from: e.fx.from, fx: { kind: "flick", to: e.fx.to } }, e.except);
       case "removed": {
         const ws = this.sockets.get(e.playerId);
         this.sockets.delete(e.playerId);
@@ -98,9 +114,10 @@ class Hub {
     }
   }
 
+  /** Everyone gets their own view: the same table, but only their own card before the reveal. */
   private push() {
     this.pushQueued = false;
-    for (const [id, ws] of this.sockets) send(ws, { t: "state", state: this.table.viewFor(id) });
+    for (const [id, ws] of this.sockets) send(ws, { t: "view", view: this.table.viewFor(id) });
   }
 
   private broadcast(msg: ServerMsg, except?: string) {
@@ -109,7 +126,7 @@ class Hub {
   }
 }
 
-export function attachSockets(server: Server, rooms: Rooms, log: Log) {
+export function attachSockets(server: Server, rooms: Rooms, deps: { log: Log; now(): number }) {
   const hubs = new WeakMap<Table, Hub>();
   const wss = new WebSocketServer({ server, path: "/ws", maxPayload: 32 * 1024 });
   wss.on("connection", (ws, req) => {
@@ -117,7 +134,7 @@ export function attachSockets(server: Server, rooms: Rooms, log: Log) {
     const table = rooms.get(code);
     if (!table) return ws.close(4004, "No such room");
     let hub = hubs.get(table);
-    if (!hub) hubs.set(table, (hub = new Hub(table, log)));
+    if (!hub) hubs.set(table, (hub = new Hub(table, deps)));
     hub.accept(ws);
   });
   return wss;

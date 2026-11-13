@@ -2,7 +2,9 @@
 // and the ticket. It redraws from the store, and animates what the event
 // stream says just happened.
 import * as THREE from "three";
-import { DECK, type RoomState } from "../../../shared/protocol.ts";
+import { wornIn } from "../../../shared/look.ts";
+import type { PublicPlayer, TableView } from "../../../shared/protocol.ts";
+import { cardValues, voters } from "../../../shared/rules.ts";
 import type { Actions } from "../app/actions.ts";
 import type { GameEvent } from "../app/events.ts";
 import type { Store } from "../app/store.ts";
@@ -55,8 +57,10 @@ export function mountTableView(stage: Stage, deps: {
     react(e);
   });
 
-  function newAvatar(p: RoomState["players"][number]) {
-    const avatar = new Avatar(p.id, p.color, p.hat, p.isDealer, p.body);
+  const hatOf = (p: PublicPlayer) => wornIn(p.look, "head") ?? "none";
+
+  function newAvatar(p: PublicPlayer) {
+    const avatar = new Avatar(p.id, p.look.color, hatOf(p), p.isDealer, p.look.body);
     const unpick = p.id === meId() ? () => {} : picking.register(avatar.hitbox, () => actions.flick(p.id));
     return { avatar, unpick };
   }
@@ -99,7 +103,7 @@ export function mountTableView(stage: Stage, deps: {
         seat = { avatar, unpick, card: new TableCard(scene), stack, pos: new THREE.Vector3(info.x, 0, info.z), facing: info.facing, slot, chipsShown: -1 };
         seats.set(p.id, seat);
       }
-      if (seat.avatar.shape !== p.body) {
+      if (seat.avatar.shape !== p.look.body) {
         // new body shape: swap the model in place
         const old = seat.avatar;
         seat.unpick();
@@ -116,8 +120,8 @@ export function mountTableView(stage: Stage, deps: {
       seat.facing = info.facing;
       seat.card.placeAt(slot, count, p.id === me ? 0.42 : 0.62);
       seat.stack.position.copy(info.toward(0.7)).addScaledVector(info.side, -0.24);
-      seat.avatar.setStyle(p.color, p.hat);
-      seat.avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.color, p.connected);
+      seat.avatar.setStyle(p.look.color, hatOf(p));
+      seat.avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.look.color, p.connected);
       seat.avatar.group.visible = p.id !== me;
       seat.card.noFloat = p.id === me;
 
@@ -202,14 +206,14 @@ export function mountTableView(stage: Stage, deps: {
       key: t.key, type: t.type, summary: t.summary,
       points: st.finalPoints !== null && st.phase === "settled" ? `${st.finalPoints} PTS` : "",
     } : null);
-    const voters = st.players.filter((p) => p.plays);
-    const tvLine3 = st.phase === "voting" ? `${voters.filter((p) => p.hasVoted).length}/${voters.length} BETS IN`
+    const playing = voters(st.players);
+    const tvLine3 = st.phase === "voting" ? `${playing.filter((p) => p.hasVoted).length}/${playing.length} BETS IN`
       : st.phase === "revealed" ? `POT ${st.pot}` : st.phase === "settled" ? `FINAL ${st.finalPoints} PTS` : "";
     world.setTv(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", tvLine3);
   }
 
   /** The pot's chips fly to the winners; their stacks grow when the chips land. */
-  function payOut(st: RoomState) {
+  function payOut(st: TableView) {
     const winners = st.winners.map((id) => seats.get(id)).filter(Boolean) as Seat[];
     const chips = [...world.pot.children];
     if (!winners.length) { world.pot.clear(); return; }
@@ -264,9 +268,9 @@ export function mountTableView(stage: Stage, deps: {
   /** Effects that don't wait for a redraw. */
   function react(e: GameEvent) {
     switch (e.t) {
-      case "look": seats.get(e.id)?.avatar.setLook(e.yaw, e.pitch); return;
+      case "gaze": seats.get(e.id)?.avatar.setLook(e.yaw, e.pitch); return;
       case "talk": seats.get(e.id)?.avatar.setTalk(e.level); return;
-      case "emote": seats.get(e.id)?.avatar.playEmote(e.kind); audio.pop(); return;
+      case "emote": seats.get(e.id)?.avatar.playEmote(e.emote); audio.pop(); return;
       case "flick": flick(e.from, e.to); return;
       case "adjust": {
         // someone swapped their card: they reach in and fiddle with it
@@ -277,9 +281,10 @@ export function mountTableView(stage: Stage, deps: {
       case "played": {
         // your card flies from your hand to the felt
         const seat = seats.get(meId());
+        const deck = cardValues(store.getState().room?.settings.deck ?? []);
         if (seat) {
-          const i = DECK.indexOf(e.value);
-          const from = camera.localToWorld(new THREE.Vector3((i - (DECK.length - 1) / 2) * 0.06, -0.35, -0.5));
+          const i = deck.indexOf(e.value);
+          const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
           if (e.changed) seat.card.hide();
           seat.card.show(e.value, from);
           seat.card.faceUp(false);

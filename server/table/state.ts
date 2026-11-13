@@ -2,16 +2,15 @@
 // so saving a table is JSON.stringify and loading it is a schema check.
 import { z } from "zod";
 import { DECKS } from "../../shared/catalog/decks.ts";
-import { BODIES, Card, Epic, HATS, Phase, RoundResult, Ticket, TicketSummary } from "../../shared/protocol.ts";
+import { Look } from "../../shared/look.ts";
+import { Epic, Phase, RoundResult, TableSettings, Ticket, TicketSummary } from "../../shared/protocol.ts";
 
 export const PlayerState = z.object({
   id: z.string(),
   /** Secret seat token: the browser keeps it so the player can reconnect. */
   token: z.string(),
   name: z.string(),
-  color: z.string(),
-  hat: z.enum(HATS),
-  body: z.enum(BODIES),
+  look: Look,
   /** 0..MAX_PLAYERS-1; the dealer sits at -1. */
   seat: z.number(),
   vote: z.number().nullable(),
@@ -20,13 +19,6 @@ export const PlayerState = z.object({
   lastWin: z.number(),
 });
 export type PlayerState = z.infer<typeof PlayerState>;
-
-export const TableSettings = z.object({
-  deck: z.array(Card),
-  dealerPlays: z.boolean(),
-  environment: z.string(),
-});
-export type TableSettings = z.infer<typeof TableSettings>;
 
 export const TableState = z.object({
   code: z.string(),

@@ -2,16 +2,17 @@
 // and local UI state, plus the event stream. Both the HUD and the 3D scene
 // read it. Values that change every frame never go in here.
 import { createStore as createZustand } from "zustand/vanilla";
-import type { RoomState } from "../../../shared/protocol.ts";
+import type { TableView } from "../../../shared/protocol.ts";
 import { createEvents, diff, type Events } from "./events.ts";
 
 export interface AppState {
   screen: "start" | "creator" | "table";
   connection: { room: string; status: "idle" | "connecting" | "open" | "closed"; reason?: string };
-  me: { id: string; isDealer: boolean } | null;
-  room: RoomState | null;
+  /** Who you are at this table (from the welcome); your seat and role come from the view. */
+  me: { id: string } | null;
+  room: TableView | null;
   ui: {
-    /** The card you just played; the server doesn't tell us our own vote. */
+    /** Your card: set the moment you play it, then kept in step with your view. */
     myVote: number | null;
     /** The look editor is open over the table. */
     lookOpen: boolean;
@@ -32,13 +33,12 @@ export function createStore() {
   return Object.assign(store, {
     events,
     /** A new view from the server: keep it, then announce what changed. */
-    receive(next: RoomState) {
+    receive(next: TableView) {
       const { room: prev, me, ui } = store.getState();
       const evs = diff(prev, next);
-      // keep our idea of our own vote in step with the table (new rounds, reconnects)
-      const mine = next.players.find((p) => p.id === me?.id);
-      const resetVote = next.phase !== "voting" || evs.some((e) => e.t === "dealt") || (!!mine && !mine.hasVoted);
-      store.setState({ room: next, ui: resetVote && ui.myVote !== null ? { ...ui, myVote: null } : ui });
+      // your view always includes your own card, so a reload mid-vote remembers it
+      const myVote = next.players.find((p) => p.id === me?.id)?.vote ?? null;
+      store.setState({ room: next, ui: myVote !== ui.myVote ? { ...ui, myVote } : ui });
       for (const e of evs) events.emit(e);
     },
     setUi(patch: Partial<AppState["ui"]>) {
@@ -48,3 +48,6 @@ export function createStore() {
 }
 
 export type Store = ReturnType<typeof createStore>;
+
+/** Your own seat in the current view. */
+export const myPlayer = (s: Pick<AppState, "me" | "room">) => s.room?.players.find((p) => p.id === s.me?.id);

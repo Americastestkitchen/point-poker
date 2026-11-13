@@ -4,23 +4,25 @@ import { fakeTickets, ticket } from "../tickets/fake.ts";
 import { noTickets } from "../tickets/none.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { newTableState, TableState } from "./state.ts";
+import { FLICK_COOLDOWN_MS } from "../../shared/rules.ts";
 import { ROLE_ERROR, Table, type JoinRequest, type TableEvent } from "./table.ts";
 
 const DEALER_KEY = "dealer-key";
 
 function setup(tickets: TicketSource = noTickets()) {
   let r = 0;
+  let now = 1_700_000_000_000;
   const logs: string[] = [];
   const table = new Table(newTableState("ABCD", DEALER_KEY, 0), {
     ticketsFor: () => tickets,
-    now: () => 1_700_000_000_000,
+    now: () => now,
     random: () => (r = (r + 0.137) % 1),
     log: { info: (l: string) => logs.push(l), error: () => {} },
   });
   const events: TableEvent[] = [];
   table.on((e) => events.push(e));
   const join = (req: Partial<JoinRequest> & { name: string }) => {
-    const res = table.join({ color: "#3bceac", hat: "none", ...req });
+    const res = table.join({ look: { color: "#3bceac" }, ...req });
     assert.ok(res.ok, "join failed");
     return res;
   };
@@ -35,7 +37,8 @@ function setup(tickets: TicketSource = noTickets()) {
   const player = (who: { playerId: string }) => view().players.find((p) => p.id === who.playerId)!;
   const deal = (summary = "A ticket") => run(deb, { t: "manualTicket", key: "", summary, description: "" });
   const notices = () => events.flatMap((e) => (e.t === "notice" ? [e] : []));
-  return { table, events, logs, deb, ann, bob, join, run, view, player, deal, notices };
+  const tick = (ms: number) => (now += ms);
+  return { table, events, logs, deb, ann, bob, join, run, view, player, deal, notices, tick };
 }
 
 test("only the dealer runs the round", async () => {
@@ -45,16 +48,19 @@ test("only the dealer runs the round", async () => {
   assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: "3" } as never), { error: "That command didn't make sense" });
 });
 
-test("votes stay hidden until the reveal", async () => {
-  const { deb, ann, bob, run, view, deal } = setup();
+test("votes stay hidden until the reveal, except your own", async () => {
+  const { table, deb, ann, bob, run, view, deal } = setup();
   await deal();
   await run(ann, { t: "vote", value: 3 });
   await run(bob, { t: "vote", value: 7 }); // not in the deck: counts as no vote
   for (const who of [deb, ann, bob]) {
     const v = view(who);
-    assert.ok(v.players.every((p) => p.vote === null), "a vote leaked");
+    assert.ok(v.players.every((p) => p.vote === null || p.id === who.playerId), "someone else's vote leaked");
     assert.equal(v.pot, 0);
   }
+  // you always see your own card, so a reload mid-vote doesn't forget it
+  assert.equal(view(ann).players.find((p) => p.id === ann.playerId)?.vote, 3);
+  assert.equal(table.viewFor(null).players.find((p) => p.id === ann.playerId)?.vote, null);
   assert.deepEqual(view().players.map((p) => p.hasVoted), [false, true, false]);
   await run(deb, { t: "reveal" });
   assert.equal(view().players.find((p) => p.id === ann.playerId)?.vote, 3);
@@ -179,7 +185,7 @@ test("kick removes a player for good, but never the dealer", async () => {
   await run(deb, { t: "kick", id: cat.playerId });
   assert.ok(!view().players.some((p) => p.id === cat.playerId));
   assert.ok(events.some((e) => e.t === "removed" && e.playerId === cat.playerId && e.reason === "Removed by the dealer"));
-  assert.deepEqual(table.join({ name: "Cat", color: "", hat: "", token: cat.token }), { ok: false, code: 4001, reason: "Removed by the dealer" });
+  assert.deepEqual(table.join({ name: "Cat", look: {}, token: cat.token }), { ok: false, code: 4001, reason: "Removed by the dealer" });
 
   await run(deb, { t: "kick", id: deb.playerId });
   assert.ok(view().players.some((p) => p.id === deb.playerId));
@@ -195,7 +201,7 @@ test("seat tokens bring players back to their seat; the table fills up at eight"
   assert.equal(again.playerId, ann.playerId);
   assert.equal(table.viewFor(null).players.find((p) => p.id === ann.playerId)?.name, "Ann again");
   for (let i = 0; i < 6; i++) join({ name: `P${i}` });
-  assert.deepEqual(table.join({ name: "One too many", color: "", hat: "" }), { ok: false, code: 4003, reason: "Table full", text: "The table is full" });
+  assert.deepEqual(table.join({ name: "One too many", look: {} }), { ok: false, code: 4003, reason: "Table full", text: "The table is full" });
 });
 
 test("a slow ticket load finishing after a newer one doesn't win", async () => {
@@ -259,4 +265,26 @@ test("a table's snapshot is plain JSON that loads back into the same table", asy
     ticketsFor: noTickets, now: () => 0, random: Math.random, log: console,
   });
   assert.deepEqual(restored.viewFor(null), { ...table.viewFor(null), players: table.viewFor(null).players.map((p) => ({ ...p, connected: false })) });
+});
+
+test("chip flicks have a cooldown the server enforces", async () => {
+  const { table, ann, bob, events, tick } = setup();
+  const flicks = () => events.filter((e) => e.t === "fx" && e.fx.kind === "flick").length;
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), { error: "Not so fast" });
+  assert.deepEqual(await table.run(bob.playerId, { t: "flick", target: ann.playerId }), {}, "everyone has their own cooldown");
+  tick(FLICK_COOLDOWN_MS);
+  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
+  assert.equal(flicks(), 3);
+  await table.run(ann.playerId, { t: "flick", target: ann.playerId });
+  await table.run(ann.playerId, { t: "flick", target: "nobody" });
+  assert.equal(flicks(), 3, "no flicking yourself or empty chairs");
+});
+
+test("a look is one object, cleaned up on the way in", async () => {
+  const { ann, run, player, join } = setup();
+  await run(ann, { t: "setLook", look: { color: "#ffd23f", body: "pear", cosmetics: ["crown", "fez", "jetpack"] } });
+  assert.deepEqual(player(ann).look, { color: "#ffd23f", body: "pear", cosmetics: ["crown"] }, "one hat at a time, no made-up items");
+  const odd = join({ name: "Odd", look: { color: "plaid", body: "blob" } });
+  assert.deepEqual(player(odd).look, { color: "#ff6b4a", body: "bean", cosmetics: [] });
 });

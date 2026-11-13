@@ -30,7 +30,7 @@ const lobby = mountLobby({ store, storage, audio, actions, roomCode, onSit: star
 function startGame() {
   store.setState({ screen: "table" });
   $("hud").hidden = false;
-  $("wardrobe").style.setProperty("--me", lobby.look.color);
+  $("wardrobe").style.setProperty("--me", lobby.me.look.color);
   const stage = createStage($("scene") as HTMLCanvasElement, { audio });
   new Hud({ store, actions, audio, storage, mic: new Mic(), openLook: lobby.openCreator });
   mountScene(stage, { store, actions, audio });

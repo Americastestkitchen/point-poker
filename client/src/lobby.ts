@@ -1,5 +1,8 @@
 // The landing page and the character creator (plain DOM until #4 replaces it).
-import { BODIES, COLORS, HATS, type Body, type Hat } from "../../shared/protocol.ts";
+import { BODIES } from "../../shared/catalog/bodies.ts";
+import { COLORS } from "../../shared/catalog/colors.ts";
+import { COSMETICS, type CosmeticId } from "../../shared/catalog/cosmetics.ts";
+import { randomLook, wear, wornIn } from "../../shared/look.ts";
 import type { Actions } from "./app/actions.ts";
 import type { Profile, Storage } from "./app/storage.ts";
 import type { Store } from "./app/store.ts";
@@ -8,26 +11,15 @@ import { createTurntable } from "./scene/turntable.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
 
-const HAT_ICON: Record<Hat, [string, string]> = {
-  none: ["🫥", "bare"], beanie: ["🧢", "propeller"], tophat: ["🎩", "top hat"], cone: ["🚧", "cone"],
-  party: ["🥳", "party"], chef: ["🧑‍🍳", "chef"], horns: ["🪖", "viking"], fez: ["🔴", "fez"], crown: ["👑", "crown"],
-};
-const BODY_ICON: Record<Body, [string, string]> = {
-  bean: ["🫘", "bean"], chonk: ["🍔", "chonk"], noodle: ["🍝", "noodle"], box: ["📦", "box"], pear: ["🍐", "pear"],
-};
+/** The hat row: going bare, then everything that sits on your head. */
+const HATS = [{ id: null, label: "bare", icon: "🫥" }, ...COSMETICS.filter((c) => c.slots.includes("head"))];
 
 export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio; actions: Actions; roomCode: string; onSit(): void }) {
   const { store, storage, audio, actions, roomCode } = deps;
   const dealerKey = roomCode ? storage.dealerKey(roomCode) : undefined;
   const saved = storage.profile();
-  const look: Profile = {
-    name: saved.name ?? "",
-    color: saved.color ?? pick(COLORS),
-    hat: saved.hat ?? pick(HATS.slice(1)),
-    body: saved.body ?? pick(BODIES),
-  };
+  const me: Profile = { name: saved.name ?? "", look: saved.look ?? randomLook() };
   let preview: ReturnType<typeof createTurntable> | null = null;
   const inGame = () => store.getState().screen === "table";
 
@@ -72,26 +64,26 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
   }
 
   function refresh() {
-    [...$("colors").children].forEach((b, i) => b.classList.toggle("on", COLORS[i] === look.color));
-    [...$("hats").children].forEach((b, i) => b.classList.toggle("on", HATS[i] === look.hat));
-    [...$("bodies").children].forEach((b, i) => b.classList.toggle("on", BODIES[i] === look.body));
-    preview?.setLook(look);
+    [...$("colors").children].forEach((b, i) => b.classList.toggle("on", COLORS[i] === me.look.color));
+    [...$("hats").children].forEach((b, i) => b.classList.toggle("on", HATS[i].id === wornIn(me.look, "head")));
+    [...$("bodies").children].forEach((b, i) => b.classList.toggle("on", BODIES[i].id === me.look.body));
+    preview?.setLook(me.look);
     preview?.wave();
   }
 
   /** A row of buttons, one per choice. */
-  function choices<T extends string>(el: HTMLElement, list: readonly T[], current: T, paint: (b: HTMLButtonElement, v: T) => void, set: (v: T) => void) {
+  function choices<T>(el: HTMLElement, list: readonly T[], current: (v: T) => boolean, paint: (b: HTMLButtonElement, v: T) => void, set: (v: T) => void) {
     el.innerHTML = "";
     for (const v of list) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = v === current ? "on" : "";
+      b.className = current(v) ? "on" : "";
       paint(b, v);
       b.onclick = () => { set(v); audio.pop(); refresh(); };
       el.append(b);
     }
   }
-  const icon = ([emoji, label]: [string, string]) => `${emoji}<span>${label}</span>`;
+  const icon = (c: { icon: string; label: string }) => `${c.icon}<span>${c.label}</span>`;
 
   function openCreator() {
     const playing = inGame();
@@ -104,28 +96,28 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
     $("sit").textContent = playing ? "Done" : dealerKey ? "Open the table →" : "Join the table →";
     ($("look-more") as HTMLDetailsElement).open = playing;
     const nameIn = $<HTMLInputElement>("name-input");
-    nameIn.value = look.name;
-    nameIn.oninput = () => (look.name = nameIn.value);
+    nameIn.value = me.name;
+    nameIn.oninput = () => (me.name = nameIn.value);
 
-    choices($("colors"), COLORS, look.color, (b, c) => (b.style.background = c), (c) => (look.color = c));
-    choices($("bodies"), BODIES, look.body, (b, v) => (b.innerHTML = icon(BODY_ICON[v])), (v) => (look.body = v));
-    choices($("hats"), HATS, look.hat, (b, h) => (b.innerHTML = icon(HAT_ICON[h])), (h) => (look.hat = h));
-    preview ??= createTurntable($<HTMLCanvasElement>("preview"), look, { dealer: !!dealerKey, visible: () => !$("lobby").hidden });
-    preview.setLook(look);
+    choices($("colors"), COLORS, (c) => c === me.look.color, (b, c) => (b.style.background = c), (color) => (me.look = { ...me.look, color }));
+    choices($("bodies"), BODIES, (b) => b.id === me.look.body, (el, b) => (el.innerHTML = icon(b)), (b) => (me.look = { ...me.look, body: b.id }));
+    choices($("hats"), HATS, (h) => h.id === wornIn(me.look, "head"), (b, h) => (b.innerHTML = icon(h)), (h) => (me.look = wear(me.look, "head", h.id as CosmeticId | null)));
+    preview ??= createTurntable($<HTMLCanvasElement>("preview"), me.look, { dealer: !!dealerKey, visible: () => !$("lobby").hidden });
+    preview.setLook(me.look);
 
     $("sit-form").onsubmit = (e) => {
       e.preventDefault();
-      look.name = nameIn.value.trim() || look.name;
-      if (!look.name) { nameIn.focus(); nameIn.classList.add("nudge"); setTimeout(() => nameIn.classList.remove("nudge"), 500); return; }
-      storage.setProfile(look);
+      me.name = nameIn.value.trim() || me.name;
+      if (!me.name) { nameIn.focus(); nameIn.classList.add("nudge"); setTimeout(() => nameIn.classList.remove("nudge"), 500); return; }
+      storage.setProfile(me);
       $("lobby").hidden = true;
       if (inGame()) {
         store.setUi({ lookOpen: false });
-        actions.restyle({ color: look.color, hat: look.hat, body: look.body });
+        actions.setLook(me.look);
       } else deps.onSit();
     };
     setTimeout(() => nameIn.focus(), 50);
   }
 
-  return { boot, openCreator, look };
+  return { boot, openCreator, me };
 }
