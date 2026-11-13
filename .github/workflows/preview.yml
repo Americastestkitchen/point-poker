@@ -22,27 +22,39 @@ env:
   MARKER: "<!-- point-poker-preview -->"
 
 jobs:
-  deploy:
-    if: github.event.action != 'closed'
+  # One job for the whole PR lifecycle: deploy while the PR is open, delete when it closes.
+  preview:
     runs-on: ubuntu-latest
+    env:
+      OPEN: ${{ github.event.action != 'closed' }}
     steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # PR open: build, check, deploy, and comment the link.
       - uses: actions/checkout@v4
+        if: env.OPEN == 'true'
       - uses: actions/setup-node@v4
+        if: env.OPEN == 'true'
         with:
           node-version: 26
           cache: npm
-      - run: npm ci
-      - run: npm run check
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - if: env.OPEN == 'true'
+        run: npm ci
+      - if: env.OPEN == 'true'
+        run: npm run check
       - name: Create the preview app (first push only)
+        if: env.OPEN == 'true'
         run: flyctl status -a "$APP" >/dev/null 2>&1 || flyctl apps create "$APP" --org "$FLY_ORG"
       - name: Set the host passcode
+        if: env.OPEN == 'true'
         run: flyctl secrets set HOST_PASSCODE="$HOST_PASSCODE" -a "$APP" --stage
         env:
           HOST_PASSCODE: ${{ secrets.HOST_PASSCODE }}
       - name: Deploy
+        if: env.OPEN == 'true'
         run: flyctl deploy --remote-only --ha=false --config fly.dev.toml -a "$APP"
       - name: Comment the link on the PR
+        if: env.OPEN == 'true'
         run: |
           body="$MARKER
           🃏 **Preview:** https://$APP.fly.dev
@@ -54,14 +66,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
-  destroy:
-    if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # PR closed: delete the app and note it on the PR.
       - name: Delete the preview app
+        if: env.OPEN != 'true'
         run: flyctl apps destroy "$APP" --yes || echo "Nothing to delete"
       - name: Note it on the PR
+        if: env.OPEN != 'true'
         run: |
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
           [ -n "$id" ] && gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$MARKER
