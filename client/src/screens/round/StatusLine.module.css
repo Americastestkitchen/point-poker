@@ -1,4 +1,50 @@
-.placeholder {
-  padding: var(--pp-space-1) var(--pp-space-3); font-size: var(--pp-size-sm); color: var(--pp-color-dim);
-  background: var(--pp-color-panel); border: 1px dashed var(--pp-color-edge); border-radius: var(--pp-radius-md);
+/* The status line: two chips stacked at the top centre. It never takes the pointer. */
+.status {
+  display: grid; justify-items: center; gap: 6px; max-width: 100%; min-width: 0;
+  pointer-events: none;
+}
+
+.steps {
+  list-style: none; margin: 0; display: flex; align-items: center; gap: 6px;
+  padding: 5px var(--pp-space-3); border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel); border: var(--pp-border-soft); backdrop-filter: blur(8px);
+  font-size: var(--pp-size-sm); color: var(--pp-color-dim);
+  transition: opacity var(--pp-motion-slow);
+}
+.idle { opacity: .55; }
+.step { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* the bar between two steps */
+.step + .step::before {
+  content: ""; width: 18px; height: 2px; margin-right: 0; border-radius: 2px;
+  background: color-mix(in srgb, var(--pp-color-ink) 15%, transparent);
+}
+.mark {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: var(--pp-radius-pill);
+  background: color-mix(in srgb, var(--pp-color-ink) 9%, transparent);
+  font-size: 11px; font-weight: var(--pp-weight-display);
+  transition: background var(--pp-motion-base), box-shadow var(--pp-motion-base);
+}
+.current { color: var(--pp-color-ink); font-weight: var(--pp-weight-strong); }
+.current .mark { background: var(--pp-color-gold); color: var(--pp-color-gold-ink); box-shadow: var(--pp-glow-gold); }
+.done .mark { background: var(--pp-color-success); color: var(--pp-color-success-ink); }
+
+.line {
+  margin: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px var(--pp-space-3);
+  max-width: 100%; padding: 4px var(--pp-space-4); border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel); border: var(--pp-border-soft); backdrop-filter: blur(8px);
+  box-shadow: var(--pp-shadow-panel);
+  font-family: var(--pp-font-display); font-size: var(--pp-size-lg); font-weight: var(--pp-weight-strong);
+  color: var(--pp-color-ink); text-align: center;
+}
+.text { min-width: 0; }
+.dots { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+
+@media (max-width: 760px) {
+  .status { gap: 4px; }
+  .line { font-size: var(--pp-size-md); padding: 3px var(--pp-space-3); }
+}
+@media (max-height: 520px) and (min-width: 761px) {
+  .status { gap: 4px; }
+  .steps { padding: 3px var(--pp-space-2); }
+  .line { font-size: var(--pp-size-md); padding: 3px var(--pp-space-3); }
 }
