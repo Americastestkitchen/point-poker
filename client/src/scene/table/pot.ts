@@ -65,6 +65,7 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
       state = "payingOut";
       chips.forEach((chip, i) => {
         const winner = to[i % to.length];
+        if (!winner) throw new Error("Missing pot payout recipient");
         const from = chip.getWorldPosition(new THREE.Vector3());
         group.remove(chip);
         stage.scene.add(chip);

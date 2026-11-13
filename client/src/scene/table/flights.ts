@@ -20,6 +20,7 @@ export function createFlights() {
     update(dt: number) {
       for (let i = flights.length - 1; i >= 0; i--) {
         const f = flights[i];
+        if (!f) throw new Error("Flight disappeared during update");
         f.t += dt;
         if (f.t < 0) continue;
         const p = Math.min(1, f.t / f.dur);

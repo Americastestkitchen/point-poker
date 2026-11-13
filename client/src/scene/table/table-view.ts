@@ -21,7 +21,7 @@ export interface TableView {
   update(dt: number, t: number): void;
 }
 
-const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)];
+const chipColors = ["#c0392b", "#2d6cdf", "#151515", "#e6be5a"];
 
 export function mountTableView(stage: Stage, deps: {
   store: Store; actions: Actions; audio: Audio; layout: Layout; flights: Flights; rig: CameraRig;
@@ -168,7 +168,9 @@ export function mountTableView(stage: Stage, deps: {
 
   /** A chip flies from one head to another, bonks, and rolls away. */
   function flick(from: string, to: string) {
-    const chip = makeChip(pick(["#c0392b", "#2d6cdf", "#151515", "#e6be5a"]));
+    const color = chipColors[Math.floor(Math.random() * chipColors.length)];
+    if (color === undefined) throw new Error("Missing flick chip color");
+    const chip = makeChip(color);
     const start = from === meId() ? camera.localToWorld(new THREE.Vector3(0.15, -0.2, -0.3)) : headOf(from);
     chip.position.copy(start);
     scene.add(chip);

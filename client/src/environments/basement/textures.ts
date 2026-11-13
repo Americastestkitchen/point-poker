@@ -29,7 +29,7 @@ export function feltTexture(): THREE.CanvasTexture {
       g.save();
       g.translate(512 + Math.cos(a) * r, 512 + Math.sin(a) * r);
       g.rotate(a + Math.PI / 2);
-      g.fillText(msg[i], 0, 0);
+      g.fillText(msg.charAt(i), 0, 0);
       g.restore();
     }
   });

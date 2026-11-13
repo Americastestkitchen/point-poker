@@ -67,10 +67,9 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
     openCreator();
   }
 
+  const refreshChoices = new Map<HTMLElement, () => void>();
   function refresh() {
-    [...$("colors").children].forEach((b, i) => b.classList.toggle("on", COLORS[i] === me.look.color));
-    [...$("hats").children].forEach((b, i) => b.classList.toggle("on", HATS[i].id === wornIn(me.look, "head")));
-    [...$("bodies").children].forEach((b, i) => b.classList.toggle("on", BODIES[i].id === me.look.body));
+    for (const update of refreshChoices.values()) update();
     preview?.setLook(me.look);
     preview?.wave();
   }
@@ -78,12 +77,17 @@ export function mountLobby(deps: { store: Store; storage: Storage; audio: Audio;
   /** A row of buttons, one per choice. */
   function choices<T>(el: HTMLElement, list: readonly T[], current: (v: T) => boolean, paint: (b: HTMLButtonElement, v: T) => void, set: (v: T) => void) {
     el.innerHTML = "";
+    const buttons: { button: HTMLButtonElement; value: T }[] = [];
+    refreshChoices.set(el, () => {
+      for (const { button, value } of buttons) button.classList.toggle("on", current(value));
+    });
     for (const v of list) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = current(v) ? "on" : "";
       paint(b, v);
       b.onclick = () => { set(v); audio.pop(); refresh(); };
+      buttons.push({ button: b, value: v });
       el.append(b);
     }
   }

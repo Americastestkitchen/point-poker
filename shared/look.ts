@@ -55,6 +55,10 @@ export function wear(look: Look, slot: Slot, id: CosmeticId | null): Look {
 
 /** A random look for someone new: any colour and body, and a hat. */
 export function randomLook(random: () => number = Math.random): Look {
-  const pick = <T,>(a: readonly T[]) => a[Math.floor(random() * a.length)];
+  const pick = <T,>(a: readonly T[]): T => {
+    const value = a[Math.floor(random() * a.length)];
+    if (value === undefined) throw new Error("Cannot choose a look from an empty catalog or invalid random value");
+    return value;
+  };
   return { color: pick(COLORS), body: pick(BODY_IDS), cosmetics: [pick(COSMETICS.filter((c) => c.slots.includes("head"))).id] };
 }

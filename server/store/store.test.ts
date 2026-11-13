@@ -15,6 +15,7 @@ test("the file store saves and loads tables", (t) => {
   const store = fileStore(dir, quiet);
   assert.deepEqual(store.load(), [], "no file yet means no tables");
   const tables = [newTableState("ABCD", "k1", 1), newTableState("WXYZ", "k2", 2)];
+  assert.ok(tables[0]);
   tables[0].skipped.push("SD-1");
   store.save(tables);
   assert.deepEqual(fileStore(dir, quiet).load(), tables);

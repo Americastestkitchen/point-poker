@@ -150,7 +150,8 @@ export function woodTexture(base = "#3b2416", lines = "#24140b", repeat = 4): TH
 }
 
 
-export function wrapText(g: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrapText(g: { measureText(text: string): { width: number } }, text: string, maxW: number, maxLines: number): string[] {
+  if (maxLines <= 0) return [];
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let line = "";
@@ -164,7 +165,8 @@ export function wrapText(g: CanvasRenderingContext2D, text: string, maxW: number
   }
   if (lines.length < maxLines && line) lines.push(line);
   if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length) {
-    lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, "") + "…";
+    const last = lines.at(-1);
+    if (last !== undefined) lines[lines.length - 1] = last.replace(/\s*\S*$/, "") + "…";
   }
   return lines;
 }

@@ -123,7 +123,9 @@ test("nobody within one card: the house rakes in the pot", async () => {
   assert.equal(view().houseWon, true);
   assert.deepEqual(view().winners, [deb.playerId]);
   assert.equal(player(deb).chips, 3);
-  assert.equal(view().history[0].houseWon, true);
+  const [result] = view().history;
+  assert.ok(result);
+  assert.equal(result.houseWon, true);
 });
 
 test("a dealer who plays along votes and can win", async () => {

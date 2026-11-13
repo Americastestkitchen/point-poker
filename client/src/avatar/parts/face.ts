@@ -13,9 +13,7 @@ export interface Face {
 
 export function buildFace(shape: BodyShape, parent: THREE.Object3D): Face {
   const A = anchorsFor(shape);
-  const eyes: THREE.Group[] = [];
-  const pupils: THREE.Mesh[] = [];
-  for (const spot of [A.eyeL, A.eyeR]) {
+  function buildEye(spot: typeof A.eyeL) {
     const eye = new THREE.Group();
     eye.position.set(spot.x, spot.y, spot.z);
     eye.scale.setScalar(spot.s);
@@ -23,10 +21,17 @@ export function buildFace(shape: BodyShape, parent: THREE.Object3D): Face {
     const pupil = mesh(new THREE.SphereGeometry(0.052, 14, 10), new THREE.MeshBasicMaterial({ color: "#111" }), false);
     eye.add(white, pupil);
     parent.add(eye);
-    eyes.push(eye);
-    pupils.push(pupil);
+    return {
+      eye,
+      apply(scale: number, gaze: Pose["face"]["pupils"][0]) {
+        eye.scale.setScalar(shape.eye.s * scale);
+        pupil.position.set(gaze.x, gaze.y, gaze.z).multiplyScalar(0.08);
+      },
+    };
   }
 
+  const left = buildEye(A.eyeL);
+  const right = buildEye(A.eyeR);
   const { mouth } = A;
   const smile = mesh(new THREE.TorusGeometry(0.055, 0.013, 6, 16, Math.PI), new THREE.MeshBasicMaterial({ color: "#2a1414" }), false);
   smile.position.set(mouth.x, mouth.y, mouth.z);
@@ -45,11 +50,11 @@ export function buildFace(shape: BodyShape, parent: THREE.Object3D): Face {
   parent.add(hole);
 
   return {
-    eyeL: eyes[0],
-    eyeR: eyes[1],
+    eyeL: left.eye,
+    eyeR: right.eye,
     apply(face) {
-      for (const eye of eyes) eye.scale.setScalar(shape.eye.s * face.eyeScale);
-      pupils.forEach((p, i) => p.position.set(face.pupils[i].x, face.pupils[i].y, face.pupils[i].z).multiplyScalar(0.08));
+      left.apply(face.eyeScale, face.pupils[0]);
+      right.apply(face.eyeScale, face.pupils[1]);
       hole.visible = face.mouthOpen > 0.03;
       smile.visible = !hole.visible;
       hole.scale.set((0.05 + face.mouthOpen * 0.02) * mouth.s, (0.016 + face.mouthOpen * 0.07) * mouth.s, 0.03);

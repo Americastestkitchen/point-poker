@@ -276,7 +276,7 @@ export class Hud {
     const t = st.ticket;
     if (!t) return;
     this.sheetKey = t.key + st.round;
-    const project = t.key.split("-")[0];
+    const project = t.key.replace(/-[\s\S]*$/, "");
     const cat = t.statusCategory || "new";
     const crumbs = [`<span>Projects</span>`, `<span>${esc(project)}</span>`];
     if (t.parent) crumbs.push(`<span>${typeIcon("epic")} ${esc(t.parent.key)}</span>`);

@@ -237,7 +237,9 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(ann.player(ann.id)?.chips, 8);
   assert.equal(ann.player(bob.id)?.chips, 0, "the first payout is taken back");
   assert.equal(ann.state.history.length, 1);
-  assert.equal(ann.state.history[0].finalPoints, 2);
+  const [result] = ann.state.history;
+  assert.ok(result);
+  assert.equal(result.finalPoints, 2);
   assert.deepEqual(ann.events.filter((e) => e.t === "settled"), [{ t: "settled", resettled: false }, { t: "settled", resettled: true }]);
 
   // ---- nobody close enough: the house rakes it in

@@ -31,6 +31,7 @@ test("starting twice while the browser asks only asks once", async () => {
   void mic.start();
   void mic.start();
   assert.equal(asks.length, 1);
+  assert.ok(asks[0]);
   asks[0].grant();
   await settle();
   assert.deepEqual(seen, ["starting", "on"]);
@@ -44,6 +45,7 @@ test("stopping while the browser asks lets the mic go when it says yes", async (
   const mic = createMic(open);
   void mic.start();
   mic.stop();
+  assert.ok(asks[0]);
   asks[0].grant();
   await settle();
   assert.equal(mic.status, "off");
@@ -56,10 +58,12 @@ test("after start, stop, start, only the newest request counts", async () => {
   void mic.start();
   mic.stop();
   void mic.start();
+  assert.ok(asks[0]);
   asks[0].grant();
   await settle();
   assert.equal(mic.status, "starting", "the cancelled request's yes is let go");
   assert.equal(input.closed, 1);
+  assert.ok(asks[1]);
   asks[1].grant();
   await settle();
   assert.equal(mic.status, "on");
@@ -69,9 +73,11 @@ test("after start, stop, start, only the newest request counts", async () => {
   void mic2.start();
   mic2.stop();
   const second = mic2.start();
+  assert.ok(again.asks[0]);
   again.asks[0].refuse();
   await settle();
   assert.equal(mic2.status, "starting", "the cancelled request's no is ignored");
+  assert.ok(again.asks[1]);
   again.asks[1].grant();
   await second;
   assert.equal(mic2.status, "on");
@@ -84,6 +90,7 @@ test("stopping from the status callback when it turns on stops it", async () => 
   const mic = createMic(open);
   mic.onStatus = (s) => { if (s === "on") mic.stop(); };
   void mic.start();
+  assert.ok(asks[0]);
   asks[0].grant();
   await settle();
   assert.equal(mic.status, "off");
@@ -103,6 +110,7 @@ test("a refused mic says so, and you can ask again", async () => {
   const { asks, open } = fakeMic();
   const mic = createMic(open);
   const first = mic.start();
+  assert.ok(asks[0]);
   asks[0].refuse();
   await assert.rejects(first, /NotAllowedError/);
   assert.equal(mic.status, "denied");
@@ -118,6 +126,7 @@ test("loudness goes out in steps, with one zero when you go quiet", async (t) =>
   const levels: number[] = [];
   mic.onLevel = (l) => levels.push(l);
   void mic.start();
+  assert.ok(asks[0]);
   asks[0].grant();
   await settle();
   input.loudness = 0.1; // loud
