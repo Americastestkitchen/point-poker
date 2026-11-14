@@ -7,6 +7,7 @@ import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
+import type { Avatar } from "../../avatar/avatar.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
@@ -18,6 +19,8 @@ import { createSeat, type Seat } from "./seat.ts";
 import type { TicketPaper } from "./ticket.ts";
 
 export interface TableView {
+  /** Your bean, while you're at the table. It's hidden on your screen; your first-person body copies it. */
+  mine(): Avatar | null;
   update(dt: number, t: number): void;
 }
 
@@ -199,6 +202,8 @@ export function mountTableView(
     const color = chipColors[Math.floor(Math.random() * chipColors.length)];
     if (color === undefined) throw new Error("Missing flick chip color");
     const chip = makeChip(color);
+    // your arm flicks it (others see the chip leave your head, as before)
+    if (from === meId()) seats.get(from)?.avatar.play("flick");
     const start = from === meId() ? camera.localToWorld(new THREE.Vector3(0.15, -0.2, -0.3)) : headOf(from);
     chip.position.copy(start);
     scene.add(chip);
@@ -213,7 +218,7 @@ export function mountTableView(
       done: () => {
         audio.bonk();
         if (to === meId()) store.events.emit({ t: "bonked" });
-        else seats.get(to)?.avatar.play("bonked");
+        seats.get(to)?.avatar.play("bonked");
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
         const away = bounce
@@ -279,6 +284,8 @@ export function mountTableView(
           if (e.changed) seat.card.hide();
           seat.card.show(e.value, from);
           seat.card.turnDown();
+          // your arm puts it down and squares it up
+          seat.avatar.play("placeCard");
         }
         audio.slide();
         return;
@@ -292,6 +299,7 @@ export function mountTableView(
   if (store.getState().room) redraw([{ t: "synced" }]);
 
   return {
+    mine: () => seats.get(meId())?.avatar ?? null,
     update(dt, t) {
       const voting = store.getState().room?.phase === "voting";
       for (const s of seats.values()) s.update(dt, t, voting);

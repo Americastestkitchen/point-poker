@@ -89,3 +89,25 @@ test("looking around turns the body and moves the pupils", () => {
   assert.ok(Math.abs(p.body.rotY - 0.48) < 0.01);
   assert.ok(p.face.pupils[0].x > 0.2 && p.face.pupils[1].x > 0.2);
 });
+
+test("a flick cocks the right arm up, snaps it out, then lets it rest", () => {
+  const a = still();
+  a.play("flick");
+  const poses = run(a, 0.8);
+  assert.ok(Math.min(...poses.slice(0, 12).map((p) => p.arms[1].x)) < -1.7, "cocked up");
+  assert.ok(Math.max(...poses.map((p) => p.arms[1].stretch)) > 1.3, "snapped out");
+  assert.ok(
+    poses.every((p) => Math.abs(p.arms[0].x + 1.15) < 1e-9),
+    "left arm stays put",
+  );
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].x + 1.15) < 0.01, "back at rest");
+});
+
+test("a poke reaches out to the felt and comes back, without holding up a card", () => {
+  const a = still();
+  a.play("poke");
+  const poses = run(a, 0.9);
+  assert.ok(Math.max(...poses.map((p) => p.arms[1].stretch)) > 2, "reaches out");
+  assert.equal(a.busyWithCard, false);
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.01, "back at rest");
+});
