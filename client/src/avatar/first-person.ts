@@ -42,8 +42,7 @@ export function createFirstPersonBody(initial: Look): FirstPersonBody {
   group.add(body);
   let arms!: Arms;
   // what your bean holds in its right hand, you hold in yours: the arm drawn on this body's left.
-  // The straw is in a mouth you can't see, so it's left out.
-  const held = createHeld((prop) => (prop === "straw" ? null : arms.handL));
+  const held = createHeld(() => arms.handL);
   let holding: Pose["prop"] = null;
 
   function build() {

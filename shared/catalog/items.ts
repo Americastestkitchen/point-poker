@@ -19,7 +19,6 @@ export const ITEMS = [
   { id: "hammer", key: "2", emoji: "🔨", name: "Squeaky hammer", does: "Bonk someone", cooldownMs: 2500 },
   { id: "chip", key: "3", emoji: "🔴", name: "Chip", does: "Flick it at someone", cooldownMs: 600 },
   { id: "plane", key: "4", emoji: "✈️", name: "Paper plane", does: "Throw it at someone", cooldownMs: 2000 },
-  { id: "spitball", key: "5", emoji: "💦", name: "Spitball", does: "Stick it on someone", cooldownMs: 4000 },
 ] as const satisfies readonly Item[];
 export type ItemId = (typeof ITEMS)[number]["id"];
 export const ITEM_IDS = idsOf(ITEMS);

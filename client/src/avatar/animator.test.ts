@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BLOW_RELEASE,
   BONK_HIT,
   createAnimator,
   DIZZY,
@@ -191,8 +190,8 @@ test("the hammer goes all the way over with the arm held high, then comes down o
   assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "and the arm snaps back");
 });
 
-test("each item is in the hand until it's let go, and the straw stays in the mouth", () => {
-  const held = (clip: "flick" | "throw" | "blow", seconds: number) => {
+test("each item is in the hand until it's let go", () => {
+  const held = (clip: "flick" | "throw", seconds: number) => {
     const a = still();
     a.setAim(AIM);
     a.play(clip);
@@ -205,9 +204,6 @@ test("each item is in the hand until it's let go, and the straw stays in the mou
   const plane = held("throw", 0.7);
   assert.equal(plane[frame(THROW_RELEASE) - 2], "plane");
   assert.equal(plane[frame(THROW_RELEASE) + 1], null, "the plane is in the air");
-  const straw = held("blow", 1.2);
-  assert.equal(straw[frame(BLOW_RELEASE)], "straw");
-  assert.equal(straw.at(-1), null);
 });
 
 test("a poke isn't aimed at anyone", () => {
@@ -237,16 +233,11 @@ test("a paper plane bops softer than a chip bonks", () => {
   assert.ok(dip("bopped") > 0.02 && dip("bopped") < dip("bonked") * 0.6);
 });
 
-test("a spitball in the face rocks the bean back, wide-eyed; being pointed at only widens the eyes", () => {
-  const a = still();
-  a.play("splatted");
-  const hit = run(a, 0.1).at(-1)!;
-  assert.ok(hit.face.eyeScale > 1.2 && hit.body.rotX < -0.15);
-  const settled = run(a, 1, 0.1).at(-1)!;
-  assert.equal(settled.face.eyeScale, 1);
-  assert.ok(Math.abs(settled.body.rotX) < 1e-9);
+test("being pointed at widens the eyes for a moment, and nothing else", () => {
   const b = still();
   b.play("noticed");
   const seen = run(b, 0.1).at(-1)!;
   assert.ok(seen.face.eyeScale > 1.1 && Math.abs(seen.body.rotX) < 1e-9);
+  const settled = run(b, 1, 0.1).at(-1)!;
+  assert.equal(settled.face.eyeScale, 1);
 });

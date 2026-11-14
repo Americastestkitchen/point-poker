@@ -137,7 +137,7 @@ export type ClientFx = z.infer<typeof ClientFx>;
 /** Effects everyone sees, including ones the server makes from commands. */
 export const Fx = z.discriminatedUnion("kind", [
   ...ClientFx.options,
-  /** Someone used a hand item on `to`: a bonk, a coin, a paper plane, a spitball, or just pointing. */
+  /** Someone used a hand item on `to`: a bonk, a chip, a paper plane, or just pointing. */
   z.object({ kind: z.literal("use"), item: z.enum(ITEM_IDS), to: z.string() }),
   /**
    * A chip flies at someone's head. Sent alongside every coin's `use`, for tabs opened before hand

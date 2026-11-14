@@ -1,4 +1,4 @@
-/* A hit's word over everything, the page shaking under it, and spitballs on the glass. This region never takes the pointer. */
+/* A hit's word over everything, and the page shaking under it. This region never takes the pointer. */
 .layer {
   position: absolute;
   inset: 0;
@@ -32,7 +32,7 @@
     0 0 40px color-mix(in srgb, var(--pp-color-error) 70%, transparent);
   animation: word 620ms var(--pp-motion-spring) both;
 }
-/* a soft one (a paper plane, a spitball): a smaller word, higher up, and no red glow */
+/* a soft one (a paper plane): a smaller word, higher up, and no red glow */
 .soft {
   background: none;
   place-items: start center;
@@ -41,52 +41,6 @@
 .soft .word {
   font-size: clamp(40px, 8vw, 90px);
   text-shadow: 0 4px 0 var(--pp-color-gold-shadow);
-}
-
-/*
- * A spitball on the glass: a wet blob that lands with a squelch, hangs there, then slides down
- * and fades. It only ever lands in the upper half of the screen (hit.ts), clear of your cards.
- */
-.splat {
-  position: absolute;
-  translate: -50% -50%;
-  rotate: var(--turn, 0deg);
-  border-radius: 46% 54% 58% 42% / 52% 44% 56% 48%;
-  background:
-    radial-gradient(circle at 34% 30%, var(--pp-color-sheet-raised) 0 9%, transparent 10%),
-    radial-gradient(
-      circle at 50% 50%,
-      color-mix(in srgb, var(--pp-color-paper) 92%, transparent),
-      color-mix(in srgb, var(--pp-color-paper-low) 80%, transparent) 62%,
-      color-mix(in srgb, var(--pp-color-paper-low) 50%, transparent)
-    );
-  box-shadow:
-    inset 0 -6px 10px color-mix(in srgb, var(--pp-color-paper-ink) 30%, transparent),
-    0 3px 8px var(--pp-color-shade);
-  animation: splat 6s ease-in both;
-}
-@keyframes splat {
-  0% {
-    scale: 0.2;
-    opacity: 0;
-  }
-  3% {
-    scale: 1.25 0.85;
-    opacity: 1;
-  }
-  7% {
-    scale: 1;
-  }
-  55% {
-    translate: -50% -50%;
-    scale: 1;
-    opacity: 1;
-  }
-  100% {
-    translate: -50% 40%;
-    scale: 0.8 1.3;
-    opacity: 0;
-  }
 }
 
 @keyframes flash {
@@ -143,22 +97,8 @@
   .shake {
     animation: none;
   }
-  .splat {
-    animation-name: splat-still;
-  }
   .word {
     animation: none;
     transform: rotate(-8deg);
-  }
-}
-
-/* without motion, the blob just shows and fades where it landed */
-@keyframes splat-still {
-  0%,
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }

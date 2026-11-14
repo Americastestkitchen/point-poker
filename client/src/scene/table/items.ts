@@ -5,8 +5,8 @@ import * as THREE from "three";
 import type { ItemId } from "../../../../shared/catalog/items.ts";
 import type { Events } from "../../app/events.ts";
 import type { Audio } from "../../audio/sfx.ts";
-import { BLOW_RELEASE, BONK_HIT, FLICK_RELEASE, THROW_RELEASE } from "../../avatar/animator.ts";
-import { makePlane, makeSpitball } from "../../avatar/parts/props.ts";
+import { BONK_HIT, FLICK_RELEASE, THROW_RELEASE } from "../../avatar/animator.ts";
+import { makePlane } from "../../avatar/parts/props.ts";
 import type { Stage } from "../engine/stage.ts";
 import type { Layout } from "../layout/layout.ts";
 import type { Flights } from "./flights.ts";
@@ -22,9 +22,8 @@ export interface ItemPlays {
 const FLICK_COLORS = ["#c0392b", "#2d6cdf", "#151515", "#e6be5a"] as const;
 const flickColor = () => FLICK_COLORS[Math.floor(Math.random() * FLICK_COLORS.length)] ?? FLICK_COLORS[0];
 
-/** How long a landed paper plane lies on the felt, and a spitball stays stuck (seconds). */
-const PLANE_RESTS = 6,
-  SPITBALL_STICKS = 8;
+/** How long a landed paper plane lies on the felt (seconds). */
+const PLANE_RESTS = 6;
 
 export function createItemPlays(
   stage: Stage,
@@ -61,7 +60,7 @@ export function createItemPlays(
   /** Where the hand that just let go is: in front of you for your own, the bean's hand for everyone else's. */
   const handOf = (id: string, mine: THREE.Vector3) =>
     isMe(id) ? mine : (avatarOf(id)?.handWorldPos() ?? new THREE.Vector3());
-  /** You took one: the screens show it (a flash, a splat on the glass). */
+  /** You took one: the screens show it (a flash, a shake). */
   const hit = (to: string, item: ItemId) => {
     if (isMe(to)) events.emit({ t: "hit", item });
   };
@@ -172,42 +171,6 @@ export function createItemPlays(
                 stage.after(PLANE_RESTS, () => scene.remove(plane));
               },
             });
-          },
-        });
-      });
-    },
-
-    /** A spitball through a straw: fast and flat, and it sticks to their face for a while. */
-    spitball(from, to) {
-      avatarOf(from)?.aim("blow", () => headOf(to));
-      stage.after(BLOW_RELEASE, () => {
-        const ball = makeSpitball();
-        // out of the end of the straw: under your nose for your own, the bean's mouth for everyone else's
-        const mouth = avatarOf(from)?.anchor("mouth");
-        const start = isMe(from) || !mouth ? inView(0, -0.1, -0.3) : mouth.localToWorld(new THREE.Vector3(0, 0, 0.2));
-        ball.position.copy(start);
-        scene.add(ball);
-        audio.spit();
-        flights.add({
-          obj: ball,
-          from: start,
-          to: () =>
-            isMe(to) ? eyes() : (avatarOf(to)?.anchor("nose").getWorldPosition(new THREE.Vector3()) ?? eyes()),
-          t: 0,
-          dur: 0.3,
-          arc: 0.05,
-          spin: 0,
-          done: () => {
-            audio.splat();
-            avatarOf(to)?.play("splatted");
-            hit(to, "spitball");
-            const face = isMe(to) ? undefined : avatarOf(to)?.anchor("nose");
-            // on your own face it's the screens' to show (you can't see your face)
-            if (!face) return void scene.remove(ball);
-            face.add(ball);
-            ball.position.set((Math.random() - 0.5) * 0.2, -0.02 + Math.random() * 0.14, 0.02);
-            ball.scale.set(1.5, 1.5, 0.6);
-            stage.after(SPITBALL_STICKS, () => ball.removeFromParent());
           },
         });
       });

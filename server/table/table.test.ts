@@ -558,16 +558,16 @@ test("every hand item has its own cooldown, which the server enforces", async ()
     table.run(who.playerId, { t: "use", item, target });
   assert.deepEqual(await use(ann, "hammer", bob.playerId), {});
   assert.deepEqual(await use(ann, "hammer", bob.playerId), { error: "Not so fast" });
-  assert.deepEqual(await use(ann, "spitball", bob.playerId), {}, "another item is ready meanwhile");
+  assert.deepEqual(await use(ann, "plane", bob.playerId), {}, "another item is ready meanwhile");
   assert.deepEqual(await use(bob, "hammer", ann.playerId), {}, "and everyone has their own cooldown");
-  tick(ITEM.hammer.cooldownMs);
-  assert.deepEqual(await use(ann, "hammer", bob.playerId), {});
-  assert.deepEqual(await use(ann, "spitball", bob.playerId), { error: "Not so fast" }, "the spitball takes longer");
+  tick(ITEM.plane.cooldownMs);
+  assert.deepEqual(await use(ann, "plane", bob.playerId), {});
+  assert.deepEqual(await use(ann, "hammer", bob.playerId), { error: "Not so fast" }, "the hammer takes longer");
   assert.deepEqual(used(), [
     `${ann.playerId}:hammer`,
-    `${ann.playerId}:spitball`,
+    `${ann.playerId}:plane`,
     `${bob.playerId}:hammer`,
-    `${ann.playerId}:hammer`,
+    `${ann.playerId}:plane`,
   ]);
   assert.deepEqual(
     events.find((e) => e.t === "fx"),
@@ -575,7 +575,7 @@ test("every hand item has its own cooldown, which the server enforces", async ()
     "everyone sees it, whoever used it included",
   );
 
-  tick(ITEM.spitball.cooldownMs);
+  tick(ITEM.hammer.cooldownMs);
   assert.deepEqual(await use(ann, "point", ann.playerId), { error: "You can't use that on yourself" });
   assert.deepEqual(await use(ann, "point", "nobody"), { error: "There's nobody in that seat" });
   assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "anvil", target: bob.playerId }), {
@@ -596,7 +596,7 @@ test("items work in every phase, and never touch the round", async () => {
   await use("plane");
   await run(deb, { t: "settle", finalPoints: 3 });
   const before = table.snapshot();
-  await use("spitball");
+  await use("chip");
   assert.deepEqual(table.snapshot(), before);
 });
 

@@ -33,7 +33,7 @@ export type GameEvent =
   | { t: "played"; value: number; changed: boolean }
   /** Something asked to show the ticket in full. */
   | { t: "openTicket" }
-  /** Someone's hand item just landed on you (the UI flashes "BONK!", shakes the screen, splats the glass). */
+  /** Someone's hand item just landed on you (the UI flashes "BONK!", shakes the screen). */
   | { t: "hit"; item: ItemId };
 
 export interface Events {

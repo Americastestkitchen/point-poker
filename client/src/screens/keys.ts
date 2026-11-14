@@ -1,4 +1,4 @@
-// Who owns the keyboard: the world's shortcuts (Z X C V emotes, 1 to 5 hand items, R recenter) or the UI.
+// Who owns the keyboard: the world's shortcuts (Z X C V emotes, 1 to 4 hand items, R recenter) or the UI.
 // The decisions are pure so node tests cover them; focusOf() is the one thin DOM read.
 import type { AppState } from "../app/store.ts";
 

@@ -88,8 +88,8 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   const labels = createLabels(group);
   // over the bean, not on it: they keep circling where the head was while it's flat
   const stars = createStars(group);
-  // the straw goes in the mouth; everything else in the hand the gestures use
-  const held = createHeld((prop) => parts.anchors[prop === "straw" ? "mouth" : "handR"]);
+  // in the hand the gestures use
+  const held = createHeld(() => parts.anchors.handR);
   let firstPerson = false;
   /** Who the gesture going on is aimed at. */
   let target: (() => THREE.Vector3) | null = null;

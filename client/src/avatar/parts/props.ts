@@ -1,5 +1,5 @@
-// The things a hand item puts in a bean's hand (or mouth) for a moment, and the ones that fly:
-// a squeaky hammer, a chip, a paper plane, a straw and the spitball it shoots. Every bean shares
+// The things a hand item puts in a bean's hand for a moment, and the ones that fly:
+// a squeaky hammer, a chip and a paper plane. Every bean shares
 // the same geometry and materials, so making one costs nothing and nobody disposes them.
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
@@ -84,23 +84,6 @@ export function makePlane(): THREE.Group {
   });
 }
 
-/** A drinking straw with a red stripe, pointing along +z from the mouth. */
-export function makeStraw(): THREE.Group {
-  const lying = (z: number) => (m: THREE.Mesh) => {
-    m.position.z = z;
-    m.rotation.x = Math.PI / 2;
-  };
-  return build("straw", () => [
-    { geo: new THREE.CylinderGeometry(0.012, 0.012, 0.2, 8), mat: toon("#f6f1e6"), at: lying(0.1) },
-    { geo: new THREE.CylinderGeometry(0.0125, 0.0125, 0.04, 8), mat: toon("#e5343a"), at: lying(0.15) },
-  ]);
-}
-
-/** A chewed-up ball of paper. */
-export function makeSpitball(): THREE.Group {
-  return build("spitball", () => [{ geo: new THREE.IcosahedronGeometry(0.036, 1), mat: toon("#f4f6f2") }]);
-}
-
 /** `made`, moved and turned to sit in a hand. */
 function inHand(made: THREE.Group, y: number, turnX = 0): THREE.Group {
   const g = new THREE.Group();
@@ -118,7 +101,6 @@ const HELD: Record<Prop, () => THREE.Group> = {
   hammer: makeHammer,
   // pinched like a dart, nose along the arm
   plane: () => inHand(makePlane(), -0.1, Math.PI / 2),
-  straw: makeStraw,
 };
 
 /** Shows whichever prop the pose calls for, each built the first time it's needed. */

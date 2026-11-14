@@ -194,15 +194,6 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
     },
     /** A paper plane bopping a head. */
     tap: () => sfx.noise(0.05, 2600, 0.3),
-    /** A spitball leaving the straw, and landing. */
-    spit: () => {
-      sfx.noise(0.07, 1800, 0.3);
-      sfx.tone(300, 0.07, "sine", 0.12, 900);
-    },
-    splat: () => {
-      sfx.noise(0.12, 500, 0.4);
-      sfx.tone(220, 0.1, "sine", 0.18, 80);
-    },
     hover: () => sfx.tone(1800, 0.03, "sine", 0.03),
     pop: () => sfx.tone(600, 0.1, "triangle", 0.15, 1200),
     /** UI kit: a button or menu item was chosen. */

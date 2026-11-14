@@ -144,7 +144,7 @@ test("the scroll wheel walks the hotbar, round and round", () => {
   const item = () => store.getState().ui.item;
   actions.items.pick("point");
   actions.items.cycle(-1);
-  assert.equal(item(), "spitball", "back from the first is the last");
+  assert.equal(item(), "plane", "back from the first is the last");
   actions.items.cycle(1);
   assert.equal(item(), "point");
   actions.items.cycle(2);
