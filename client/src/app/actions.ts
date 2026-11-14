@@ -3,6 +3,7 @@
 // server answers, and reject with its reason (like a Jira error).
 import type { Command } from "../../../server/table/commands.ts";
 import type { EmoteId } from "../../../shared/catalog/emotes.ts";
+import type { EnvironmentId } from "../../../shared/catalog/environments.ts";
 import type { Look } from "../../../shared/look.ts";
 import type { Session } from "./session.ts";
 import { myPlayer, type Store } from "./store.ts";
@@ -50,6 +51,8 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       loadSprint: () => run({ t: "fetchQueue" }),
       clearQueue: () => run({ t: "clearQueue" }),
       setPlays: (plays: boolean) => run({ t: "dealerPlays", plays }),
+      /** Moves the table to another room, for everyone. */
+      moveTo: (environment: EnvironmentId) => run({ t: "setEnvironment", environment }),
       deal: () => run({ t: "deal" }),
       reveal: () => run({ t: "reveal" }),
       settle: (finalPoints: number) => run({ t: "settle", finalPoints }),

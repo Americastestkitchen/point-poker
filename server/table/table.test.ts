@@ -520,19 +520,25 @@ test("a look is one object, cleaned up on the way in", async () => {
   assert.deepEqual(player(odd).look, { color: "#ff6b4a", body: "bean", cosmetics: [] });
 });
 
-test("only the dealer picks the room, and only rooms that exist", async () => {
-  const { table, deb, ann, view, notices } = setup();
+test("only the dealer moves the table, and only to rooms that exist", async () => {
+  const { table, deb, ann, run, view, deal, notices } = setup();
   assert.equal(view().environment, "basement");
-  assert.equal((await table.run(ann.playerId, { t: "setEnvironment", environment: "basement" })).error, ROLE_ERROR);
+  assert.equal((await table.run(ann.playerId, { t: "setEnvironment", environment: "beach" })).error, ROLE_ERROR);
   assert.deepEqual(await table.run(deb.playerId, { t: "setEnvironment", environment: "moon-base" }), {
     error: "That command didn't make sense",
   });
-  assert.equal((await table.run(deb.playerId, { t: "setEnvironment", environment: "basement" })).error, undefined);
+  await deal();
+  await run(ann, { t: "vote", value: 3 });
+  await run(deb, { t: "setEnvironment", environment: "beach" });
+  assert.equal(view().environment, "beach");
+  assert.equal(view().phase, "voting", "the round carries on in the new room");
+  assert.equal(view().settings.environment, "basement", "tabs from before rooms could change still read it");
+  await run(deb, { t: "setEnvironment", environment: "beach" });
   assert.deepEqual(
     notices().map((n) => [n.text, n.except]),
-    [["🧳 The dealer moved the table to The Backlog Basement", deb.playerId]],
+    [["🧳 The dealer moved the table to Async Atoll", deb.playerId]],
+    "everyone else hears about it once; staying put isn't news",
   );
-  assert.equal(view().environment, "basement");
 });
 
 test("tabs opened before tables could change rooms still read every view", () => {

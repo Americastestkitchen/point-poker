@@ -39,7 +39,7 @@ export function OptionsDialog() {
               flipped();
             }}
           />
-          <p className={s.note}>Card flips, chips and the basement's hum.</p>
+          <p className={s.note}>Card flips, chips and the sounds of the room.</p>
         </div>
         <div className={s.option}>
           <Toggle label="🎙️ Mic" checked={micPressed(micStatus)} onChange={mic.toggle} />
