@@ -7,7 +7,9 @@ import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, woodTexture } from "../../scene/art/textures.ts";
 import { blinker, wobble } from "../kit/animate.ts";
 import { bubble } from "../kit/bubble.ts";
+import { box, cylinder, plane, put, sphere } from "../kit/build.ts";
 import { liveCanvas, speckle, textLines } from "../kit/canvas.ts";
+import { between } from "../kit/random.ts";
 import type { EnvCtx } from "../types.ts";
 
 export function eggs(ctx: EnvCtx): THREE.Group {
@@ -67,8 +69,7 @@ function noteTexture(text: string, color: string): THREE.CanvasTexture {
 function corkboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
   const W = 2.1,
     H = 1.4;
-  const g = new THREE.Group();
-  g.position.set(-1.6, 1.8, -3.98);
+  const g = put(new THREE.Group(), -1.6, 1.8, -3.98);
   const cork = new THREE.Mesh(
     new THREE.PlaneGeometry(W, H),
     new THREE.MeshStandardMaterial({
@@ -100,7 +101,7 @@ function corkboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
       roughness: 0.9,
       side: THREE.DoubleSide,
     });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+    const mesh = plane(size, size, mat);
     mesh.position.copy(home);
     mesh.rotation.z = tilt;
     g.add(mesh);
@@ -166,9 +167,7 @@ const FOURTH_GOALS = [
 
 /** The whiteboard of sprint goals. Click it and someone has another go at goal four. */
 function whiteboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(1.4, 1.75, 3.98);
-  g.rotation.y = Math.PI;
+  const g = put(new THREE.Group(), 1.4, 1.75, 3.98, Math.PI);
   const board = liveCanvas(768, 512);
   let goal = 0;
   const draw = () => {
@@ -199,10 +198,7 @@ function whiteboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
     board.redraw();
   };
   draw();
-  const wb = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.0, 1.33),
-    new THREE.MeshStandardMaterial({ map: board.texture, roughness: 0.5 }),
-  );
+  const wb = plane(2.0, 1.33, new THREE.MeshStandardMaterial({ map: board.texture, roughness: 0.5 }));
   g.add(wb);
   const say = bubble(g, 1.2, 0.95);
   pick(wb, () => {
@@ -219,33 +215,23 @@ function whiteboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 
 /** The server rack with its blinkenlights. Click it and everything goes red, but it's fine. */
 function serverRack({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const rack = new THREE.Group();
-  rack.position.set(4.4, 0, -3.4);
-  rack.rotation.y = -Math.PI / 4;
-  const cab = new THREE.Mesh(
-    new THREE.BoxGeometry(0.75, 2.0, 0.7),
-    new THREE.MeshStandardMaterial({ color: "#16161b", roughness: 0.6, metalness: 0.4 }),
-  );
-  cab.position.y = 1.0;
+  const rack = put(new THREE.Group(), 4.4, 0, -3.4, -Math.PI / 4);
+  const cabMat = new THREE.MeshStandardMaterial({ color: "#16161b", roughness: 0.6, metalness: 0.4 });
+  const cab = put(box(0.75, 2.0, 0.7, cabMat), 0, 1.0, 0);
   cab.castShadow = true;
   rack.add(cab);
   const slabMat = new THREE.MeshStandardMaterial({ color: "#26262e", roughness: 0.5 });
   const leds: { mat: THREE.MeshBasicMaterial; rate: number; on: string }[] = [];
   for (let u = 0; u < 9; u++) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.15, 0.02), slabMat);
-    slab.position.set(0, 0.25 + u * 0.19, 0.36);
-    rack.add(slab);
+    rack.add(put(box(0.62, 0.15, 0.02, slabMat), 0, 0.25 + u * 0.19, 0.36));
     for (let l = 0; l < 4; l++) {
       const on = ["#39ff7a", "#ffb02e", "#39c2ff", "#ff4757"][(u + l) % 4] ?? "#39ff7a";
       const mat = new THREE.MeshBasicMaterial({ color: on });
-      const led = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.018), mat);
-      led.position.set(0.18 + l * 0.03, 0.25 + u * 0.19, 0.372);
-      rack.add(led);
-      leds.push({ mat, rate: 0.5 + Math.random() * 6, on });
+      rack.add(put(plane(0.018, 0.018, mat), 0.18 + l * 0.03, 0.25 + u * 0.19, 0.372));
+      leds.push({ mat, rate: between(0.5, 6.5), on });
     }
   }
-  const light = new THREE.PointLight("#39ff7a", 0.8, 2.5, 2);
-  light.position.set(0, 1.2, 0.6);
+  const light = put(new THREE.PointLight("#39ff7a", 0.8, 2.5, 2), 0, 1.2, 0.6);
   rack.add(light);
   const say = bubble(rack, 1.1, 2.35);
   const shake = wobble(40, 4);
@@ -275,22 +261,16 @@ function serverRack({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 
 /** A crate with a sad office plant. Water it (click) and it perks up, for a bit. */
 function sadPlant({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(-4.3, 0, -3.3);
-  g.rotation.y = Math.PI / 4; // its bubble faces into the room
-  const crate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.6, 0.5, 0.6),
-    new THREE.MeshStandardMaterial({ map: woodTexture("#6b4a2a", "#3a2414", 1), roughness: 0.9 }),
-  );
-  crate.position.y = 0.25;
+  const g = put(new THREE.Group(), -4.3, 0, -3.3, Math.PI / 4); // its bubble faces into the room
+  const crateMat = new THREE.MeshStandardMaterial({ map: woodTexture("#6b4a2a", "#3a2414", 1), roughness: 0.9 });
+  const crate = put(box(0.6, 0.5, 0.6, crateMat), 0, 0.25, 0);
   crate.castShadow = true;
-  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.25, 16), toon("#b0603a"));
-  pot.position.y = 0.62;
+  const pot = put(cylinder(0.16, 0.12, 0.25, toon("#b0603a"), 16), 0, 0.62, 0);
   g.add(crate, pot);
   const leaves = Array.from({ length: 7 }, (_, i) => {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), toon(i % 2 ? "#3e7a3a" : "#5f8f3a"));
-    leaf.scale.set(0.5, 1.6, 0.25);
     const a = (i / 7) * Math.PI * 2;
+    const leaf = sphere(0.1, toon(i % 2 ? "#3e7a3a" : "#5f8f3a"), 8, 6);
+    leaf.scale.set(0.5, 1.6, 0.25);
     leaf.position.set(Math.cos(a) * 0.08, 0.86, Math.sin(a) * 0.08);
     const droop = new THREE.Euler(Math.sin(a) * 0.6 + 0.4, 0, -Math.cos(a) * 0.6);
     leaf.rotation.copy(droop);
@@ -323,16 +303,10 @@ function sadPlant({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 
 /** The door nobody uses, under its EXIT? sign. Click it: it's locked. */
 function lockedDoor({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(-3.4, 0, 3.97);
-  g.rotation.y = Math.PI; // facing into the room
-  const door = new THREE.Mesh(
-    new THREE.BoxGeometry(1.0, 2.1, 0.06),
-    new THREE.MeshStandardMaterial({ map: woodTexture("#3b2a20", "#20140c", 1), roughness: 0.8 }),
-  );
-  door.position.y = 1.05;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), toon("#c9a24a"));
-  knob.position.set(0.38, 1.0, 0.05);
+  const g = put(new THREE.Group(), -3.4, 0, 3.97, Math.PI); // facing into the room
+  const doorMat = new THREE.MeshStandardMaterial({ map: woodTexture("#3b2a20", "#20140c", 1), roughness: 0.8 });
+  const door = put(box(1.0, 2.1, 0.06, doorMat), 0, 1.05, 0);
+  const knob = put(sphere(0.04, toon("#c9a24a"), 10, 8), 0.38, 1.0, 0.05);
   const signMat = new THREE.MeshBasicMaterial({
     map: canvasTex(256, 90, (c) => {
       c.fillStyle = "#0d3";
@@ -343,10 +317,8 @@ function lockedDoor({ pick, onFrame, sound }: EnvCtx): THREE.Group {
       c.fillText("EXIT?", 128, 68);
     }),
   });
-  const exit = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.14), signMat);
-  exit.position.set(0, 2.32, 0.01);
-  const light = new THREE.PointLight("#22ff66", 0.6, 2, 2);
-  light.position.set(0, 2.2, 0.27);
+  const exit = put(plane(0.4, 0.14, signMat), 0, 2.32, 0.01);
+  const light = put(new THREE.PointLight("#22ff66", 0.6, 2, 2), 0, 2.2, 0.27);
   g.add(door, knob, exit, light);
   const say = bubble(g, 1.3, 2.75);
   const rattle = wobble(45, 5);

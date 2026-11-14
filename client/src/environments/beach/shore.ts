@@ -2,6 +2,8 @@
 // umbrella over the table, two tiki torches, and the sound of waves and gulls.
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
+import { cylinder, plane, put, sphere } from "../kit/build.ts";
+import { between } from "../kit/random.ts";
 import type { EnvCtx } from "../types.ts";
 import { glowTexture, sandTexture, skyTexture, stripesTexture } from "./textures.ts";
 
@@ -21,15 +23,11 @@ export function shore({ anchors, sound, onFrame }: EnvCtx): THREE.Group {
   Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
   g.add(sun, sky());
 
-  const sand = new THREE.Mesh(
-    new THREE.PlaneGeometry(120, 120),
-    new THREE.MeshStandardMaterial({ map: sandTexture(), roughness: 1 }),
-  );
+  const sand = plane(120, 120, new THREE.MeshStandardMaterial({ map: sandTexture(), roughness: 1 }));
   sand.rotation.x = -Math.PI / 2;
   sand.receiveShadow = true;
-  const wet = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 120), toon("#c9a46f"));
+  const wet = put(plane(2.4, 120, toon("#c9a46f")), SHORE_X - 1, 0.004, 0);
   wet.rotation.x = -Math.PI / 2;
-  wet.position.set(SHORE_X - 1, 0.004, 0);
   g.add(sand, wet);
 
   const sea = waves();
@@ -58,7 +56,7 @@ export function shore({ anchors, sound, onFrame }: EnvCtx): THREE.Group {
     // now and then, a gull somewhere down the beach
     gullIn -= dt;
     if (gullIn > 0) return;
-    gullIn = 9 + Math.random() * 9;
+    gullIn = between(9, 18);
     sound.tone(1900, 0.18, "sawtooth", 0.012, 1250);
     sound.tone(1750, 0.24, "sawtooth", 0.01, 1100, 0.24);
   });
@@ -69,15 +67,21 @@ export function shore({ anchors, sound, onFrame }: EnvCtx): THREE.Group {
 /** The sky: a dome with the sunset painted on, and the sun sinking into the sea. */
 function sky(): THREE.Group {
   const g = new THREE.Group();
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(50, 32, 16),
-    new THREE.MeshBasicMaterial({ map: skyTexture(), side: THREE.BackSide, fog: false, depthWrite: false }),
-  );
+  const painted = new THREE.MeshBasicMaterial({
+    map: skyTexture(),
+    side: THREE.BackSide,
+    fog: false,
+    depthWrite: false,
+  });
+  const dome = sphere(50, painted, 32, 16);
   dome.renderOrder = -1;
-  const sun = new THREE.Mesh(
-    new THREE.PlaneGeometry(14, 14),
-    new THREE.MeshBasicMaterial({ map: glowTexture("#fff1c2"), transparent: true, fog: false, depthWrite: false }),
-  );
+  const glow = new THREE.MeshBasicMaterial({
+    map: glowTexture("#fff1c2"),
+    transparent: true,
+    fog: false,
+    depthWrite: false,
+  });
+  const sun = plane(14, 14, glow);
   sun.position.copy(SUN).setLength(45);
   sun.lookAt(0, SUN.y, 0);
   g.add(dome, sun);
@@ -98,7 +102,7 @@ function waves() {
   );
   sea.receiveShadow = true;
   const foamMat = new THREE.MeshBasicMaterial({ color: "#fffaf0", transparent: true, opacity: 0.7 });
-  const foam = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 100), foamMat);
+  const foam = plane(0.5, 100, foamMat);
   foam.rotation.x = -Math.PI / 2;
   const object = new THREE.Group();
   object.add(sea, foam);
@@ -122,16 +126,14 @@ function waves() {
 
 /** A palm tree `h` metres tall, its trunk curving `lean` radians away from the table. */
 function palm(x: number, z: number, h: number, lean: number): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = Math.atan2(-z, x); // local +x points away from the table
+  const g = put(new THREE.Group(), x, 0, z, Math.atan2(-z, x)); // local +x points away from the table
   const bark = toon("#8a6440");
   const segments = 8;
   let top = new THREE.Vector3();
   for (let i = 0; i < segments; i++) {
     const f = i / segments;
     const r = 0.17 - f * 0.07;
-    const seg = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.92, r, h / segments + 0.02, 8), bark);
+    const seg = cylinder(r * 0.92, r, h / segments + 0.02, bark, 8);
     const bend = lean * f * f;
     seg.position.set(Math.sin(bend) * h * f * 0.5, (h / segments) * (i + 0.5), 0);
     seg.rotation.z = -bend;
@@ -152,10 +154,8 @@ function palm(x: number, z: number, h: number, lean: number): THREE.Group {
   }
   const nut = toon("#5a3a1e");
   for (let i = 0; i < 3; i++) {
-    const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), nut);
     const a = (i / 3) * Math.PI * 2;
-    coconut.position.set(top.x + Math.cos(a) * 0.14, h - 0.18, Math.sin(a) * 0.14);
-    g.add(coconut);
+    g.add(put(sphere(0.11, nut, 8, 6), top.x + Math.cos(a) * 0.14, h - 0.18, Math.sin(a) * 0.14));
   }
   return g;
 }
@@ -175,35 +175,24 @@ function beachUmbrella(over: THREE.Vector3Like): THREE.Group {
   const length = along.length();
   lean.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), along.normalize());
   g.add(lean);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, length, 8), toon("#f3ead6"));
-  pole.position.y = length / 2;
+  const pole = put(cylinder(0.035, 0.035, length, toon("#f3ead6"), 8), 0, length / 2, 0);
   pole.castShadow = true;
-  const canopy = new THREE.Mesh(
-    new THREE.ConeGeometry(2.1, 0.65, 16, 1, true),
-    toon("#ffffff", { map: stripesTexture("#e4573d", "#fff4e0", 16), side: THREE.DoubleSide }),
-  );
-  canopy.position.y = length - 0.1;
+  const stripes = toon("#ffffff", { map: stripesTexture("#e4573d", "#fff4e0", 16), side: THREE.DoubleSide });
+  const canopy = put(new THREE.Mesh(new THREE.ConeGeometry(2.1, 0.65, 16, 1, true), stripes), 0, length - 0.1, 0);
   canopy.castShadow = true;
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), toon("#e4573d"));
-  cap.position.y = length + 0.26;
-  lean.add(pole, canopy, cap);
+  lean.add(pole, canopy, put(sphere(0.08, toon("#e4573d"), 8, 6), 0, length + 0.26, 0));
   return g;
 }
 
 /** A bamboo tiki torch whose flame dances and lights the sand round it. */
 function tikiTorch(x: number, z: number) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.7, 8), toon("#b08a4e"));
-  pole.position.y = 0.85;
+  const g = put(new THREE.Group(), x, 0, z);
+  const pole = put(cylinder(0.035, 0.045, 1.7, toon("#b08a4e"), 8), 0, 0.85, 0);
   pole.castShadow = true;
-  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.06, 0.22, 8), toon("#6b4a2a"));
-  cup.position.y = 1.78;
+  const cup = put(cylinder(0.1, 0.06, 0.22, toon("#6b4a2a"), 8), 0, 1.78, 0);
   const flameMat = new THREE.MeshBasicMaterial({ color: "#ffb347", transparent: true, opacity: 0.9 });
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 8), flameMat);
-  flame.position.y = 2.02;
-  const light = new THREE.PointLight("#ff9a40", 1.6, 5, 1.6);
-  light.position.y = 2.1;
+  const flame = put(new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 8), flameMat), 0, 2.02, 0);
+  const light = put(new THREE.PointLight("#ff9a40", 1.6, 5, 1.6), 0, 2.1, 0);
   g.add(pole, cup, flame, light);
   const seed = x * 3.1 + z * 1.7;
   return {

@@ -5,7 +5,9 @@ import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import { oneShot } from "../kit/animate.ts";
+import { box, cylinder, plane, put } from "../kit/build.ts";
 import { liveCanvas } from "../kit/canvas.ts";
+import { between } from "../kit/random.ts";
 import type { EnvCtx } from "../types.ts";
 import { ROOM, plaque } from "./room.ts";
 
@@ -31,19 +33,10 @@ export function ledTicker() {
   const object = new THREE.Group();
   const width = 1.6;
   const height = (width * H) / W;
-  object.add(new THREE.Mesh(new THREE.BoxGeometry(width + 0.08, height + 0.08, 0.08), toon("#1a1a1a")));
+  object.add(box(width + 0.08, height + 0.08, 0.08, toon("#1a1a1a")));
   const face = new THREE.MeshBasicMaterial({ map: texture });
-  for (const side of [1, -1]) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(width, height), face);
-    m.position.z = side * 0.041;
-    m.rotation.y = side > 0 ? 0 : Math.PI;
-    object.add(m);
-  }
-  for (const x of [-0.6, 0.6]) {
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.9), toon("#333"));
-    rod.position.set(x, height / 2 + 0.45, 0);
-    object.add(rod);
-  }
+  for (const side of [1, -1]) object.add(put(plane(width, height, face), 0, 0, side * 0.041, side > 0 ? 0 : Math.PI));
+  for (const x of [-0.6, 0.6]) object.add(put(cylinder(0.008, 0.008, 0.9, toon("#333")), x, height / 2 + 0.45, 0));
   let idle = 0;
   let text = IDLE[0] ?? "";
   let offset = 0;
@@ -91,7 +84,7 @@ function announce({ sound }: EnvCtx, syllables: number, vol: number) {
   for (const [i, f] of [659, 523, 392].entries()) sound.tone(f, 0.5, "sine", vol * 1.2, undefined, i * 0.32);
   let at = 1.1;
   for (let i = 0; i < syllables; i++) {
-    const f = 170 + Math.random() * 110;
+    const f = between(170, 280);
     const dur = 0.08 + Math.random() * 0.1;
     const slide = f * (0.8 + Math.random() * 0.4);
     for (const [echo, k] of [
@@ -113,18 +106,15 @@ export function paSpeaker(ctx: EnvCtx, ticker: Ticker) {
     toon("#c9ccc4", { side: THREE.DoubleSide }),
   );
   horn.rotation.z = Math.PI / 2 - 0.35;
-  const driver = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 12), grey);
+  const driver = put(cylinder(0.06, 0.06, 0.1, grey, 12), 0.17, 0.06, 0);
   driver.rotation.z = Math.PI / 2 - 0.35;
-  driver.position.set(0.17, 0.06, 0);
-  const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.4, 0.03), toon("#333"));
-  bracket.position.set(0.2, 0.25, 0);
-  object.add(horn, driver, bracket);
+  object.add(horn, driver, put(box(0.03, 0.4, 0.03, toon("#333")), 0.2, 0.25, 0));
   const wobble = oneShot(3.5);
-  let next = 60 + Math.random() * 60;
+  let next = between(60, 120);
   ctx.onFrame((dt) => {
     next -= dt;
     if (next <= 0) {
-      next = 120 + Math.random() * 120;
+      next = between(120, 240);
       announce(ctx, 9, 0.012); // somewhere down the platform, nobody's listening
     }
     const left = wobble.step(dt);
@@ -219,58 +209,44 @@ export function sprintTrain(ctx: EnvCtx, ticker: Ticker) {
   const { sound, onFrame, pick } = ctx;
   const { track, trench, edge, side } = ROOM;
   const group = new THREE.Group();
-  const train = new THREE.Group();
-  train.position.set(track, trench, -40);
+  const train = put(new THREE.Group(), track, trench, -40);
   train.visible = false;
   const silver = toon("#c3cad0");
   const roof = toon("#8f979e");
   const sideMat = toon("#ffffff", { map: carriageSide() });
   for (let i = 0; i < CARS; i++) {
-    const car = new THREE.Group();
-    car.position.z = -i * (CAR + COUPLING) - CAR / 2;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, CAR), silver);
-    body.position.y = 1.25;
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.12, CAR - 0.2), roof);
-    top.position.y = 2.4;
-    const decal = new THREE.Mesh(new THREE.PlaneGeometry(CAR - 0.08, 2.0), sideMat);
-    decal.rotation.y = -Math.PI / 2;
-    decal.position.set(-0.605, 1.25, 0);
+    const car = put(new THREE.Group(), 0, 0, -i * (CAR + COUPLING) - CAR / 2);
+    const body = put(box(1.2, 2.2, CAR, silver), 0, 1.25, 0);
+    const top = put(box(1.0, 0.12, CAR - 0.2, roof), 0, 2.4, 0);
+    const decal = put(plane(CAR - 0.08, 2.0, sideMat), -0.605, 1.25, 0, -Math.PI / 2);
     car.add(body, top, decal);
     train.add(car);
   }
-  const front = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.0), toon("#ffffff", { map: trainFront() }));
-  front.position.set(0, 1.25, 0.005);
-  train.add(front);
-  const headlight = new THREE.PointLight("#fff6c8", 0, 4, 1.6);
-  headlight.position.set(0, 0.6, 0.6);
+  train.add(put(plane(1.1, 2.0, toon("#ffffff", { map: trainFront() })), 0, 1.25, 0.005));
+  const headlight = put(new THREE.PointLight("#fff6c8", 0, 4, 1.6), 0, 0.6, 0.6);
   train.add(headlight);
   group.add(train);
 
   // the signal at the end of the platform, by the tunnel the train comes out of
-  const signal = new THREE.Group();
-  signal.position.set(edge - 0.25, 0, -side + 0.45);
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.6, 8), toon("#2b2622"));
-  post.position.y = 0.8;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.36, 0.12), toon("#1a1a1a"));
-  head.position.y = 1.75;
+  const signal = put(new THREE.Group(), edge - 0.25, 0, -side + 0.45);
+  const post = put(cylinder(0.03, 0.04, 1.6, toon("#2b2622"), 8), 0, 0.8, 0);
+  const head = put(box(0.16, 0.36, 0.12, toon("#1a1a1a")), 0, 1.75, 0);
   const red = new THREE.MeshBasicMaterial({ color: "#ff3b3b" });
   const green = new THREE.MeshBasicMaterial({ color: "#163a1c" });
-  const redLamp = new THREE.Mesh(new THREE.CircleGeometry(0.045, 12), red);
-  redLamp.position.set(0, 1.83, 0.062);
-  const greenLamp = new THREE.Mesh(new THREE.CircleGeometry(0.045, 12), green);
-  greenLamp.position.set(0, 1.67, 0.062);
   const lamps = new THREE.Group();
-  lamps.add(redLamp, greenLamp);
+  lamps.add(
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.045, 12), red), 0, 1.83, 0.062),
+    put(new THREE.Mesh(new THREE.CircleGeometry(0.045, 12), green), 0, 1.67, 0.062),
+  );
   // turned to face down the platform, towards the table
   lamps.rotation.y = -Math.PI / 2;
   head.rotation.y = -Math.PI / 2;
-  lamps.position.set(0, 0, 0);
   signal.add(post, head, lamps);
   group.add(signal);
 
   type State = "idle" | "in" | "crawl" | "out";
   let state: State = "idle";
-  let wait = 25 + Math.random() * 35;
+  let wait = between(25, 60);
   let head0 = -40; // where the front of the train is, along z
   let v = 0;
   let crawl = 0;
@@ -321,7 +297,7 @@ export function sprintTrain(ctx: EnvCtx, ticker: Ticker) {
         v = Math.min(18, v + 6 * dt);
         if (head0 - TRAIN_LENGTH > 30) {
           state = "idle";
-          wait = 80 + Math.random() * 80;
+          wait = between(80, 160);
           crawl = 0;
           train.visible = false;
           head0 = -40;
@@ -434,10 +410,8 @@ export function lineMap(ctx: EnvCtx, ticker: Ticker) {
   };
   draw(0);
   const object = new THREE.Group();
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.36, 1.1, 0.04), toon("#444"));
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.28, 1.0), toon("#ffffff", { map: texture }));
-  face.position.z = 0.021;
-  object.add(frame, face);
+  const frame = box(1.36, 1.1, 0.04, toon("#444"));
+  object.add(frame, put(plane(1.28, 1.0, toon("#ffffff", { map: texture })), 0, 0, 0.021));
 
   const works = oneShot(2.2);
   let tick = 0;
@@ -447,7 +421,7 @@ export function lineMap(ctx: EnvCtx, ticker: Ticker) {
     tick -= dt;
     if (work > 0.15 && tick <= 0) {
       tick = 0.06;
-      ctx.sound.noise(0.03, 700 + Math.random() * 400, 0.03);
+      ctx.sound.noise(0.03, between(700, 1100), 0.03);
     }
     draw(work > 0.15 ? Math.min(1, (1 - work) / 0.85) : 0);
     if (work === 0) draw(0);
@@ -493,19 +467,14 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
   shell.castShadow = true;
   const velvetGeo = new THREE.ShapeGeometry(shape, 8);
   velvetGeo.scale(0.92, 0.82, 1);
-  const velvet = new THREE.Mesh(velvetGeo, toon("#7a2a4a"));
+  const velvet = put(new THREE.Mesh(velvetGeo, toon("#7a2a4a")), 0, 0.092, 0);
   velvet.rotation.x = -Math.PI / 2;
-  velvet.position.y = 0.092;
   object.add(shell, velvet);
   // the lid, propped open behind
-  const hinge = new THREE.Group();
-  hinge.position.set(0, 0.09, -0.2);
-  const lid = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(shape, { depth: 0.03, bevelEnabled: false, curveSegments: 8 }),
-    leather,
-  );
+  const hinge = put(new THREE.Group(), 0, 0.09, -0.2);
+  const lidGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.03, bevelEnabled: false, curveSegments: 8 });
+  const lid = put(new THREE.Mesh(lidGeo, leather), 0, 0, 0.2);
   lid.rotation.x = -Math.PI / 2;
-  lid.position.z = 0.2;
   hinge.add(lid);
   hinge.rotation.x = -1.85;
   object.add(hinge);
@@ -519,8 +488,7 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
     [-0.12, 0.02],
     [0.05, -0.05],
   ] as const) {
-    const coin = new THREE.Mesh(coinGeo, gold);
-    coin.position.set(x, 0.097, z);
+    const coin = put(new THREE.Mesh(coinGeo, gold), x, 0.097, z);
     coins.push(coin);
     object.add(coin);
   }
@@ -537,20 +505,18 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
   card.rotation.x = -0.9;
   object.add(card);
   // a note that floats up when someone plays
-  const note = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.16, 0.16),
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(64, 64, (g) => {
-        g.fillStyle = "#ffd34d";
-        g.font = `bold 56px ${FONT}`;
-        g.textAlign = "center";
-        g.fillText("♪", 32, 52);
-      }),
-      transparent: true,
-      side: THREE.DoubleSide,
-      depthWrite: false,
+  const noteMat = new THREE.MeshBasicMaterial({
+    map: canvasTex(64, 64, (g) => {
+      g.fillStyle = "#ffd34d";
+      g.font = `bold 56px ${FONT}`;
+      g.textAlign = "center";
+      g.fillText("♪", 32, 52);
     }),
-  );
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const note = plane(0.16, 0.16, noteMat);
   note.visible = false;
   object.add(note);
 
@@ -564,12 +530,12 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
   };
 
   const plays = oneShot(1.6);
-  let next = 45 + Math.random() * 60;
+  let next = between(45, 105);
   const hop = coins[2];
   ctx.onFrame((dt) => {
     next -= dt;
     if (next <= 0) {
-      next = 90 + Math.random() * 90;
+      next = between(90, 180);
       busk(0.01);
     }
     const play = plays.step(dt);

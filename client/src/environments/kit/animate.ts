@@ -1,4 +1,5 @@
 // Little motions rooms share, run in frame time.
+import { between } from "./random.ts";
 
 /** A springy wobble: kick it, and what `step` returns each frame rings down to 0. */
 export function wobble(rate = 14, damping = 4) {
@@ -60,13 +61,13 @@ export function blinker(opts: {
   onBurst?(): void;
   onRelight?(): void;
 }) {
-  const between = (r: readonly [number, number]) => r[0] + Math.random() * (r[1] - r[0]);
-  let next = opts.every ? between(opts.first ?? opts.every) : Infinity;
+  const roll = (r: readonly [number, number]) => between(r[0], r[1]);
+  let next = opts.every ? roll(opts.first ?? opts.every) : Infinity;
   let left = 0;
   let flip = 0;
   let lit = true;
   const burst = () => {
-    left = between(opts.length);
+    left = roll(opts.length);
     opts.onBurst?.();
   };
   return {
@@ -74,7 +75,7 @@ export function blinker(opts: {
     step(dt: number): boolean {
       next -= dt;
       if (next <= 0 && opts.every) {
-        next = between(opts.every);
+        next = roll(opts.every);
         burst();
       }
       if (left <= 0) return (lit = true);
