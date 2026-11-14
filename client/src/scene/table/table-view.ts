@@ -38,7 +38,7 @@ export function mountTableView(
     rig: CameraRig;
     ticket: TicketPaper;
     pot: Pot;
-    screen: StatusScreen;
+    screen: Pick<StatusScreen, "show">;
   },
 ): TableView {
   const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;
@@ -257,6 +257,8 @@ export function mountTableView(
       case "flick":
         flick(from, fx.to);
         return;
+      case "squeak":
+        return; // the room's squeaky plays it (scene/index.ts)
       case "adjust":
         // someone swapped their card: they reach in and square it up (you see your own on "played")
         if (seat && seat.card.group.visible) {

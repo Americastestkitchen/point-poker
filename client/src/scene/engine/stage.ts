@@ -21,12 +21,15 @@ export interface Stage {
   start(): void;
 }
 
+/** How bright the camera sees a room that doesn't say (tone mapping exposure). */
+export const DEFAULT_EXPOSURE = 1.18;
+
 export function createStage(canvas: HTMLCanvasElement, deps: { audio: Audio }): Stage {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = DEFAULT_EXPOSURE;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
   scene.add(camera);

@@ -15,6 +15,7 @@ const FX_LIMITS: Record<ClientFx["kind"], { burst: number; perSecond: number }> 
   gaze: { burst: 20, perSecond: 20 },
   talk: { burst: 20, perSecond: 20 },
   emote: { burst: 3, perSecond: 2 },
+  squeak: { burst: 3, perSecond: 2 },
 };
 
 /** A token bucket per player and effect: relays never outpace what a person can do. */
@@ -100,11 +101,11 @@ class Hub {
     return r.playerId;
   }
 
-  /** Looking around, talking and emotes: rate-limited, relayed, never stored. */
+  /** Looking around, talking, emotes and squeaks: rate-limited, relayed, never stored. */
   private relay(from: string, fx: ClientFx) {
     if (!this.allow(from, fx.kind)) return;
     if (fx.kind === "talk") fx = { kind: "talk", level: Math.round(Math.min(1, Math.max(0, fx.level)) * 100) / 100 };
-    // you see your own emote; your own gaze and voice you already know
+    // you see your own emote; your own gaze, voice and squeak you already know
     this.broadcast({ t: "fx", from, fx }, fx.kind === "emote" ? undefined : from);
   }
 

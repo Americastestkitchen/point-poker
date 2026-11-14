@@ -32,6 +32,8 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
       run({ t: "flick", target }).catch(() => {});
     },
     emote: (emote: EmoteId) => session.fx({ kind: "emote", emote }),
+    /** You clicked the squeaky (it already squeaked for you): everyone else hears it too. */
+    squeak: () => session.fx({ kind: "squeak" }),
     /** Where you're looking, relative to facing the table. */
     gaze: (yaw: number, pitch: number) => session.fx({ kind: "gaze", yaw, pitch }),
     /** Mic loudness 0..1 (never audio). */
