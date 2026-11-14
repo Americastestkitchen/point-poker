@@ -121,6 +121,8 @@ export const ClientFx = z.discriminatedUnion("kind", [
   /** Mic loudness 0..1 (never audio), so your bean's mouth moves while you talk. */
   z.object({ kind: z.literal("talk"), level: z.number() }),
   z.object({ kind: z.literal("emote"), emote: z.enum(EMOTE_IDS) }),
+  /** Someone clicked the squeaky on the felt; everyone else's room plays its squeak. */
+  z.object({ kind: z.literal("squeak") }),
 ]);
 export type ClientFx = z.infer<typeof ClientFx>;
 

@@ -34,7 +34,7 @@ const MAX_LIGHTS = 6;
 function mount(env: Awaited<ReturnType<typeof loadEnvironment>>) {
   const picks = new Map<THREE.Object3D, () => void>();
   const frames = new Set<(dt: number, t: number) => void>();
-  const sounds = { played: 0, beds: 0, disposed: false };
+  const sounds = { played: 0, beds: 0, disposed: false, squeaked: 0 };
   const sound: RoomSound = {
     tone: () => void sounds.played++,
     noise: () => void sounds.played++,
@@ -52,7 +52,7 @@ function mount(env: Awaited<ReturnType<typeof loadEnvironment>>) {
       frames.add(fn);
       return () => frames.delete(fn);
     },
-    squeaked: () => {},
+    squeaked: () => void sounds.squeaked++,
   });
   const run = (seconds: number) => {
     for (let t = 0; t < seconds; t += 1 / 60) for (const fn of frames) fn(1 / 60, t);
@@ -107,6 +107,9 @@ for (const { id, name } of ENVIRONMENTS) {
     assert.ok(click, "the squeaky is clickable");
     click();
     assert.ok(sounds.played > 0, "it made a noise");
+    assert.equal(sounds.squeaked, 1, "everyone else hears about it");
+    mounted.props.squeaky.squeak(); // someone else's click: it plays here without telling anyone
+    assert.equal(sounds.squeaked, 1);
     mounted.props.statusScreen.show("SD-1", "Make the button blue", "3 of 5 voted");
     run(5);
   });

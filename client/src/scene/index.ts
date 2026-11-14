@@ -41,8 +41,11 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
       sound: audio.room,
       pick: stage.picking.register,
       onFrame: stage.onFrame,
-      // you clicked the squeaky: your bean reaches out and pokes it
-      squeaked: () => table.mine()?.play("poke"),
+      // you clicked the squeaky: your bean reaches out and pokes it, and everyone else hears it
+      squeaked: () => {
+        table.mine()?.play("poke");
+        actions.squeak();
+      },
     },
     stage: {
       add: (o) => stage.scene.add(o),
@@ -69,6 +72,9 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
   await room.show(roomOf(store.getState()));
   store.subscribe((s, prev) => {
     if (s.room?.environment !== prev.room?.environment) void room.show(roomOf(s));
+  });
+  store.events.on((e) => {
+    if (e.t === "fx" && e.fx.kind === "squeak") room.squeak();
   });
 
   const ticket = createTicketPaper(layout);

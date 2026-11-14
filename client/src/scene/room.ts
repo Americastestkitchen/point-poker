@@ -30,6 +30,8 @@ export interface Room<Id extends string> {
   readonly screen: Pick<StatusScreen, "show">;
   /** Moves to `id`. If it's called again before that's done, the latest call wins. */
   show(id: Id): Promise<void>;
+  /** Someone else clicked the squeaky: this room's squeaks. */
+  squeak(): void;
 }
 
 export function createRoom<Id extends string>(deps: RoomDeps<Id>): Room<Id> {
@@ -56,6 +58,9 @@ export function createRoom<Id extends string>(deps: RoomDeps<Id>): Room<Id> {
         lines = shown;
         current?.env.props.statusScreen.show(...shown);
       },
+    },
+    squeak() {
+      current?.env.props.squeaky.squeak();
     },
     async show(id) {
       if (id === wanted) return;

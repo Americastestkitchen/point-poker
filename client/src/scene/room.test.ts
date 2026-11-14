@@ -25,7 +25,7 @@ function fakeRoom(id: Id, log: string[]): Environment {
     props: {
       statusScreen: () => ({ object: named("screen"), show: (title) => log.push(`${id} shows ${title}`) }),
       sign: () => ({ object: named("sign") }),
-      squeaky: () => ({ object: named("squeaky"), squeak() {} }),
+      squeaky: () => ({ object: named("squeaky"), squeak: () => log.push(`${id} squeaks`) }),
     },
   };
 }
@@ -59,7 +59,7 @@ function setup({ slowCurtain = false } = {}) {
         frames.add(fn);
         return () => frames.delete(fn);
       },
-      squeaked: () => {},
+      squeaked: () => log.push("told everyone"),
     },
     stage: {
       add: (o) => log.push(`add ${o.children.map((c) => c.name).find((n) => n.endsWith("backdrop"))}`),
@@ -180,4 +180,16 @@ test("a room that doesn't load leaves the table where it is, and can be tried ag
   void room.show("boat");
   await arrive("boat");
   assert.ok(log.includes("add boat backdrop"));
+});
+
+test("someone else's squeak plays in whichever room is up", async () => {
+  const { room, log, arrive } = setup();
+  room.squeak(); // no room yet: nothing to squeak
+  void room.show("attic");
+  await arrive("attic");
+  void room.show("boat");
+  await arrive("boat");
+  log.length = 0;
+  room.squeak();
+  assert.deepEqual(log, ["boat squeaks"], "and it doesn't tell everyone again");
 });
