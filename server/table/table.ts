@@ -24,7 +24,7 @@ export interface TableDeps {
 }
 
 /** The effects commands make (browsers send the rest themselves). They change no state. */
-export type TableFx = Extract<Fx, { kind: "flick" | "adjust" }>;
+export type TableFx = Extract<Fx, { kind: "use" | "flick" | "adjust" }>;
 
 export type TableEvent =
   /** The state changed: send everyone a fresh view. */

@@ -13,8 +13,8 @@ import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
 import type { Layout } from "../layout/layout.ts";
-import { makeChip } from "./chips.ts";
 import type { Flights } from "./flights.ts";
+import { createItemPlays } from "./items.ts";
 import { potMove, type Pot } from "./pot.ts";
 import { createSeat, type Seat } from "./seat.ts";
 import type { TicketPaper } from "./ticket.ts";
@@ -24,8 +24,6 @@ export interface TableView {
   mine(): Avatar | null;
   update(dt: number, t: number): void;
 }
-
-const chipColors = ["#c0392b", "#2d6cdf", "#151515", "#e6be5a"];
 
 export function mountTableView(
   stage: Stage,
@@ -42,10 +40,19 @@ export function mountTableView(
   },
 ): TableView {
   const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;
-  const { scene, camera } = stage;
+  const { camera } = stage;
   const seats = new Map<string, Seat>();
 
   const meId = () => store.getState().me?.id ?? "";
+  const items = createItemPlays(stage, {
+    audio,
+    layout,
+    flights,
+    events: store.events,
+    me: meId,
+    seat: (id) => seats.get(id),
+    flattened: rig.flatten,
+  });
 
   // Each new view redraws the table, and what changed in it shapes the animation.
   store.subscribe((s, prev) => {
@@ -89,14 +96,15 @@ export function mountTableView(
       const mine = p.id === me;
       let seat = seats.get(p.id);
       if (!seat) {
-        seat = createSeat(stage, p, { layout, onPick: mine ? undefined : () => actions.flick(p.id) });
+        // clicking someone uses the hand item you've picked on them
+        seat = createSeat(stage, p, { layout, onPick: mine ? undefined : () => actions.items.use(p.id) });
         seats.set(p.id, seat);
       }
       seat.place(slot, count, mine);
       const { avatar, card } = seat;
       avatar.setLook(p.look);
       avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.look.color, p.connected);
-      avatar.group.visible = !mine;
+      avatar.setFirstPerson(mine);
 
       if (mine) {
         const s = layout.seat(slot, count);
@@ -208,53 +216,6 @@ export function mountTableView(
     seat.card.swap(value, hand, { grab: SWAP_GRAB, slap: SWAP_SLAP, onSlap: audio.slap });
   }
 
-  function headOf(id: string): THREE.Vector3 {
-    if (id === meId()) return camera.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, -0.05, 0));
-    return seats.get(id)?.avatar.headWorldPos() ?? new THREE.Vector3();
-  }
-
-  /** A chip flies from one head to another, bonks, and rolls away. */
-  function flick(from: string, to: string) {
-    const color = chipColors[Math.floor(Math.random() * chipColors.length)];
-    if (color === undefined) throw new Error("Missing flick chip color");
-    const chip = makeChip(color);
-    // your arm flicks it (others see the chip leave your head, as before)
-    if (from === meId()) seats.get(from)?.avatar.play("flick");
-    const start = from === meId() ? camera.localToWorld(new THREE.Vector3(0.15, -0.2, -0.3)) : headOf(from);
-    chip.position.copy(start);
-    scene.add(chip);
-    flights.add({
-      obj: chip,
-      from: start,
-      to: () => headOf(to),
-      t: 0,
-      dur: 0.55,
-      arc: 0.35,
-      spin: 25,
-      done: () => {
-        audio.bonk();
-        if (to === meId()) store.events.emit({ t: "bonked" });
-        seats.get(to)?.avatar.play("bonked");
-        // the chip bounces off and rolls away
-        const bounce = chip.position.clone();
-        const away = bounce
-          .clone()
-          .add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8))
-          .setY(layout.table.y + 0.01);
-        flights.add({
-          obj: chip,
-          from: bounce,
-          to: away,
-          t: 0,
-          dur: 0.5,
-          arc: 0.25,
-          spin: 12,
-          done: () => stage.after(1.5, () => scene.remove(chip)),
-        });
-      },
-    });
-  }
-
   /** What someone's effect looks like at the table. */
   function play(from: string, fx: Fx) {
     const seat = seats.get(from);
@@ -269,9 +230,11 @@ export function mountTableView(
         seat?.avatar.play(fx.emote);
         audio.pop();
         return;
-      case "flick":
-        flick(from, fx.to);
+      case "use":
+        items.play(from, fx.item, fx.to);
         return;
+      case "flick":
+        return; // for tabs opened before hand items; this one played the coin's "use"
       case "squeak":
         return; // the room's squeaky plays it (scene/index.ts)
       case "adjust":

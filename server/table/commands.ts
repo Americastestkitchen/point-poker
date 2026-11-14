@@ -4,9 +4,10 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
+import { ITEM, ITEM_IDS, type ItemId } from "../../shared/catalog/items.ts";
 import { LookInput, validateLook } from "../../shared/look.ts";
 import type { Ticket } from "../../shared/protocol.ts";
-import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
+import { nextInQueue, parseIssueKey } from "../../shared/rules.ts";
 import { payOut, takeBack } from "./coins.ts";
 import {
   changeRevealedVote,
@@ -73,6 +74,16 @@ export function defineCommand<const T extends string, R extends Role, S extends 
   return { ...def, schema: z.object({ t: z.literal(def.t), ...def.input }) };
 }
 
+/** `me` uses `item` on `target`, if there's someone there and the item is off its cooldown. */
+function playItem({ s, fx, ready }: PlayerCtx, me: PlayerState, item: ItemId, target: string): string | void {
+  if (target === me.id) return "You can't use that on yourself";
+  if (!s.players.some((p) => p.id === target)) return "There's nobody in that seat";
+  if (!ready(me.id, `use:${item}`, ITEM[item].cooldownMs)) return "Not so fast";
+  fx(me.id, { kind: "use", item, to: target });
+  // tabs opened before hand items only know a flicked chip: they still see coins fly
+  if (item === "coin") fx(me.id, { kind: "flick", to: target });
+}
+
 export const COMMANDS = [
   /**
    * Put a card down, or swap it; null takes it back. After the reveal you can still swap the card
@@ -101,18 +112,24 @@ export const COMMANDS = [
       changed();
     },
   }),
-  /** Flick a chip at someone. Has a cooldown. */
+  /**
+   * Use a hand item on someone: everyone sees it, and nothing at the table changes. Each item
+   * has its own cooldown, so nobody gets spammed.
+   */
+  defineCommand({
+    t: "use",
+    role: "player",
+    move: "anytime",
+    input: { item: z.enum(ITEM_IDS), target: z.string() },
+    run: (ctx, me, { item, target }) => playItem(ctx, me, item, target),
+  }),
+  /** Flick a chip at someone: what a tab opened before hand items sends. It's the coin. */
   defineCommand({
     t: "flick",
     role: "player",
     move: "anytime",
     input: { target: z.string() },
-    run({ s, fx, ready }, me, { target }) {
-      if (target === me.id) return "You can't flick yourself";
-      if (!s.players.some((p) => p.id === target)) return "There's nobody in that seat";
-      if (!ready(me.id, "flick", FLICK_COOLDOWN_MS)) return "Not so fast";
-      fx(me.id, { kind: "flick", to: target });
-    },
+    run: (ctx, me, { target }) => playItem(ctx, me, "coin", target),
   }),
   defineCommand({
     t: "setLook",

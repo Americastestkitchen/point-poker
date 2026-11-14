@@ -1,0 +1,155 @@
+/*
+ * The hotbar: a small column of round slots on the right edge, with a caption that pops out
+ * beside it when you pick something. On phones it turns into a row over the dock.
+ */
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--pp-space-2);
+  /* only the slots take the pointer: the caption and the gaps stay the room's */
+  pointer-events: none;
+}
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pp-space-2);
+  padding: var(--pp-space-2);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-pill);
+  box-shadow: var(--pp-shadow-panel);
+  pointer-events: auto;
+}
+
+.slot.slot {
+  position: relative;
+  width: 44px;
+  overflow: hidden;
+  font-size: var(--pp-size-xl);
+}
+/* the one in your hand: lit gold and a touch bigger */
+.picked.picked {
+  background: linear-gradient(var(--pp-color-gold-hi), var(--pp-color-gold-mid) 55%, var(--pp-color-gold-low));
+  border-color: var(--pp-color-gold-hi);
+  box-shadow: var(--pp-shadow-button-gold), var(--pp-glow-gold);
+  scale: 1.1;
+}
+.emoji {
+  line-height: 1;
+}
+/* which key picks it, in the corner (no keys on a touch screen) */
+.key {
+  position: absolute;
+  right: 5px;
+  bottom: 3px;
+  font-family: var(--pp-font-body);
+  font-size: 10px;
+  font-weight: var(--pp-weight-strong);
+  line-height: 1;
+  color: var(--pp-color-dim);
+}
+.picked .key {
+  color: var(--pp-color-gold-ink);
+}
+@media (hover: none) and (pointer: coarse) {
+  .key {
+    display: none;
+  }
+}
+
+/* just used: a shade over the slot that drains away as it cools down */
+.cooling {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pp-color-backdrop) 72%, transparent);
+  transform-origin: bottom;
+  animation: drain linear both;
+  pointer-events: none;
+}
+@keyframes drain {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+
+.caption {
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  padding: var(--pp-space-1) var(--pp-space-3);
+  font-size: var(--pp-size-sm);
+  line-height: 1.25;
+  color: var(--pp-color-dim);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-md);
+  white-space: nowrap;
+  animation: caption 2.6s ease-out both;
+}
+.caption b {
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-strong);
+  color: var(--pp-color-ink);
+}
+@keyframes caption {
+  0% {
+    opacity: 0;
+    translate: 8px 0;
+  }
+  8%,
+  75% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 0;
+  }
+}
+
+/* phones in portrait: a row, the caption over it */
+@media (max-width: 760px) {
+  .wrap {
+    flex-direction: column;
+    gap: var(--pp-space-1);
+  }
+  .bar {
+    flex-direction: row;
+    padding: var(--pp-space-1) var(--pp-space-2);
+  }
+  .caption {
+    justify-items: center;
+  }
+}
+/* phones on their side: the column, with smaller slots */
+@media (max-height: 520px) and (min-width: 761px) {
+  .bar {
+    gap: var(--pp-space-1);
+    padding: var(--pp-space-1);
+  }
+  .slot.slot {
+    width: 34px;
+    font-size: var(--pp-size-lg);
+  }
+  .key {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caption {
+    animation-name: caption-still;
+  }
+}
+@keyframes caption-still {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

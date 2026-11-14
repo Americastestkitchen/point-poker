@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
 import { layout } from "../layout/layout.ts";
-import { createCameraRig } from "./camera.ts";
+import { createCameraRig, flattened } from "./camera.ts";
 
 function setup() {
   const camera = new THREE.PerspectiveCamera();
@@ -42,4 +42,22 @@ test("once seated, a snapping seat jumps straight there", () => {
   rig.seat(-2.38, 0, true, true);
   rig.update(0.016);
   assert.ok(atSeat(camera) < 1e-9);
+});
+
+test("a hammer blow drops your eyes to the table for a beat, and they come back to where they were", () => {
+  const { camera, rig } = setup();
+  rig.seat(-2.38, 0, true, true);
+  for (let i = 0; i < 200; i++) rig.update(0.1);
+  const before = camera.position.y;
+  rig.flatten();
+  const heights: number[] = [];
+  for (let i = 0; i < 120; i++) {
+    rig.update(1 / 60);
+    heights.push(camera.position.y);
+  }
+  assert.ok(Math.abs(heights[8]! - (before - 0.45)) < 0.02, "down in a blink");
+  assert.ok(heights[20]! < before - 0.4, "it stays down a beat");
+  assert.ok(Math.min(...heights) > layout.table.y, "never under the table");
+  assert.ok(Math.abs(camera.position.y - before) < 1e-9, "and back up");
+  assert.equal(flattened(-1), 0);
 });

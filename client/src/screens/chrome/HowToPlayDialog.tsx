@@ -1,9 +1,10 @@
 // How to play (popup "help"), opened from the game menu.
 // The four steps, then "Just for fun": drag to look
-// around, click someone to flick a chip, Z X C V to wave / laugh / think / gasp, click the
-// duck. Also R / a double-click to recenter the view (scene/engine/input.ts).
+// around, pick a hand item and click someone to use it on them, Z X C V to wave / laugh / think /
+// gasp, click the duck. Also R / a double-click to recenter the view (scene/engine/input.ts).
 // Closing it (Esc, ✕, Back) goes back to the menu when it was opened from there.
 import { EMOTES } from "../../../../shared/catalog/emotes.ts";
+import { ITEMS } from "../../../../shared/catalog/items.ts";
 import { Button, Dialog, KeyHint } from "../../ui/index.ts";
 import { usePopupWithBack } from "./popups.ts";
 import s from "./HowToPlayDialog.module.css";
@@ -58,9 +59,13 @@ export function HowToPlayDialog() {
         </li>
         <li>
           <span className={s.icon} aria-hidden>
-            🪙
+            🔨
           </span>
-          Click or tap someone to flick a chip at them
+          Click or tap someone to use your hand item on them
+        </li>
+        <li className={s.keys}>
+          <KeyHint keys={ITEMS.map((i) => i.key)} />
+          <span>or the scroll wheel to pick one: {ITEMS.map((i) => i.emoji).join(" ")}</span>
         </li>
         <li>
           <span className={s.icon} aria-hidden>

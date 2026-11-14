@@ -41,5 +41,5 @@ defineCommand({ t: "probe", role: "player", input: {}, run: () => {} });
 defineCommand({ t: "probe", role: "player", move: "fold", input: {}, run: () => {} });
 defineCommand({ t: "probe", role: "dealer", move: "settle", input: {}, run: () => {} });
 
-// The effects commands make are the protocol's flick and adjust.
-assertType<Equal<TableFx["kind"], "flick" | "adjust">>();
+// The effects commands make are the protocol's use, flick and adjust.
+assertType<Equal<TableFx["kind"], "use" | "flick" | "adjust">>();

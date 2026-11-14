@@ -1,14 +1,35 @@
 // Everything a bean does, as numbers: breathing, emotes, getting bonked,
-// celebrating, putting a card down, swapping it after the reveal, flicking a chip, poking the duck, talking
+// celebrating, putting a card down, swapping it after the reveal, using a hand item on someone
+// (pointing, a hammer, a coin, a paper plane, a spitball) and taking one, poking the duck, talking
 // and looking around. It has three layers (body, arms, face) and produces a
 // Pose; the rig turns that into meshes. No three.js here, so the same animator
 // drives the bean and your first-person body, and tests can run it.
 import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
 
-export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard" | "swapCard" | Gesture;
+export type ClipId = EmoteId | Reaction | "celebrate" | "placeCard" | "adjustCard" | "swapCard" | Gesture;
 
-/** A quick move of the right arm that wins over everything else for a moment. */
-type Gesture = "flick" | "poke";
+/**
+ * Taking a hit: `bonked` by a coin, `bopped` (softly) by a paper plane, `squashed` flat by the
+ * hammer and left seeing stars, `splatted` by a spitball, or `noticed` that someone's pointing.
+ */
+type Reaction = "bonked" | "bopped" | "squashed" | "splatted" | "noticed";
+
+/**
+ * A quick move of the right arm that wins over everything else for a moment. All but the poke
+ * are aimed at someone (see `setAim`): pointing, swinging the hammer, flicking a coin, throwing
+ * a paper plane, and blowing a spitball through a straw.
+ */
+export type Gesture = "flick" | "poke" | "point" | "bonk" | "throw" | "blow";
+
+/** What a gesture puts in the hand for a moment (the straw goes in the mouth; the finger is the hand's own). */
+export type Prop = "finger" | "coin" | "hammer" | "plane" | "straw";
+
+/** Where the right arm aims: the shoulder angles that point it at someone, and the stretch that reaches them. */
+export interface Aim {
+  x: number;
+  z: number;
+  reach: number;
+}
 
 /** How the hands hold the cards (#7 animates these). */
 export type HandPose = { kind: "none" } | { kind: "deciding" } | { kind: "committed"; variant: number };
@@ -35,6 +56,10 @@ export interface Pose {
   };
   /** The emote playing and how long it's been going, for the floating emoji. */
   emote: { id: EmoteId; t: number } | null;
+  /** What's in the right hand (or, for the straw, the mouth) right now. */
+  prop: Prop | null;
+  /** Seconds of seeing stars left after a hammer blow; 0 when the head is clear. */
+  dizzy: number;
 }
 
 const REST_ARM_X = -1.15;
@@ -51,6 +76,23 @@ const SWAP = 1.15;
 /** How long a flick and a poke take (seconds). */
 const FLICK = 0.5,
   POKE = 0.6;
+/** When the coin leaves the thumb. */
+export const FLICK_RELEASE = 0.16;
+/** How long a bean keeps pointing, and how much of the way over to them the arm goes. */
+export const POINT = 2.6;
+const POINT_REACH = 0.4;
+/** The hammer: the arm stretches out raised, then comes down on their head at BONK_HIT. */
+const BONK = 1.0;
+export const BONK_HIT = 0.42;
+/** The paper plane leaves the hand at THROW_RELEASE; the spitball leaves the straw at BLOW_RELEASE. */
+const THROW = 0.7;
+export const THROW_RELEASE = 0.3;
+const BLOW = 0.95;
+export const BLOW_RELEASE = 0.42;
+/** How long the stars circle after a hammer blow. */
+export const DIZZY = 2.4;
+/** Aimed straight ahead at the felt, for a gesture nobody aimed. */
+const AHEAD: Aim = { x: -1.5, z: 0.1, reach: 1.6 };
 const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
@@ -62,6 +104,10 @@ export interface Animator {
   setGaze(yaw: number, pitch: number): void;
   /** Mic loudness 0..1; the mouth flaps while it's above zero. */
   setTalk(level: number): void;
+  /** Where the aimed gestures point. The rig works it out from who's being pointed at, every frame. */
+  setAim(aim: Aim): void;
+  /** An aimed gesture is going on, so the aim is worth keeping up to date. */
+  readonly aiming: boolean;
   /** Stored for #7, which animates it. */
   handPose: HandPose;
   readonly busyWithCard: boolean;
@@ -79,6 +125,12 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
     targetPitch = 0;
   let bonkT = 0,
     celebrateT = 0;
+  /** Flattened by the hammer: seconds since it landed, or -1. */
+  let squashT = -1;
+  let dizzy = 0;
+  /** A start: how wide the eyes go and how far the body rocks back, fading out. */
+  let startle = { t: 0, eyes: 0, rock: 0 };
+  let aim = AHEAD;
   /** The emote playing, and how many seconds in. */
   let emote: { id: EmoteId; t: number } | null = null;
   /** What the hands are doing with the card, and how many seconds in. */
@@ -105,11 +157,22 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
     play(clip) {
       switch (clip) {
         case "bonked":
-          bonkT = 1;
+        case "bopped":
+          bonkT = clip === "bonked" ? 1 : 0.5;
           for (const p of pupils) {
-            p.vel.x = (random() - 0.5) * 40;
-            p.vel.y = (random() - 0.5) * 40;
+            p.vel.x = (random() - 0.5) * 40 * bonkT;
+            p.vel.y = (random() - 0.5) * 40 * bonkT;
           }
+          return;
+        case "squashed":
+          squashT = 0;
+          dizzy = DIZZY;
+          return;
+        case "splatted":
+          startle = { t: 0.7, eyes: 0.3, rock: 0.22 };
+          return;
+        case "noticed":
+          startle = { t: 0.5, eyes: 0.18, rock: 0 };
           return;
         case "celebrate":
           celebrateT = 2.2;
@@ -126,6 +189,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           return;
         case "flick":
         case "poke":
+        case "point":
+        case "bonk":
+        case "throw":
+        case "blow":
           gesture = { kind: clip, t: 0 };
           return;
         default:
@@ -141,6 +208,14 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
     setTalk(level) {
       talkTarget = level;
       talkAt = now();
+    },
+
+    setAim(next) {
+      aim = next;
+    },
+
+    get aiming() {
+      return gesture !== null && gesture.kind !== "poke";
     },
 
     get busyWithCard() {
@@ -162,12 +237,39 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         sy -= k * 0.25;
         sx += k * 0.18;
       }
+      if (squashT >= 0) {
+        // flat as a pancake in a blink, a beat to take it in, then it springs back up with a wobble
+        squashT += dt;
+        const e = squashT;
+        const flat = ease(e / 0.07) * (1 - ease((e - 0.45) / 0.25));
+        const spring = e > 0.45 ? Math.sin((e - 0.45) * 16) * Math.exp(-(e - 0.45) * 4.5) * 0.22 : 0;
+        sy -= 0.42 * flat - spring;
+        sx += 0.34 * flat - spring * 0.6;
+        if (e > 1.8) squashT = -1;
+      }
       if (celebrateT > 0) {
         celebrateT = Math.max(0, celebrateT - dt);
         y = Math.abs(Math.sin(celebrateT * 7)) * 0.18 * Math.min(1, celebrateT);
       }
       let rotZ = 0;
       let eyeScale = 1;
+      let rock = 0;
+      if (startle.t > 0) {
+        startle.t = Math.max(0, startle.t - dt);
+        const k = Math.min(1, startle.t * 4);
+        eyeScale += startle.eyes * k;
+        rock = startle.rock * k;
+      }
+      if (dizzy > 0) {
+        // seeing stars: the head lolls round and the pupils go for a spin
+        dizzy = Math.max(0, dizzy - dt);
+        const k = Math.min(1, dizzy);
+        rotZ += Math.sin(tt * 5) * 0.09 * k;
+        for (const [i, p] of pupils.entries()) {
+          p.vel.x += Math.cos(tt * 11 + i * 2) * 260 * k * dt;
+          p.vel.y += Math.sin(tt * 11 + i * 2) * 260 * k * dt;
+        }
+      }
       let armL = REST_ARM_X,
         armR = REST_ARM_X;
       if (celebrateT > 0) {
@@ -179,21 +281,21 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         const { id, t: e } = emote;
         if (id === "wave") armR = -2.6 + Math.sin(e * 16) * 0.5;
         if (id === "laugh") {
-          rotZ = Math.sin(e * 30) * 0.06;
+          rotZ += Math.sin(e * 30) * 0.06;
           y += Math.abs(Math.sin(e * 20)) * 0.04;
         }
         if (id === "think") {
-          rotZ = 0.2 * Math.min(1, e * 4);
+          rotZ += 0.2 * Math.min(1, e * 4);
           armL = -2.4;
         }
-        if (id === "shock") {
-          y += Math.max(0, 0.15 - e * 0.4);
-          eyeScale = 1.3;
+        if (e > 2) emote = null;
+        else {
+          if (id === "shock") {
+            y += Math.max(0, 0.15 - e * 0.4);
+            eyeScale = 1.3;
+          }
+          playing = { id, t: e };
         }
-        if (e > 2) {
-          emote = null;
-          eyeScale = 1;
-        } else playing = { id, t: e };
       }
 
       // ---- arms layer: card handling (reach out with the right arm, let go, both hands square it up)
@@ -249,7 +351,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           lean = 0.16 * reach - 0.08 * hoist + 0.24 * slam;
         } else hands = { kind: "idle" };
       }
-      // ---- gestures: the right arm flicks a chip off its thumb, or jabs at something on the felt
+      // ---- gestures: the right arm uses a hand item on someone, or jabs at something on the felt
+      let prop: Prop | null = null;
       if (gesture) {
         gesture.t += dt;
         const e = gesture.t;
@@ -261,6 +364,46 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           armR = REST_ARM_X + (-2.05 - REST_ARM_X) * up + (-1.5 - REST_ARM_X) * out;
           zR = 0.25 - 0.3 * up - 0.15 * out;
           stretchR = 1 + 0.6 * out;
+          if (e < FLICK_RELEASE) prop = "coin";
+        } else if (gesture.kind === "point" && e < POINT) {
+          // out it goes, part of the way over to them, with a couple of jabs; it stays on them, and comes back
+          const k = ease(e / 0.18) * (1 - ease((e - (POINT - 0.3)) / 0.3));
+          const jab = Math.sin(e * 15) * Math.exp(-e * 3.5);
+          armR = REST_ARM_X + (aim.x - REST_ARM_X) * k;
+          zR = 0.25 + (aim.z - 0.25) * k;
+          stretchR = 1 + (aim.reach * POINT_REACH - 1) * (1 + 0.25 * jab) * k;
+          lean = Math.max(lean, 0.08 * k);
+          prop = "finger";
+        } else if (gesture.kind === "bonk" && e < BONK) {
+          // the rubber arm stretches all the way over to them with the hammer held high, then
+          // comes down on their head, rests there a beat, and snaps back
+          const out = ease(e / 0.26) * (1 - ease((e - 0.62) / 0.3));
+          const up = ease(e / 0.26) * (1 - ease((e - 0.3) / 0.1));
+          const down = ease((e - 0.3) / 0.1) * (1 - ease((e - 0.62) / 0.3));
+          armR = REST_ARM_X + (aim.x - 0.65 - REST_ARM_X) * up + (aim.x + 0.03 - REST_ARM_X) * down;
+          zR = 0.25 + (aim.z - 0.25) * out;
+          stretchR = 1 + (aim.reach - 1) * (0.85 * up + down);
+          lean = Math.max(lean, 0.22 * down - 0.1 * up);
+          if (e < BONK - 0.1) prop = "hammer";
+        } else if (gesture.kind === "throw" && e < THROW) {
+          // back past the ear, then forward at them, letting go on the way
+          const back = ease(e / 0.2) * (1 - ease((e - 0.2) / 0.1));
+          const fwd = ease((e - 0.2) / 0.1) * (1 - ease((e - 0.42) / 0.28));
+          armR = REST_ARM_X + (-2.75 - REST_ARM_X) * back + (aim.x - REST_ARM_X) * fwd;
+          zR = 0.25 + (aim.z - 0.25) * (back + fwd);
+          stretchR = 1 + 0.15 * back + 0.7 * fwd;
+          lean = Math.max(lean, 0.16 * fwd - 0.08 * back);
+          if (e < THROW_RELEASE) prop = "plane";
+        } else if (gesture.kind === "blow" && e < BLOW) {
+          // the hand comes up to hold the straw; a deep breath in, and the puff knocks them back a little
+          const k = ease(e / 0.16) * (1 - ease((e - (BLOW - 0.25)) / 0.25));
+          const puff = Math.max(0, 1 - Math.abs(e - BLOW_RELEASE) / 0.12);
+          armR = REST_ARM_X + (-2.25 - REST_ARM_X) * k;
+          zR = 0.25 - 0.62 * k;
+          stretchR = 1 - 0.08 * k;
+          lean = Math.max(lean, -0.1 * ease(e / BLOW_RELEASE) * k + 0.24 * puff);
+          sx += 0.07 * ease(e / BLOW_RELEASE) * k * (1 - puff);
+          prop = "straw";
         } else if (gesture.kind === "poke" && e < POKE) {
           // reach out to the felt, squeeze twice, come back
           const k = ease(e / 0.15) * (1 - ease((e - (POKE - 0.18)) / 0.18));
@@ -302,10 +445,12 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       const looking: Pose["face"]["pupils"] = [spring(pupils[0]), spring(pupils[1])];
 
       return {
-        body: { sx, sy, y, rotX: -pitch * 0.25 + lean, rotY: yaw * 0.6, rotZ },
+        body: { sx, sy, y, rotX: -pitch * 0.25 + lean - rock, rotY: yaw * 0.6, rotZ },
         arms: [{ ...L }, { ...R }],
         face: { mouthOpen, eyeScale, pupils: looking },
         emote: playing,
+        prop,
+        dizzy,
       };
     },
   };

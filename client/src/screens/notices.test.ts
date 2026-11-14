@@ -21,7 +21,7 @@ test("toasts from the event stream keep their level; errors bonk", () => {
     tone: "error",
     bonk: true,
   });
-  assert.equal(eventNotice({ t: "bonked" }), null);
+  assert.equal(eventNotice({ t: "hit", item: "hammer" }), null);
 });
 
 test("being removed by the dealer says so, once", () => {

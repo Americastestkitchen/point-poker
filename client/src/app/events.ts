@@ -1,6 +1,7 @@
 // What happened. diff() works out what changed between two views; those
 // changes arrive in the store with the view itself. Everything else that
 // happens (effects, toasts, local moments) goes on the event stream.
+import type { ItemId } from "../../../shared/catalog/items.ts";
 import type { PublicPlayer, ServerMsg, TableView } from "../../../shared/protocol.ts";
 import { allIn } from "../../../shared/rules.ts";
 
@@ -25,15 +26,15 @@ export type ViewChange =
 /** Things that happen without changing the view. */
 export type GameEvent =
   // ---- straight from the server: effects (someone looked around, talked,
-  // emoted, flicked a chip or fiddled with their card) and toasts
+  // emoted, used a hand item on someone or fiddled with their card) and toasts
   | Extract<ServerMsg, { t: "fx" | "toast" }>
   // ---- local
   /** You put a card down (`changed` when you swapped one already there). */
   | { t: "played"; value: number; changed: boolean }
   /** Something asked to show the ticket in full. */
   | { t: "openTicket" }
-  /** A chip hit you in the face (the UI flashes "BONK!" and shakes the screen). */
-  | { t: "bonked" };
+  /** Someone's hand item just landed on you (the UI flashes "BONK!", shakes the screen, splats the glass). */
+  | { t: "hit"; item: ItemId };
 
 export interface Events {
   on(listener: (e: GameEvent) => void): () => void;

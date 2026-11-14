@@ -46,7 +46,14 @@ test("popups leave the rest of the UI state alone", () => {
   const store = createStore();
   store.lookOpened();
   store.popupOpened("leaderboard");
-  assert.deepEqual(store.getState().ui, { myVote: null, votesInFlight: 0, lookOpen: true, popup: "leaderboard" });
+  assert.deepEqual(store.getState().ui, {
+    myVote: null,
+    votesInFlight: 0,
+    lookOpen: true,
+    popup: "leaderboard",
+    item: "coin",
+    itemsUsed: {},
+  });
 });
 
 test("the showcase only changes when where or how the bean shows changes", () => {

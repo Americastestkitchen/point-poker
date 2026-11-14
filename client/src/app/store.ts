@@ -2,10 +2,12 @@
 // you are, the connection and local UI state, plus the event stream. Both the
 // screens and the 3D scene read it. Values that change every frame never go in here.
 import { createStore as createZustand } from "zustand/vanilla";
+import { DEFAULT_ITEM, type ItemId } from "../../../shared/catalog/items.ts";
 import type { Look } from "../../../shared/look.ts";
 import type { TableView } from "../../../shared/protocol.ts";
 import type { Connection } from "./connection.ts";
 import { createEvents, diff, type Events, type ViewChange } from "./events.ts";
+import type { ItemsUsed } from "./items.ts";
 import { vote, type VoteState } from "./vote.ts";
 
 /** A box on the screen in CSS pixels, from the top-left of the window. */
@@ -44,6 +46,10 @@ export interface AppState {
     lookOpen: boolean;
     /** The one popup open over the table, if any. */
     popup: Popup | null;
+    /** The hand item you've picked on the hotbar: clicking someone uses it on them. */
+    item: ItemId;
+    /** When you last used each item, for its cooldown (see items.ts). */
+    itemsUsed: ItemsUsed;
   };
 }
 
@@ -61,7 +67,7 @@ const initial: AppState = {
   room: null,
   showcase: null,
   changes: [],
-  ui: { myVote: null, votesInFlight: 0, lookOpen: false, popup: null },
+  ui: { myVote: null, votesInFlight: 0, lookOpen: false, popup: null, item: DEFAULT_ITEM, itemsUsed: {} },
 };
 
 export function createStore(): Store {
@@ -96,6 +102,15 @@ function build() {
     popupClosed(popup: Popup) {
       const { ui } = store.getState();
       if (ui.popup === popup) store.setState({ ui: { ...ui, popup: null } });
+    },
+    /** You picked `item` on the hotbar. */
+    itemPicked(item: ItemId) {
+      const { ui } = store.getState();
+      if (ui.item !== item) store.setState({ ui: { ...ui, item } });
+    },
+    /** You used `item` on someone at `at` (ms): its cooldown starts. */
+    itemUsed(item: ItemId, at: number) {
+      store.setState((s) => ({ ui: { ...s.ui, itemsUsed: { ...s.ui.itemsUsed, [item]: at } } }));
     },
     /** The line to the table moved on (see connection.ts). */
     connectionChanged(connection: Connection) {

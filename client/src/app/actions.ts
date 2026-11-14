@@ -4,11 +4,18 @@
 import type { Command } from "../../../server/table/commands.ts";
 import type { EmoteId } from "../../../shared/catalog/emotes.ts";
 import type { EnvironmentId } from "../../../shared/catalog/environments.ts";
+import { itemAfter, type ItemId } from "../../../shared/catalog/items.ts";
 import type { Look } from "../../../shared/look.ts";
+import { coolingFor } from "./items.ts";
 import type { Session } from "./session.ts";
 import { myPlayer, type Store } from "./store.ts";
 
-export function createActions(session: Pick<Session, "request" | "fx">, store: Store) {
+export function createActions(
+  session: Pick<Session, "request" | "fx">,
+  store: Store,
+  /** This browser's clock in ms, for item cooldowns. */
+  now: () => number = Date.now,
+) {
   const run = (cmd: Command) => session.request(cmd);
   /** For actions nobody waits on: a failure shows up as a toast. */
   const report = (e: unknown) =>
@@ -30,9 +37,22 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
         report(e);
       });
     },
-    /** Flick a chip at someone's head. Too soon after the last one and nothing happens. */
-    flick(target: string) {
-      run({ t: "flick", target }).catch(() => {});
+    items: {
+      /** Pick a hand item on the hotbar. */
+      pick: (item: ItemId) => store.itemPicked(item),
+      /** Move along the hotbar (the scroll wheel): 1 is the next item, -1 the one before. */
+      cycle: (steps: number) => store.itemPicked(itemAfter(store.getState().ui.item, steps)),
+      /** How long until `item` can be used again, in ms (0 when it's ready). */
+      cooling: (item: ItemId) => coolingFor(store.getState().ui.itemsUsed, item, now()),
+      /** Use the item you've picked on someone. While it's cooling down nothing happens. */
+      use(target: string) {
+        const { item, itemsUsed } = store.getState().ui;
+        const at = now();
+        if (coolingFor(itemsUsed, item, at) > 0) return;
+        store.itemUsed(item, at);
+        // nobody waits on it: a refusal (they just left, the server's clock disagrees) isn't worth a toast
+        run({ t: "use", item, target }).catch(() => {});
+      },
     },
     emote: (emote: EmoteId) => session.fx({ kind: "emote", emote }),
     /** You clicked the squeaky (it already squeaked for you): everyone else hears it too. */

@@ -1,5 +1,7 @@
-// Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote.
+// Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote, and the
+// number keys or the scroll wheel to change the hand item a click uses.
 import { EMOTES } from "../../../../shared/catalog/emotes.ts";
+import { ITEMS } from "../../../../shared/catalog/items.ts";
 import type { Actions } from "../../app/actions.ts";
 import type { CameraRig } from "./camera.ts";
 import type { Stage } from "./stage.ts";
@@ -14,6 +16,13 @@ type Pointer =
 
 /** How far (CSS px) a press can wander and still be a click. */
 const CLICK_SLOP = 6;
+/**
+ * How much scrolling (CSS px of wheel delta) moves the hotbar one item along, and how long a
+ * pause (ms) forgets a scroll that didn't get that far. A mouse wheel's notch is about 100;
+ * a trackpad sends many small ones.
+ */
+const WHEEL_STEP = 60,
+  WHEEL_FORGETS_MS = 250;
 
 export interface InputDeps {
   actions: Actions;
@@ -59,6 +68,25 @@ export function bindInput(stage: Stage, deps: InputDeps) {
   });
   canvas.addEventListener("dblclick", () => rig.recenter());
 
+  // the scroll wheel over the room walks the hotbar
+  let scrolled = 0,
+    scrolledAt = 0;
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      if (e.ctrlKey) return; // a pinch to zoom the page
+      if (e.timeStamp - scrolledAt > WHEEL_FORGETS_MS) scrolled = 0;
+      scrolledAt = e.timeStamp;
+      // lines and pages count as a notch each
+      scrolled += e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? e.deltaY : Math.sign(e.deltaY) * WHEEL_STEP;
+      const steps = Math.trunc(scrolled / WHEEL_STEP);
+      if (!steps) return;
+      scrolled -= steps * WHEEL_STEP;
+      actions.items.cycle(Math.sign(steps));
+    },
+    { passive: true },
+  );
+
   addEventListener("keydown", (e) => {
     // something else used this key already (Esc closing a popup), or the UI has the keyboard
     if (e.defaultPrevented || !allowsWorldKeys()) return;
@@ -66,6 +94,11 @@ export function bindInput(stage: Stage, deps: InputDeps) {
     const emote = EMOTES.find((x) => x.key === k);
     if (emote) {
       actions.emote(emote.id);
+      return;
+    }
+    const item = ITEMS.find((x) => x.key === k);
+    if (item) {
+      actions.items.pick(item.id);
       return;
     }
     if (k === "r") rig.recenter();
