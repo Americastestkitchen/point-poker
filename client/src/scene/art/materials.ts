@@ -11,6 +11,9 @@ export function toon(color: THREE.ColorRepresentation, extra: Partial<THREE.Mesh
   return new THREE.MeshToonMaterial({ color, gradientMap: gradient, ...extra });
 }
 
+/** True for a texture every toon material shares, which nothing may dispose. */
+export const isSharedTexture = (t: unknown) => t === gradient;
+
 export const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, shadow = true) => {
   const m = new THREE.Mesh(geo, mat);
   m.castShadow = shadow;

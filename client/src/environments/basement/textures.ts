@@ -1,6 +1,7 @@
 // Basement-only textures: the casino felt and the sad wallpaper.
 import * as THREE from "three";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
+import { speckle } from "../kit/canvas.ts";
 
 export function feltTexture(): THREE.CanvasTexture {
   return canvasTex(1024, 1024, (g) => {
@@ -10,10 +11,7 @@ export function feltTexture(): THREE.CanvasTexture {
     g.fillStyle = grad;
     g.fillRect(0, 0, 1024, 1024);
     // fuzz
-    for (let i = 0; i < 9000; i++) {
-      g.fillStyle = `rgba(${Math.random() < 0.5 ? "0,0,0" : "200,255,210"},${Math.random() * 0.05})`;
-      g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
-    }
+    speckle(g, 9000, 2, () => `rgba(${Math.random() < 0.5 ? "0,0,0" : "200,255,210"},${Math.random() * 0.05})`);
     g.strokeStyle = "rgba(230,190,90,0.65)";
     g.lineWidth = 6;
     g.beginPath();
@@ -52,10 +50,7 @@ export function wallpaperTexture(): THREE.CanvasTexture {
         g.arc(x, y, 5, 0, Math.PI * 2);
         g.fill();
       }
-    for (let i = 0; i < 1500; i++) {
-      g.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`;
-      g.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
-    }
+    speckle(g, 1500, 3, () => `rgba(0,0,0,${Math.random() * 0.12})`);
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(6, 2);
