@@ -1,4 +1,4 @@
-// Everything a bean does, as numbers: breathing, emotes, getting bonked,
+// Everything a bean does, as numbers: breathing, emotes (a wave, a laugh, a yawn…), getting bonked,
 // celebrating, putting a card down, swapping it after the reveal, using a hand item on someone
 // (pointing, a hammer, a chip, a paper plane) and taking one, poking the duck, talking
 // and looking around. It has three layers (body, arms, face) and produces a
@@ -270,6 +270,9 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         armL = armR = -2.9 + Math.sin(tt * 18) * 0.3;
       }
       let playing: Pose["emote"] = null;
+      /** How far the arms are wrapped in across the chest, and how wide the mouth is open in a yawn. */
+      let hug = 0,
+        yawn = 0;
       if (emote) {
         emote.t += dt;
         const { id, t: e } = emote;
@@ -284,9 +287,37 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         }
         if (e > 2) emote = null;
         else {
+          // in over a moment and out again, for the ones that hold a pose
+          const hold = ease(e / 0.2) * (1 - ease((e - 1.7) / 0.3));
           if (id === "shock") {
             y += Math.max(0, 0.15 - e * 0.4);
             eyeScale = 1.3;
+          }
+          if (id === "thumbs") {
+            // a fist held out front, pumped twice
+            armR = REST_ARM_X + (-1.75 - REST_ARM_X) * hold - Math.abs(Math.sin(e * 7)) * 0.22 * hold;
+            y += Math.abs(Math.sin(e * 7)) * 0.03 * hold;
+          }
+          if (id === "party") {
+            // both arms up, waving out of time, and a few hops
+            armL = REST_ARM_X + (-2.8 + Math.sin(e * 14) * 0.35 - REST_ARM_X) * hold;
+            armR = REST_ARM_X + (-2.8 + Math.sin(e * 14 + 2) * 0.35 - REST_ARM_X) * hold;
+            y += Math.abs(Math.sin(e * 9)) * 0.12 * hold;
+          }
+          if (id === "sleepy") {
+            // a big yawn: the hand comes up to the mouth, the eyes close down, and the whole bean sags
+            armR = REST_ARM_X + (-2.2 - REST_ARM_X) * hold;
+            eyeScale -= 0.45 * hold;
+            sy -= 0.06 * hold;
+            rotZ += 0.12 * hold;
+            yawn = hold;
+          }
+          if (id === "love") {
+            // hugging itself, swaying, eyes wide
+            armL = armR = REST_ARM_X + (-1.9 - REST_ARM_X) * hold;
+            hug = hold;
+            rotZ += Math.sin(e * 6) * 0.1 * hold;
+            eyeScale += 0.18 * hold;
           }
           playing = { id, t: e };
         }
@@ -296,8 +327,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       let stretchL = 1,
         stretchR = 1,
         lean = 0,
-        zL = -0.25,
-        zR = 0.25,
+        zL = -0.25 + 0.6 * hug,
+        zR = 0.25 - 0.6 * hug - 0.55 * yawn,
         armSpeed = 12;
       const fiddle = (e: number, len: number) => {
         // e: 0..len. In, wiggle, out.
@@ -409,7 +440,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       // ---- face layer: talking (a little extra chatter so it reads as speech) and googly pupils
       if (talkTarget > 0 && now() - talkAt > 1500) talkTarget = 0; // lost the "stopped" message
       talk += (talkTarget - talk) * Math.min(1, dt * 18);
-      const mouthOpen = talk < 0.02 ? 0 : Math.min(1, talk * 1.4) * (0.45 + 0.55 * Math.abs(Math.sin(tt * 15)));
+      const talking = talk < 0.02 ? 0 : Math.min(1, talk * 1.4) * (0.45 + 0.55 * Math.abs(Math.sin(tt * 15)));
+      const mouthOpen = Math.max(talking, yawn);
       // pupils spring toward where we're looking, with wobble
       const tx = Math.min(0.6, Math.max(-0.6, Math.sin(yaw) * 0.5));
       const ty = Math.min(0.6, Math.max(-0.6, pitch * 0.8));

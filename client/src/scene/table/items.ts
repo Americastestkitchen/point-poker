@@ -1,12 +1,14 @@
 // What using a hand item on someone looks like at the table: the bean's arm does its move with
 // the item in its hand, something swings or flies across, there's a sound, and whoever it was
-// for takes the hit. Nothing here changes the game: it plays what the server says just happened.
+// for takes the hit. An emote that answers someone's flies over to them the same way.
+// Nothing here changes the game: it plays what the server says just happened.
 import * as THREE from "three";
 import type { ItemId } from "../../../../shared/catalog/items.ts";
 import type { Events } from "../../app/events.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import { BONK_HIT, FLICK_RELEASE, THROW_RELEASE } from "../../avatar/animator.ts";
 import { makePlane } from "../../avatar/parts/props.ts";
+import { dropEmoji, emojiBubble } from "../../avatar/parts/labels.ts";
 import type { Stage } from "../engine/stage.ts";
 import type { Layout } from "../layout/layout.ts";
 import type { Flights } from "./flights.ts";
@@ -16,6 +18,8 @@ import type { Seat } from "./seat.ts";
 export interface ItemPlays {
   /** `from` used `item` on `to`. */
   play(from: string, item: ItemId, to: string): void;
+  /** `from`'s emote was for `to`: the emoji flies over from one to the other. */
+  toss(from: string, emoji: string, to: string): void;
 }
 
 /** The colours a flicked chip comes in: one at random each flick. */
@@ -24,6 +28,8 @@ const flickColor = () => FLICK_COLORS[Math.floor(Math.random() * FLICK_COLORS.le
 
 /** How long a landed paper plane lies on the felt (seconds). */
 const PLANE_RESTS = 6;
+/** How long an emoji that flew over to someone hangs over their head (seconds). */
+const EMOJI_LINGERS = 0.9;
 
 export function createItemPlays(
   stage: Stage,
@@ -177,5 +183,29 @@ export function createItemPlays(
     },
   };
 
-  return { play: (from, item, to) => PLAYS[item](from, to) };
+  return {
+    play: (from, item, to) => PLAYS[item](from, to),
+    toss(from, emoji, to) {
+      const bubble = emojiBubble(emoji);
+      const over = (id: string) => headOf(id).add(new THREE.Vector3(0, isMe(id) ? 0 : 0.45, 0));
+      const start = over(from);
+      bubble.position.copy(start);
+      scene.add(bubble);
+      flights.add({
+        obj: bubble,
+        from: start,
+        to: () => over(to),
+        t: 0,
+        dur: 0.8,
+        arc: 0.6,
+        spin: 0,
+        done: () => {
+          audio.pop();
+          avatarOf(to)?.play("noticed");
+          // it hangs over them a moment (on your own screen it's flown into your face: it's gone)
+          stage.after(isMe(to) ? 0 : EMOJI_LINGERS, () => dropEmoji(bubble));
+        },
+      });
+    },
+  };
 }

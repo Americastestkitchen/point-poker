@@ -1,6 +1,6 @@
-// Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote, and the
-// number keys or the scroll wheel to change the hand item a click uses.
-import { EMOTES } from "../../../../shared/catalog/emotes.ts";
+// Pointer and keyboard on the 3D scene: drag to look, click to pick, keys to emote (E opens the
+// wheel of them), and the number keys or the scroll wheel to change the hand item a click uses.
+import { EMOTE_WHEEL_KEY, EMOTES } from "../../../../shared/catalog/emotes.ts";
 import { ITEMS } from "../../../../shared/catalog/items.ts";
 import type { Actions } from "../../app/actions.ts";
 import type { CameraRig } from "./camera.ts";
@@ -93,6 +93,11 @@ export function bindInput(stage: Stage, deps: InputDeps) {
     const emote = EMOTES.find((x) => x.key === k);
     if (emote) {
       actions.emote(emote.id);
+      return;
+    }
+    // the rest of the emotes are on the wheel; the UI takes it from here (see screens/emotes/)
+    if (k === EMOTE_WHEEL_KEY) {
+      if (!e.repeat) actions.openEmotes();
       return;
     }
     const item = ITEMS.find((x) => x.key === k);

@@ -128,7 +128,8 @@ export const ClientFx = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("gaze"), yaw: z.number(), pitch: z.number() }),
   /** Mic loudness 0..1 (never audio), so your bean's mouth moves while you talk. */
   z.object({ kind: z.literal("talk"), level: z.number() }),
-  z.object({ kind: z.literal("emote"), emote: z.enum(EMOTE_IDS) }),
+  /** `to` is who it's for, when it answers their emote: the emoji flies over to them. */
+  z.object({ kind: z.literal("emote"), emote: z.enum(EMOTE_IDS), to: z.string().max(100).optional() }),
   /** Someone clicked the squeaky on the felt; everyone else's room plays its squeak. */
   z.object({ kind: z.literal("squeak") }),
 ]);

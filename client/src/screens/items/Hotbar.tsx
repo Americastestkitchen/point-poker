@@ -1,11 +1,12 @@
-// The hotbar (region "items", the right edge; a row over the dock on phones): your hand items.
-// The lit one is what clicking someone uses on them. Pick with a click or a tap, the number
+// The hotbar (region "items", the right edge; a row over the dock on phones): the emote slot
+// (emotes/Emotes.tsx), then your hand items. The lit one is what clicking someone uses on them. Pick with a click or a tap, the number
 // keys, or the scroll wheel over the room (the world's keys and wheel live in
 // scene/engine/input.ts). An item that was just used drains back up while it cools down.
 import { useEffect, useReducer } from "react";
 import { ITEMS, type ItemId } from "../../../../shared/catalog/items.ts";
 import { cooldownOf } from "../../app/items.ts";
 import { Button, cx, useRoving } from "../../ui/index.ts";
+import { EmoteSlot } from "../emotes/Emotes.tsx";
 import { useAppState, useGame } from "../game.tsx";
 import { useLetGoAfterTouch } from "../parts/touch.ts";
 import s from "./Hotbar.module.css";
@@ -23,7 +24,9 @@ export function Hotbar() {
           <span>{now.does}</span>
         </p>
       )}
-      <div className={s.bar} role="toolbar" aria-label="Hand items" aria-orientation="vertical">
+      <div className={s.bar} role="toolbar" aria-label="Emotes and hand items" aria-orientation="vertical">
+        <EmoteSlot />
+        <span className={s.rule} aria-hidden />
         {ITEMS.map((item, i) => (
           <Slot
             key={item.id}

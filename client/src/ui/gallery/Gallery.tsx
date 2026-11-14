@@ -21,6 +21,7 @@ import { TextField } from "../kit/TextField.tsx";
 import { Toast } from "../kit/Toast.tsx";
 import { Toggle } from "../kit/Toggle.tsx";
 import { Tooltip } from "../kit/Tooltip.tsx";
+import { Wheel } from "../kit/Wheel.tsx";
 import { tokens, varName } from "../tokens.ts";
 import s from "./Gallery.module.css";
 
@@ -70,6 +71,17 @@ type MenuId = (typeof MENU)[number]["id"];
 
 const HATS = fitting("head");
 
+const SNACKS = [
+  { id: "pizza", icon: "🍕", label: "Pizza" },
+  { id: "taco", icon: "🌮", label: "Taco" },
+  { id: "ramen", icon: "🍜", label: "Ramen" },
+  { id: "donut", icon: "🍩", label: "Donut" },
+  { id: "fries", icon: "🍟", label: "Fries" },
+  { id: "sushi", icon: "🍣", label: "Sushi" },
+  { id: "pretzel", icon: "🥨", label: "Pretzel" },
+  { id: "cookie", icon: "🍪", label: "Cookie" },
+] as const;
+
 const swatch = (c: string) => <span className={s.swatch} style={{ background: c }} />;
 
 export function Gallery({ audio }: { audio: Audio }) {
@@ -85,6 +97,8 @@ export function Gallery({ audio }: { audio: Audio }) {
   const [volume, setVolume] = useState(0.6);
   const [coins, setCoins] = useState(1240);
   const [dialog, setDialog] = useState<"none" | "plain" | "stacked" | "must" | "paper" | "confirm">("none");
+  const [wheel, setWheel] = useState(false);
+  const [snack, setSnack] = useState("nothing yet");
   const [field, setField] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [on, setOn] = useState(true);
@@ -514,6 +528,33 @@ export function Gallery({ audio }: { audio: Audio }) {
         >
           <p>Someone has to run the table. No Esc out of this one.</p>
         </Dialog>
+      </Section>
+
+      <Section
+        name="Wheel"
+        note={`Picked: ${snack}. Head for an item with the mouse, or use the arrow keys; hold W, flick and let go to pick in one move.`}
+      >
+        <div className={s.row}>
+          <Button onPress={() => setWheel(true)}>Open the wheel</Button>
+        </div>
+        <Wheel
+          open={wheel}
+          onClose={() => setWheel(false)}
+          label="Snacks"
+          items={SNACKS}
+          holdKey="w"
+          onPick={(id) => {
+            setSnack(id);
+            setWheel(false);
+          }}
+        >
+          Snack time
+        </Wheel>
+        <div className={`${s.row} ${s.roomy}`}>
+          <Wheel open inline onClose={() => {}} label="Snacks, shown in place" items={SNACKS} onPick={setSnack}>
+            In place
+          </Wheel>
+        </div>
       </Section>
 
       <Section name="Toast">

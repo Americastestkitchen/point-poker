@@ -1,6 +1,7 @@
 // The game on the table: a seat per player, the pot, and the ticket. It
 // redraws from the store, and animates what the event stream says just happened.
 import * as THREE from "three";
+import { EMOTE } from "../../../../shared/catalog/emotes.ts";
 import type { Fx } from "../../../../shared/protocol.ts";
 import { cardValues, voters } from "../../../../shared/rules.ts";
 import type { Actions } from "../../app/actions.ts";
@@ -229,6 +230,8 @@ export function mountTableView(
       case "emote":
         seat?.avatar.play(fx.emote);
         audio.pop();
+        // it answers someone's: the emoji flies over to them as well
+        if (fx.to !== undefined && fx.to !== from && seats.has(fx.to)) items.toss(from, EMOTE[fx.emote].emoji, fx.to);
         return;
       case "use":
         items.play(from, fx.item, fx.to);

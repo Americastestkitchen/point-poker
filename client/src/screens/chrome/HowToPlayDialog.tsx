@@ -1,9 +1,9 @@
 // How to play (popup "help"), opened from the game menu.
 // The four steps, then "Just for fun": drag to look
 // around, pick a hand item and click someone to use it on them, Z X C V to wave / laugh / think /
-// gasp, click the duck. Also R to recenter the view (scene/engine/input.ts).
+// gasp, E for the wheel of emotes, click the duck. Also R to recenter the view (scene/engine/input.ts).
 // Closing it (Esc, ✕, Back) goes back to the menu when it was opened from there.
-import { EMOTES } from "../../../../shared/catalog/emotes.ts";
+import { EMOTE_WHEEL_KEY, EMOTES } from "../../../../shared/catalog/emotes.ts";
 import { ITEMS } from "../../../../shared/catalog/items.ts";
 import { Button, Dialog, KeyHint } from "../../ui/index.ts";
 import { usePopupWithBack } from "./popups.ts";
@@ -16,13 +16,8 @@ const STEPS = [
   "Closest guess wins the pot (just for fun), but only if it's within one card of the final call. Ties split it.",
 ] as const;
 
-/** What each emote's key does, in the help's words. */
-const EMOTE_WORDS: Record<(typeof EMOTES)[number]["id"], string> = {
-  wave: "wave",
-  laugh: "laugh",
-  think: "think",
-  shock: "gasp",
-};
+/** The emotes with a key of their own, and what each does, in the help's words. */
+const KEYED = EMOTES.flatMap((e) => (e.key === null ? [] : [{ key: e.key, word: e.name.toLowerCase() }]));
 
 export function HowToPlayDialog() {
   const popup = usePopupWithBack("help");
@@ -74,8 +69,12 @@ export function HowToPlayDialog() {
           Click the duck
         </li>
         <li className={s.keys}>
-          <KeyHint keys={EMOTES.map((e) => e.key)} />
-          <span>{EMOTES.map((e) => EMOTE_WORDS[e.id]).join(", ")}</span>
+          <KeyHint keys={KEYED.map((e) => e.key)} />
+          <span>{KEYED.map((e) => e.word).join(", ")}</span>
+        </li>
+        <li className={s.keys}>
+          <KeyHint keys={[EMOTE_WHEEL_KEY]} />
+          <span>or 😀 for the rest. Open it just after someone emotes to answer them</span>
         </li>
         <li className={s.keys}>
           <KeyHint keys={["r"]} />

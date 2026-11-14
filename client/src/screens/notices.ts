@@ -1,4 +1,5 @@
 // The toasts the screen root shows by itself for what happened. Pure, so they're tested here.
+import { EMOTE } from "../../../shared/catalog/emotes.ts";
 import type { PublicPlayer } from "../../../shared/protocol.ts";
 import type { Connection } from "../app/connection.ts";
 import type { GameEvent, ViewChange } from "../app/events.ts";
@@ -25,13 +26,15 @@ export function eventNotice(e: GameEvent): Notice | null {
   return { text: e.text, tone: e.level ?? "info", bonk: e.level === "error" };
 }
 
-/** A toast when something is aimed at you that you'd otherwise miss: someone is pointing at you. */
+/** A toast when something is aimed at you that you'd otherwise miss: someone points at you, or answers your emote. */
 export function forYouNotice(e: GameEvent, players: readonly PublicPlayer[], meId: string | undefined): Notice | null {
   if (e.t !== "fx" || meId === undefined || e.from === meId) return null;
   const from = players.find((p) => p.id === e.from);
   if (!from) return null;
   if (e.fx.kind === "use" && e.fx.item === "point" && e.fx.to === meId)
     return { text: `👉 ${from.name} is pointing at you`, tone: "info", bonk: false };
+  if (e.fx.kind === "emote" && e.fx.to === meId)
+    return { text: `${EMOTE[e.fx.emote].emoji} ${from.name}, right back at you`, tone: "info", bonk: false };
   return null;
 }
 

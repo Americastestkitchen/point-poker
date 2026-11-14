@@ -45,3 +45,19 @@ test("being removed by the dealer says so, once", () => {
   assert.equal(connectionNotice(open, { status: "closed", room: "ABCD", reason: "Table full" }), null);
   assert.equal(connectionNotice(open, { status: "connecting", room: "ABCD", attempt: 1 }), null);
 });
+
+test("an emote that's for you says who sent it; everyone else's are just emotes", () => {
+  const players = [player("ann"), player("bob", { name: "Bob" })];
+  const laugh = (from: string, to?: string) =>
+    ({ t: "fx", from, fx: { kind: "emote", emote: "laugh", ...(to ? { to } : {}) } }) as const;
+  assert.deepEqual(forYouNotice(laugh("bob", "ann"), players, "ann"), {
+    text: "😂 Bob, right back at you",
+    tone: "info",
+    bonk: false,
+  });
+  assert.equal(forYouNotice(laugh("bob"), players, "ann"), null, "for the whole table");
+  assert.equal(forYouNotice(laugh("bob", "cat"), players, "ann"), null, "for someone else");
+  assert.equal(forYouNotice(laugh("ann", "ann"), players, "ann"), null, "your own");
+  assert.equal(forYouNotice(laugh("zed", "ann"), players, "ann"), null, "from someone who's gone");
+  assert.equal(forYouNotice(laugh("bob", "ann"), players, undefined), null, "before you're seated");
+});

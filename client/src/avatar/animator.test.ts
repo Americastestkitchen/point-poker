@@ -241,3 +241,26 @@ test("being pointed at widens the eyes for a moment, and nothing else", () => {
   const settled = run(b, 1, 0.1).at(-1)!;
   assert.equal(settled.face.eyeScale, 1);
 });
+
+test("the wheel's emotes each have their own move, and all end after two seconds", () => {
+  const at = (id: "thumbs" | "party" | "sleepy" | "love", sec = 1) => {
+    const a = still();
+    a.play(id);
+    const poses = run(a, 2.3);
+    assert.equal(poses[0]!.emote?.id, id);
+    assert.equal(poses.at(-1)!.emote, null, `${id} ends`);
+    assert.ok(Math.abs(poses.at(-1)!.arms[1].x + 1.15) < 0.01, `${id}: the arm comes back down`);
+    return poses[Math.round(sec * 60) - 1]!;
+  };
+  const thumbs = at("thumbs");
+  assert.ok(thumbs.arms[1].x < -1.6, "a fist held out front");
+  assert.ok(Math.abs(thumbs.arms[0].x + 1.15) < 1e-9, "with the other arm at rest");
+  const party = at("party");
+  assert.ok(party.arms[0].x < -2.2 && party.arms[1].x < -2.2, "both arms up");
+  const sleepy = at("sleepy");
+  assert.ok(sleepy.face.eyeScale < 0.7, "eyes closing");
+  assert.ok(sleepy.face.mouthOpen > 0.9, "a big yawn");
+  const love = at("love");
+  assert.ok(love.arms[0].z > 0.2 && love.arms[1].z < -0.2, "arms wrapped in across the chest");
+  assert.ok(love.face.eyeScale > 1.1);
+});
