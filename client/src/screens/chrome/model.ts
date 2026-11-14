@@ -3,7 +3,6 @@
 import type { PublicPlayer, RoundResult, TableView } from "../../../../shared/protocol.ts";
 import type { Connection } from "../../app/connection.ts";
 import type { ViewChange } from "../../app/events.ts";
-import type { Popup } from "../../app/store.ts";
 import type { MicStatus } from "../../audio/mic.ts";
 import { names } from "../text.ts";
 
@@ -71,9 +70,6 @@ export function coinFlight(i: number, from: Point, to: Point, angle: number, rad
   };
 }
 
-/** Every third coin that lands clinks (all of them at once would be noise). */
-export const clinks = (landed: number) => landed % 3 === 0;
-
 // ------------------------------------------------------------------ leaderboard
 
 export interface BoardRow {
@@ -114,9 +110,6 @@ export function roundSwitches(h: Pick<RoundResult, "switched">): string | null {
   return h.switched.map((w) => `${w.name} ${w.from} → ${w.to}`).join(" · ");
 }
 
-/** Rounds played, newest first. */
-export const roundsNewestFirst = (history: readonly RoundResult[]) => history.toReversed();
-
 /**
  * For pasting into Jira: the latest result per ticket, oldest first, one "KEY\tN pts\tSummary"
  * line each. Re-pointing a ticket keeps its first place but takes its latest points.
@@ -128,11 +121,3 @@ export function jiraExport(history: readonly RoundResult[]): { text: string; cou
   const count = latest.size;
   return { text, count, done: `📋 Copied ${count} ticket${count === 1 ? "" : "s"} and their points` };
 }
-
-// ------------------------------------------------------------------ popups
-
-/**
- * Where closing a popup goes: back to the game menu when that's where it was opened from
- * (Options, How to play), otherwise nowhere. Popups are one at a time, so "back" reopens it.
- */
-export const backTo = (openedFrom: Popup | null): Popup | null => (openedFrom === "menu" ? "menu" : null);

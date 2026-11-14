@@ -7,6 +7,7 @@ import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
 import { ITEM, ITEM_IDS, type ItemId } from "../../shared/catalog/items.ts";
+import { errorMessage } from "../../shared/errors.ts";
 import { LookInput, validateLook } from "../../shared/look.ts";
 import type { Ticket } from "../../shared/protocol.ts";
 import { nextInQueue, parseIssueKey } from "../../shared/rules.ts";
@@ -187,7 +188,7 @@ export const COMMANDS = [
         s.queueLabel = label;
         s.epic = null;
       } catch (e) {
-        if (current()) return `Couldn't load the sprint: ${e instanceof Error ? e.message : String(e)}`;
+        if (current()) return `Couldn't load the sprint: ${errorMessage(e)}`;
       }
     },
   }),
@@ -352,7 +353,7 @@ export const COMMANDS = [
       try {
         fresh = await fetchTicket(before.key);
       } catch (e) {
-        return `Couldn't refresh ${before.key}: ${e instanceof Error ? e.message : String(e)}`;
+        return `Couldn't refresh ${before.key}: ${errorMessage(e)}`;
       }
       if (s.ticket?.key !== before.key) return; // the dealer moved on meanwhile
       if (isDeepStrictEqual(s.ticket, fresh)) {

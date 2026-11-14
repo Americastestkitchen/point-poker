@@ -8,7 +8,7 @@ import type { RoundResult } from "../../../../shared/protocol.ts";
 import { Button, cx, Dialog, ScrollArea } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
-import { boardRows, jiraExport, roundOutcome, roundsNewestFirst, roundSwitches, type BoardRow } from "./model.ts";
+import { boardRows, jiraExport, roundOutcome, roundSwitches, type BoardRow } from "./model.ts";
 import s from "./LeaderboardDialog.module.css";
 
 export function LeaderboardDialog() {
@@ -54,7 +54,7 @@ export function LeaderboardDialog() {
           </h3>
           <ScrollArea label="Rounds played, newest first" className={s.scroll}>
             <ul className={s.history}>
-              {roundsNewestFirst(history).map((h, i) => (
+              {history.toReversed().map((h, i) => (
                 <Round key={`${history.length - i}`} round={h} />
               ))}
             </ul>

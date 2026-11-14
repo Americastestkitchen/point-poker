@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import type { Popup } from "../../app/store.ts";
 import { useGame, usePopup } from "../game.tsx";
-import { backTo } from "./model.ts";
 
 export function usePopupWithBack(popup: Popup) {
   const { store } = useGame();
@@ -19,7 +18,9 @@ export function usePopupWithBack(popup: Popup) {
     [store, popup],
   );
 
-  const back = backTo(from);
+  // back to the game menu when that's where this was opened from (Options, How to play),
+  // otherwise nowhere
+  const back: Popup | null = from === "menu" ? "menu" : null;
   return {
     open: own.open,
     /** Where closing goes: "menu" when it came from there, otherwise null (just closes). */
