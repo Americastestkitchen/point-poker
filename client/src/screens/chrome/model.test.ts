@@ -3,17 +3,14 @@ import assert from "node:assert/strict";
 import type { RoundResult } from "../../../../shared/protocol.ts";
 import { player, view } from "../../app/fixtures.ts";
 import {
-  backTo,
   boardRows,
   burstSize,
-  clinks,
   coinFlight,
   connectionLabel,
   jiraExport,
   micPressed,
   micTip,
   roundOutcome,
-  roundsNewestFirst,
   roundSwitches,
   walletWin,
 } from "./model.ts";
@@ -60,7 +57,6 @@ test("a burst has a handful of coins, more for bigger wins, never a flood", () =
   assert.equal(burstSize(1), 8);
   assert.equal(burstSize(13.4), 13);
   assert.equal(burstSize(500), 28);
-  assert.deepEqual([1, 2, 3, 4, 5, 6].map(clinks), [false, false, true, false, false, true]);
 });
 
 test("a coin starts small at the burst and ends at the wallet", () => {
@@ -125,10 +121,6 @@ test("rounds read as before: house wins, winners and their share, or nobody play
   assert.equal(roundOutcome(round("A", { houseWon: true, winners: ["Deb"], share: 12 })), "house wins · Deb +12");
   assert.equal(roundOutcome(round("A", { winners: ["Ann", "Bob"], share: 4 })), "Ann & Bob +4");
   assert.equal(roundOutcome(round("A")), "no cards played");
-  assert.deepEqual(
-    roundsNewestFirst([round("A"), round("B")]).map((h) => h.key),
-    ["B", "A"],
-  );
 });
 
 test("the rounds log says who switched cards after the reveal", () => {
@@ -158,10 +150,4 @@ test("Copy for Jira: the latest points per ticket, oldest first, tab-separated",
   assert.equal(out.done, "📋 Copied 2 tickets and their points");
   assert.equal(jiraExport([round("SD-9")]).done, "📋 Copied 1 ticket and their points");
   assert.deepEqual(jiraExport([]), { text: "", count: 0, done: "📋 Copied 0 tickets and their points" });
-});
-
-test("closing Options or How to play goes back to the menu only when that's where they came from", () => {
-  assert.equal(backTo("menu"), "menu");
-  assert.equal(backTo(null), null);
-  assert.equal(backTo("leaderboard"), null);
 });

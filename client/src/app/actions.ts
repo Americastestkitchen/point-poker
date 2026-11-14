@@ -8,6 +8,7 @@
 //   on it (a form, the ticket loader) shows the failure itself.
 import type { Command } from "../../../server/table/commands.ts";
 import type { EmoteId } from "../../../shared/catalog/emotes.ts";
+import { errorMessage } from "../../../shared/errors.ts";
 import type { EnvironmentId } from "../../../shared/catalog/environments.ts";
 import { itemAfter, type ItemId } from "../../../shared/catalog/items.ts";
 import type { Look } from "../../../shared/look.ts";
@@ -23,8 +24,7 @@ export function createActions(
 ) {
   const run = (cmd: Command) => session.request(cmd);
   /** For actions nobody waits on: a failure shows up as a toast. */
-  const report = (e: unknown) =>
-    store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
+  const report = (e: unknown) => store.events.emit({ t: "toast", text: errorMessage(e), level: "error" });
   /** The fire-and-forget form of a dealer action: it returns nothing and reports its own failure. */
   const told =
     <A extends unknown[]>(action: (...args: A) => Promise<void>) =>

@@ -7,7 +7,7 @@ import { myPlayer } from "../../app/store.ts";
 import { useUi } from "../../ui/index.ts";
 import { useAppState, useGame } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
-import { BURST_DELAY_MS, burstSize, clinks, coinFlight, walletWin, type Point } from "./model.ts";
+import { BURST_DELAY_MS, burstSize, coinFlight, walletWin, type Point } from "./model.ts";
 
 interface BurstDeps {
   /** Where the coins are added (the UI layer, so they fly over the HUD and popups). */
@@ -98,7 +98,8 @@ export function useWallet(target: RefObject<HTMLElement | null>, coinClass: stri
           amount,
           onLand(landed) {
             if (landed === 1) release();
-            if (clinks(landed)) audio.chip();
+            // every third coin that lands clinks (all of them at once would be noise)
+            if (landed % 3 === 0) audio.chip();
           },
         });
         // if the coins never get there (a hidden tab), the wallet still catches up

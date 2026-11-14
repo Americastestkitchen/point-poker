@@ -1,6 +1,7 @@
 // One poker table. It owns the round's state and rules; transport/ moves
 // messages in and out, and adapters (tickets, clock, log) come in as deps.
 import { randomUUID } from "node:crypto";
+import { errorMessage } from "../../shared/errors.ts";
 import { validateLook } from "../../shared/look.ts";
 import type { Fx, JoinMsg, TableView } from "../../shared/protocol.ts";
 import type { TicketSource } from "../tickets/source.ts";
@@ -237,7 +238,7 @@ export class Table {
       }
       startRound(s, ticket);
     } catch (e) {
-      if (current()) return `${label}: ${e instanceof Error ? e.message : String(e)}`;
+      if (current()) return `${label}: ${errorMessage(e)}`;
     }
   }
 }

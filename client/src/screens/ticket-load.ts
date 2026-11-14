@@ -1,5 +1,6 @@
 // Fetching a ticket for the table: the dock's "Next ticket", the dealer panel's "Skip" and the
 // picker all share it. The picker shows the spinner and any failure; the latest load wins.
+import { errorMessage } from "../../../shared/errors.ts";
 import { createValue } from "../../../shared/value.ts";
 
 export type TicketLoadState =
@@ -39,7 +40,7 @@ export function createTicketLoad({ openPicker, bonk }: TicketLoadDeps) {
         },
         (e: unknown) => {
           if (mine !== latest) return;
-          state.set({ status: "failed", reason: e instanceof Error ? e.message : String(e) });
+          state.set({ status: "failed", reason: errorMessage(e) });
           openPicker();
           bonk();
         },
