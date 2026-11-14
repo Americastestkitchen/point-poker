@@ -258,7 +258,7 @@ export function mountTableView(
         flick(from, fx.to);
         return;
       case "adjust":
-        // someone swapped their card: they reach in and fiddle with it
+        // someone swapped their card: they reach in and square it up (you see your own on "played")
         if (seat && seat.card.group.visible) {
           seat.avatar.play("adjustCard");
           seat.card.nudge(0.2);
@@ -276,17 +276,22 @@ export function mountTableView(
         play(e.from, e.fx);
         return;
       case "played": {
-        // your card flies from your hand to the felt
         const seat = seats.get(meId());
-        const deck = cardValues(store.getState().room?.settings.deck ?? []);
         if (seat) {
-          const i = deck.indexOf(e.value);
-          const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
-          if (e.changed) seat.card.hide();
-          seat.card.show(e.value, from);
+          if (e.changed && seat.card.group.visible) {
+            // swapping it: the card stays on the felt and both hands square it up, as everyone sees
+            seat.card.show(e.value);
+            seat.avatar.play("adjustCard");
+            seat.card.nudge(0.2);
+          } else {
+            // your card flies from your hand to the felt, and your arm puts it down and pats it
+            const deck = cardValues(store.getState().room?.settings.deck ?? []);
+            const i = deck.indexOf(e.value);
+            const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
+            seat.card.show(e.value, from);
+            seat.avatar.play("placeCard");
+          }
           seat.card.turnDown();
-          // your arm puts it down and pats it
-          seat.avatar.play("placeCard");
         }
         audio.slide();
         return;
