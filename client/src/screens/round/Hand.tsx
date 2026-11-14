@@ -9,7 +9,7 @@ export interface HandProps {
   cards: readonly HandCard[];
   /** What the hand is, for screen readers: "Your cards", "Final points". */
   label: string;
-  /** The dealer's settle hand: a bit smaller, with room for vote dots and ribbons. */
+  /** A hand with everyone's votes on it (the dealer's settle hand, yours after the reveal): a bit smaller, with room for vote dots and ribbons. */
   settle?: boolean;
   onPress(card: HandCard): void;
 }

@@ -8,20 +8,22 @@
 //    │                │ └──deal (restart)──┴──────────────────┘ replaces the call
 //    └──cancel/skip (voting or revealed), next round (any phase): endRound()
 //
+// Votes can change while voting and after the reveal, until the dealer settles.
 // Refreshing the ticket that's out (any phase but waiting) changes no phase.
 //
 // A table is waiting exactly when there's no ticket out.
 import type { Phase, Ticket } from "../../shared/protocol.ts";
 import { potOf } from "./coins.ts";
-import type { TableState } from "./state.ts";
+import type { PlayerState, TableState } from "./state.ts";
 
 /** For every move and every phase: allowed, or why not. */
 const RULES = {
+  /** After the reveal you can still change your mind, until the dealer calls it. */
   vote: {
     waiting: "There's nothing to vote on yet",
     voting: true,
-    revealed: "Voting is over",
-    settled: "Voting is over",
+    revealed: true,
+    settled: "The dealer already called it",
   },
   /** Deals the ticket that's out again: everyone votes from scratch. */
   deal: { waiting: "Load a ticket first", voting: true, revealed: true, settled: true },
@@ -71,6 +73,24 @@ export function reveal(s: TableState) {
   s.pot = potOf(s.players);
 }
 
+/**
+ * Someone changed their mind during the discussion. The table remembers the card they had at the
+ * reveal, and the pot is whatever the cards add up to now.
+ */
+export function changeRevealedVote(s: TableState, p: PlayerState, vote: number) {
+  p.revealedVote ??= p.vote;
+  p.vote = vote;
+  s.pot = potOf(s.players);
+}
+
+/** Who changed their card since the reveal, as it was then and as it is now. */
+export const switchedSinceReveal = (s: TableState) =>
+  s.players.flatMap((p) =>
+    p.revealedVote !== null && p.vote !== null && p.revealedVote !== p.vote
+      ? [{ player: p, from: p.revealedVote, to: p.vote }]
+      : [],
+  );
+
 /** The dealer's call, and who it paid. */
 export function settleRound(
   s: TableState,
@@ -100,6 +120,7 @@ function clearRound(s: TableState) {
   s.pot = 0;
   for (const p of s.players) {
     p.vote = null;
+    p.revealedVote = null;
     p.lastWin = 0;
   }
 }

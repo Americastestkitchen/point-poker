@@ -132,6 +132,7 @@ export class Table {
         look: validateLook(undefined),
         seat,
         vote: null,
+        revealedVote: null,
         chips: 0,
         lastWin: 0,
       };

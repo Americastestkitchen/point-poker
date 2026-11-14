@@ -1,11 +1,11 @@
 // Everything a bean does, as numbers: breathing, emotes, getting bonked,
-// celebrating, putting a card down, flicking a chip, poking the duck, talking
+// celebrating, putting a card down, swapping it after the reveal, flicking a chip, poking the duck, talking
 // and looking around. It has three layers (body, arms, face) and produces a
 // Pose; the rig turns that into meshes. No three.js here, so the same animator
 // drives the bean and your first-person body, and tests can run it.
 import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
 
-export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard" | Gesture;
+export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard" | "swapCard" | Gesture;
 
 /** A quick move of the right arm that wins over everything else for a moment. */
 type Gesture = "flick" | "poke";
@@ -41,6 +41,13 @@ const REST_ARM_X = -1.15;
 /** How long putting a card down takes, and when the hand pats it (seconds). */
 const PLACE = 1.05;
 export const PLACE_PAT = 0.65;
+/**
+ * Changing your card after the reveal: the hand grabs the old card off the felt, hoists it up
+ * and slaps the new one down. When it grabs and when it slaps (seconds), and how long it all takes.
+ */
+export const SWAP_GRAB = 0.28,
+  SWAP_SLAP = 0.72;
+const SWAP = 1.15;
 /** How long a flick and a poke take (seconds). */
 const FLICK = 0.5,
   POKE = 0.6;
@@ -75,7 +82,11 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
   /** The emote playing, and how many seconds in. */
   let emote: { id: EmoteId; t: number } | null = null;
   /** What the hands are doing with the card, and how many seconds in. */
-  let hands: { kind: "idle" } | { kind: "placing"; t: number } | { kind: "adjusting"; t: number } = { kind: "idle" };
+  let hands:
+    | { kind: "idle" }
+    | { kind: "placing"; t: number }
+    | { kind: "adjusting"; t: number }
+    | { kind: "swapping"; t: number } = { kind: "idle" };
   /** A flick or poke going on, and how many seconds in. */
   let gesture: { kind: Gesture; t: number } | null = null;
   let talkTarget = 0,
@@ -108,7 +119,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           return;
         case "adjustCard":
           // squaring it up waits until it's been put down
-          if (hands.kind !== "placing") hands = { kind: "adjusting", t: 0 };
+          if (hands.kind !== "placing" && hands.kind !== "swapping") hands = { kind: "adjusting", t: 0 };
+          return;
+        case "swapCard":
+          hands = { kind: "swapping", t: 0 };
           return;
         case "flick":
         case "poke":
@@ -219,6 +233,21 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         armSpeed = 22;
         if (hands.t < 0.8) fiddle(hands.t, 0.8);
         else hands = { kind: "idle" };
+      } else if (hands.kind === "swapping") {
+        hands.t += dt;
+        const e = hands.t;
+        armSpeed = 26;
+        if (e < SWAP) {
+          // reach out to the felt and grab the card, hoist it up over the head for a big wind-up,
+          // then SLAP the new one down with the whole body behind it, and settle back
+          const reach = ease(e / SWAP_GRAB) * (1 - ease((e - SWAP_GRAB) / 0.12));
+          const hoist = ease((e - SWAP_GRAB) / 0.22) * (1 - ease((e - (SWAP_SLAP - 0.1)) / 0.1));
+          const slam = ease((e - (SWAP_SLAP - 0.1)) / 0.1) * (1 - ease((e - (SWAP - 0.3)) / 0.3));
+          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * reach + (-2.6 - REST_ARM_X) * hoist + (-1.55 - REST_ARM_X) * slam;
+          stretchR = 1 + 1.5 * reach + 0.35 * hoist + 1.45 * slam;
+          zR = 0.25 - 0.2 * reach + 0.1 * hoist - 0.2 * slam;
+          lean = 0.16 * reach - 0.08 * hoist + 0.24 * slam;
+        } else hands = { kind: "idle" };
       }
       // ---- gestures: the right arm flicks a chip off its thumb, or jabs at something on the felt
       if (gesture) {

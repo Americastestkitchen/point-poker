@@ -1,14 +1,14 @@
 // The leaderboard (popup "leaderboard"), opened from the coins in the top bar.
 // Players by chips (a crown for a leader with chips, you
 // highlighted, away players dimmed; the dealer can remove an away player, no confirm),
-// "Rounds played" newest first, and "📋 Copy for Jira": the latest result per ticket as
+// "Rounds played" newest first (with who switched cards after the reveal), and "📋 Copy for Jira": the latest result per ticket as
 // "KEY\tN pts\tSummary" lines through useGame().copy (an in-game dialog when the clipboard
 // says no). Rounds scroll in their own ScrollArea.
 import type { RoundResult } from "../../../../shared/protocol.ts";
 import { Button, cx, Dialog, ScrollArea } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
-import { boardRows, jiraExport, roundOutcome, roundsNewestFirst, type BoardRow } from "./model.ts";
+import { boardRows, jiraExport, roundOutcome, roundsNewestFirst, roundSwitches, type BoardRow } from "./model.ts";
 import s from "./LeaderboardDialog.module.css";
 
 export function LeaderboardDialog() {
@@ -100,6 +100,7 @@ function Row({ row, onRemove }: { row: BoardRow; onRemove: () => void }) {
 }
 
 function Round({ round }: { round: RoundResult }) {
+  const switched = roundSwitches(round);
   return (
     <li className={s.round} title={round.summary}>
       <span className={s.key}>{round.key}</span>
@@ -113,6 +114,15 @@ function Round({ round }: { round: RoundResult }) {
       <span className={cx(s.outcome, round.houseWon && s.house, !round.winners.length && s.nobody)}>
         {roundOutcome(round)}
       </span>
+      {switched && (
+        <span
+          className={s.switched}
+          title="Changed after the reveal"
+          aria-label={`Changed after the reveal: ${switched}`}
+        >
+          🔁 {switched}
+        </span>
+      )}
     </li>
   );
 }

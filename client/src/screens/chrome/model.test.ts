@@ -14,6 +14,7 @@ import {
   micTip,
   roundOutcome,
   roundsNewestFirst,
+  roundSwitches,
   walletWin,
 } from "./model.ts";
 
@@ -127,6 +128,22 @@ test("rounds read as before: house wins, winners and their share, or nobody play
   assert.deepEqual(
     roundsNewestFirst([round("A"), round("B")]).map((h) => h.key),
     ["B", "A"],
+  );
+});
+
+test("the rounds log says who switched cards after the reveal", () => {
+  assert.equal(roundSwitches(round("A")), null);
+  assert.equal(roundSwitches(round("A", { switched: [] })), null);
+  assert.equal(
+    roundSwitches(
+      round("A", {
+        switched: [
+          { name: "Ann", from: 3, to: 5 },
+          { name: "Bob", from: 2, to: 3 },
+        ],
+      }),
+    ),
+    "Ann 3 → 5 · Bob 2 → 3",
   );
 });
 

@@ -37,6 +37,8 @@ export type DockBody =
   | { t: "waiting"; text: string }
   /** Your hand while voting. */
   | { t: "vote"; cards: HandCard[] }
+  /** Your hand after the reveal, with everyone's votes on it: tap another card if they talked you round. */
+  | { t: "change"; cards: HandCard[] }
   /** The dealer picking (or changing) the final points. */
   | { t: "settle"; cards: HandCard[] }
   /** How everyone voted; empty when nobody did. */
@@ -126,6 +128,31 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
     case "settled": {
       const settled = room.phase === "settled";
       const final = room.finalPoints;
+      const mine = myVote ?? me?.vote ?? null;
+      if (!dealer && !settled && amVoter && mine !== null) {
+        // your card shows where you see it played, ahead of the server
+        const live = tally(playing.map((p) => (p.id === meId ? { ...p, vote: mine } : p)));
+        const was = me?.revealedVote ?? null;
+        return {
+          key,
+          title:
+            was !== null && was !== mine
+              ? [`You switched from ${was} to `, { strong: String(mine) }, " · tap another to switch again"]
+              : ["You played ", { strong: String(mine) }, " · talked round? Tap another card"],
+          body: {
+            t: "change",
+            cards: deck.map((value) => ({
+              value,
+              selected: value === mine,
+              dimmed: value !== mine,
+              suggested: false,
+              voters: live.get(value) ?? [],
+              press: value === mine ? null : { t: "vote", value },
+            })),
+          },
+          actions: [],
+        };
+      }
       if (!dealer) {
         const cards = deck
           .filter((v) => counts.has(v) || (settled && v === final))

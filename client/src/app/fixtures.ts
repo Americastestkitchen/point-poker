@@ -13,6 +13,7 @@ export function player(id: string, extra: Partial<PublicPlayer> = {}): PublicPla
     plays: true,
     hasVoted: false,
     vote: null,
+    revealedVote: null,
     chips: 0,
     lastWin: 0,
     ...extra,

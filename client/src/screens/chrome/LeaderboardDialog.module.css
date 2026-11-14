@@ -166,6 +166,14 @@
   overflow-wrap: anywhere;
   color: var(--pp-color-dim);
 }
+/* who switched cards after the reveal, on its own line under the round */
+.switched {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--pp-size-xs);
+  color: var(--pp-color-faint);
+}
 .house {
   color: var(--pp-color-ink);
 }

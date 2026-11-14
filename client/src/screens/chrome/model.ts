@@ -108,6 +108,12 @@ export function roundOutcome(h: Pick<RoundResult, "houseWon" | "winners" | "shar
   return h.winners.length ? `${names(h.winners)} +${h.share}` : "no cards played";
 }
 
+/** Who got talked round after the reveal: "Ann 3 → 5 · Bob 2 → 3", or null when nobody switched. */
+export function roundSwitches(h: Pick<RoundResult, "switched">): string | null {
+  if (!h.switched?.length) return null;
+  return h.switched.map((w) => `${w.name} ${w.from} → ${w.to}`).join(" · ");
+}
+
 /** Rounds played, newest first. */
 export const roundsNewestFirst = (history: readonly RoundResult[]) => history.toReversed();
 

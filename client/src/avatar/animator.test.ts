@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createAnimator, type Animator, type Pose } from "./animator.ts";
+import { createAnimator, SWAP_GRAB, SWAP_SLAP, type Animator, type Pose } from "./animator.ts";
 
 /** Runs the animator for `seconds` at 60fps and returns every pose. */
 function run(a: Animator, seconds: number, from = 0): Pose[] {
@@ -65,6 +65,23 @@ test("squaring up the card waits until it's been put down", () => {
   assert.equal(a.busyWithCard, false, "done at about 1.05s, not restarted by the adjust");
   a.play("adjustCard");
   a.play("placeCard"); // a new card takes over from the fiddle
+  run(a, 0.9);
+  assert.equal(a.busyWithCard, true);
+});
+
+test("swapping a card after the reveal reaches out, hoists it up, slaps it down and comes back", () => {
+  const a = still();
+  a.play("swapCard");
+  assert.equal(a.busyWithCard, true);
+  const poses = run(a, 1.2);
+  const at = (sec: number) => poses[Math.round(sec * 60) - 1]!.arms[1];
+  assert.ok(at(SWAP_GRAB).stretch > 1.4, "the right arm stretches out to grab the card");
+  assert.ok(at(SWAP_SLAP - 0.15).x < -2.2, "then it's hoisted up high");
+  assert.ok(at(SWAP_SLAP + 0.05).stretch > 1.4, "and slapped back down on the felt");
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "back at rest");
+  assert.equal(a.busyWithCard, false);
+  a.play("swapCard");
+  a.play("adjustCard"); // ignored: busy swapping
   run(a, 0.9);
   assert.equal(a.busyWithCard, true);
 });

@@ -21,6 +21,7 @@ export function viewFor(
     plays: isVoter(s, p),
     hasVoted: p.vote !== null,
     vote: showVotes || p.id === viewer ? p.vote : null,
+    revealedVote: showVotes ? p.revealedVote : null,
     chips: p.chips,
     lastWin: p.lastWin,
   }));

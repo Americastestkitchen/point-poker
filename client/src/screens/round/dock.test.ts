@@ -122,15 +122,48 @@ test("revealed: no favourite on a tie or a single vote", () => {
   assert.ok(cards(dock(one, "deb").body).every((c) => !c.suggested));
 });
 
-test("revealed: players see the spread of votes", () => {
+test("revealed: a voter keeps their hand, with everyone's votes on it, to switch if they're talked round", () => {
+  const room = withPlayers(revealed(), (p) => (p.id === "bob" ? { vote: 8 } : {}));
+  const d = dock(room, "ann", 5);
+  assert.equal(title(d), "You played 5 · talked round? Tap another card");
+  assert.equal(d.body?.t, "change");
+  const hand = d.body?.t === "change" ? d.body.cards : [];
+  assert.deepEqual(
+    hand.map((c) => [c.value, c.selected, c.voters.map((p) => p.id), c.press]),
+    [
+      [1, false, [], { t: "vote", value: 1 }],
+      [2, false, [], { t: "vote", value: 2 }],
+      [3, false, [], { t: "vote", value: 3 }],
+      [5, true, ["ann"], null],
+      [8, false, ["bob"], { t: "vote", value: 8 }],
+    ],
+  );
+  assert.deepEqual(d.actions, []);
+});
+
+test("revealed: your switch shows in your hand right away, and the title says what you had", () => {
+  const room = withPlayers(revealed(), (p) => (p.id === "ann" ? { revealedVote: 5, vote: 3 } : {}));
+  // the server already has 3; you've just tapped 8 and it hasn't answered yet
+  const d = dock(room, "ann", 8);
+  assert.equal(title(d), "You switched from 5 to 8 · tap another to switch again");
+  const hand = d.body?.t === "change" ? d.body.cards : [];
+  assert.deepEqual(
+    hand.find((c) => c.value === 8)?.voters.map((p) => p.id),
+    ["ann"],
+  );
+  assert.deepEqual(hand.find((c) => c.value === 3)?.voters, []);
+});
+
+test("revealed: players with no card down see the spread of votes", () => {
   const d = dock(
-    withPlayers(revealed(), (p) => (p.id === "bob" ? { vote: 8 } : {})),
+    withPlayers(revealed(), (p) =>
+      p.id === "bob" ? { vote: 8 } : p.id === "ann" ? { vote: null, hasVoted: false } : {},
+    ),
     "ann",
   );
   assert.equal(title(d), "Here's how everyone voted");
   assert.equal(d.body?.t, "spread");
   assert.deepEqual(d.body?.t === "spread" && d.body.cards.map((c) => [c.value, c.voters.map((p) => p.id), c.final]), [
-    [5, ["ann"], false],
     [8, ["bob"], false],
   ]);
   assert.deepEqual(d.actions, []);

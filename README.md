@@ -12,7 +12,8 @@ closest guess wins the pot.
 
 - **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Add a ticket (or an epic, to queue its
   children), reveal the cards, and pick the final points.
-- **Players:** open the invite link, pick a body, colour and hat, and click a card. Drag to
+- **Players:** open the invite link, pick a body, colour and hat, and click a card. After the reveal you
+  can swap it if the discussion talks you round, until the dealer picks the points. Drag to
   look around, press Z X C V to emote, click someone to throw a chip, and click the duck.
 
 ## Quick start
