@@ -183,13 +183,23 @@ test("a failed action nobody waits on becomes a toast; an item the server refuse
 test("small talk goes out as effects", () => {
   const { sent, events, actions } = setup();
   actions.emote("wave");
+  actions.emote("laugh", "bob");
   actions.gaze(0.2, -0.1);
   actions.talk(0.5);
   actions.openTicket();
   assert.deepEqual(sent, [
     { kind: "emote", emote: "wave" },
+    // an answer says who it's for
+    { kind: "emote", emote: "laugh", to: "bob" },
     { kind: "gaze", yaw: 0.2, pitch: -0.1 },
     { kind: "talk", level: 0.5 },
   ]);
   assert.deepEqual(events, [{ t: "openTicket" }]);
+});
+
+test("the emote wheel is a popup over the table", () => {
+  const { sent, store, actions } = setup();
+  actions.openEmotes();
+  assert.equal(store.getState().ui.popup, "emotes");
+  assert.deepEqual(sent, [], "opening it sends nothing");
 });

@@ -17,6 +17,23 @@ export interface Labels {
   apply(emote: Pose["emote"]): void;
 }
 
+/** An emoji in a little white bubble, always facing the camera. Whoever makes one frees it with `dropEmoji`. */
+export function emojiBubble(emoji: string): THREE.Sprite {
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: bubbleTexture(emoji), depthTest: false, transparent: true }),
+  );
+  sprite.scale.set(0.4, 0.4, 1);
+  sprite.renderOrder = 11;
+  return sprite;
+}
+
+/** Takes an emoji bubble out of the scene and frees its texture. */
+export function dropEmoji(sprite: THREE.Sprite) {
+  sprite.removeFromParent();
+  sprite.material.map?.dispose();
+  sprite.material.dispose();
+}
+
 export function createLabels(parent: THREE.Object3D): Labels {
   const tag = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true }));
   tag.scale.set(0.9, 0.28, 1);
@@ -58,13 +75,9 @@ export function createLabels(parent: THREE.Object3D): Labels {
       }
     },
     showEmoji(text) {
-      if (emoji) parent.remove(emoji);
-      emoji = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: bubbleTexture(text), depthTest: false, transparent: true }),
-      );
-      emoji.scale.set(0.4, 0.4, 1);
+      if (emoji) dropEmoji(emoji);
+      emoji = emojiBubble(text);
       emoji.position.y = 1.6;
-      emoji.renderOrder = 11;
       parent.add(emoji);
     },
     apply(emote) {
@@ -73,8 +86,7 @@ export function createLabels(parent: THREE.Object3D): Labels {
         emoji.position.y = 1.6 + emote.t * 0.25;
         emoji.material.opacity = Math.max(0, 1 - Math.max(0, emote.t - 1.4) * 2);
       } else {
-        parent.remove(emoji);
-        emoji.material.map?.dispose();
+        dropEmoji(emoji);
         emoji = null;
       }
     },

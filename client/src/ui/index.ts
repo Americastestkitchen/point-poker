@@ -17,6 +17,7 @@ export { Toggle } from "./kit/Toggle.tsx";
 export { Slider } from "./kit/Slider.tsx";
 export { Dialog, type DialogProps } from "./kit/Dialog.tsx";
 export { ConfirmDialog, type ConfirmDialogProps } from "./kit/ConfirmDialog.tsx";
+export { Wheel, type WheelItem, type WheelProps } from "./kit/Wheel.tsx";
 export { TextField, type TextFieldProps } from "./kit/TextField.tsx";
 export { ScrollArea, type ScrollAreaProps } from "./kit/ScrollArea.tsx";
 export { Spinner } from "./kit/Spinner.tsx";

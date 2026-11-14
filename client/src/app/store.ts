@@ -57,7 +57,7 @@ export interface AppState {
  * The popups over the table. One at a time: opening one closes the other. A confirm
  * asked from inside one stays local to it (a nested dialog), not a popup of its own.
  */
-export const POPUPS = ["menu", "options", "help", "leaderboard", "dealer", "picker", "ticket"] as const;
+export const POPUPS = ["menu", "options", "help", "leaderboard", "dealer", "picker", "ticket", "emotes"] as const;
 export type Popup = (typeof POPUPS)[number];
 
 const initial: AppState = {

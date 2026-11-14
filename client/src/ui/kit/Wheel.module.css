@@ -1,0 +1,117 @@
+/* A wheel of things to pick from, over the game: a ring of round items around a hub. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--pp-layer-dialog) + 1);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--pp-color-backdrop) 70%, transparent),
+    color-mix(in srgb, var(--pp-color-backdrop) 35%, transparent) 60%
+  );
+  font-family: var(--pp-font-body);
+  color: var(--pp-color-ink);
+  animation: fade var(--pp-motion-base) ease-out;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.wheel {
+  --wheel: min(78vmin, 340px);
+  --item: calc(var(--wheel) * 0.21);
+  position: relative;
+  width: var(--wheel);
+  aspect-ratio: 1;
+  outline: none;
+  border-radius: var(--pp-radius-pill);
+  /* a ring: the panel colour between the hub and the rim, nothing in the middle */
+  background: radial-gradient(
+    closest-side,
+    transparent 30%,
+    var(--pp-color-panel) 31%,
+    var(--pp-color-panel) 99%,
+    transparent 100%
+  );
+  box-shadow: var(--pp-shadow-panel);
+  animation: open var(--pp-motion-slow) var(--pp-motion-spring);
+}
+@keyframes open {
+  from {
+    transform: scale(0.6) rotate(-25deg);
+    opacity: 0;
+  }
+}
+
+.item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--item);
+  aspect-ratio: 1;
+  margin: calc(var(--item) / -2);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: inherit;
+  font-size: calc(var(--item) * 0.52);
+  line-height: 1;
+  color: inherit;
+  background: linear-gradient(var(--pp-color-button), var(--pp-color-button-low));
+  border: var(--pp-border-soft);
+  border-bottom-color: var(--pp-color-shade);
+  border-radius: var(--pp-radius-pill);
+  box-shadow: var(--pp-shadow-button);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  /* out along its own direction, then turned back upright */
+  transform: rotate(var(--angle)) translateY(calc(var(--wheel) * -0.335)) rotate(calc(-1 * var(--angle)));
+  transition:
+    scale var(--pp-motion-base) var(--pp-motion-spring),
+    background var(--pp-motion-base),
+    box-shadow var(--pp-motion-base);
+}
+.active {
+  background: linear-gradient(var(--pp-color-gold-hi), var(--pp-color-gold-mid) 55%, var(--pp-color-gold-low));
+  border-color: var(--pp-color-gold-hi);
+  box-shadow: var(--pp-shadow-button-gold), var(--pp-glow-gold);
+  scale: 1.22;
+  z-index: 1;
+}
+
+.hub {
+  position: absolute;
+  inset: 31%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--pp-space-1);
+  text-align: center;
+  font-size: var(--pp-size-sm);
+  color: var(--pp-color-dim);
+  /* what's put in the hub can be pressed; the hub's own empty space lets the pointer through */
+  pointer-events: none;
+}
+.hub > * {
+  pointer-events: auto;
+}
+.name {
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-strong);
+  font-size: var(--pp-size-md);
+  color: var(--pp-color-ink);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel {
+    animation: none;
+  }
+  .item {
+    transition: none;
+  }
+}

@@ -81,12 +81,14 @@ test("server effects go on the event stream; nonsense is ignored", () => {
   assert.ok(socket);
   socket.open();
   socket.receive({ t: "fx", from: "bob", fx: { kind: "emote", emote: "wave" } });
+  socket.receive({ t: "fx", from: "bob", fx: { kind: "emote", emote: "party", to: "ann" } });
   socket.receive({ t: "fx", from: "bob", fx: { kind: "emote", emote: "moonwalk" } });
   socket.receive({ t: "fx", from: "bob", fx: { kind: "flick", to: "ann" } });
   socket.receive({ t: "fx", from: "bob", fx: { kind: "adjust" } });
   socket.receive({ t: "toast", text: "hi" });
   assert.deepEqual(seen, [
     { t: "fx", from: "bob", fx: { kind: "emote", emote: "wave" } },
+    { t: "fx", from: "bob", fx: { kind: "emote", emote: "party", to: "ann" } },
     { t: "fx", from: "bob", fx: { kind: "flick", to: "ann" } },
     { t: "fx", from: "bob", fx: { kind: "adjust" } },
     { t: "toast", text: "hi" },

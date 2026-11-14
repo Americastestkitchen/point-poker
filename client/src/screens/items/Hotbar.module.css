@@ -21,6 +21,14 @@
   pointer-events: auto;
 }
 
+/* between the emote slot and the hand items */
+.rule {
+  align-self: center;
+  width: 60%;
+  height: 1px;
+  background: var(--pp-color-edge-soft);
+}
+
 .cell {
   position: relative;
   display: flex;
@@ -143,6 +151,10 @@
   .bar {
     flex-direction: row;
     padding: var(--pp-space-1) var(--pp-space-2);
+  }
+  .rule {
+    width: 1px;
+    height: 60%;
   }
   .caption {
     justify-items: center;

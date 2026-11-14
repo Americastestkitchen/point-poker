@@ -1,0 +1,130 @@
+/* The emote slot at the top of the hotbar, and the nudge that pops out beside it when someone emotes. */
+.wrap {
+  position: relative;
+  display: flex;
+}
+.slot.slot {
+  position: relative;
+  width: 44px;
+  font-size: var(--pp-size-xl);
+}
+/* which key opens the wheel: a little badge on the slot's rim (no keys on a touch screen) */
+.key {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  font-family: var(--pp-font-body);
+  font-size: 10px;
+  font-weight: var(--pp-weight-strong);
+  line-height: 1;
+  color: var(--pp-color-dim);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-pill);
+  pointer-events: none;
+}
+/* someone just emoted: the slot hops for attention while you can still answer */
+.asking.asking {
+  border-color: var(--pp-color-gold);
+  box-shadow: var(--pp-shadow-button), var(--pp-glow-focus);
+  animation: hop 0.9s ease-in-out infinite;
+}
+@keyframes hop {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  30% {
+    translate: 0 -5px;
+  }
+  60% {
+    translate: 0 1px;
+  }
+}
+
+.nudge {
+  position: absolute;
+  right: calc(100% + var(--pp-space-3));
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: baseline;
+  gap: var(--pp-space-2);
+  padding: var(--pp-space-1) var(--pp-space-3);
+  font-size: var(--pp-size-sm);
+  color: var(--pp-color-dim);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-panel);
+  border-radius: var(--pp-radius-md);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: nudge 6s ease-out both;
+}
+.nudge b {
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-strong);
+  font-size: var(--pp-size-md);
+  color: var(--pp-color-ink);
+}
+@keyframes nudge {
+  0% {
+    opacity: 0;
+    scale: 0.8;
+  }
+  4%,
+  88% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+/* who the wheel's emote is for, in its hub */
+.to.to {
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 var(--pp-space-2);
+  font-size: var(--pp-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* phones in portrait: the hotbar is a row, so the nudge goes over the slot */
+@media (max-width: 760px) {
+  .nudge {
+    right: auto;
+    left: 0;
+    top: auto;
+    bottom: calc(100% + var(--pp-space-3));
+    translate: 0 0;
+  }
+}
+/* phones on their side: smaller slots */
+@media (max-height: 520px) and (min-width: 761px) {
+  .slot.slot {
+    width: 34px;
+    font-size: var(--pp-size-lg);
+  }
+  .key {
+    display: none;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .key {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .asking.asking {
+    animation: none;
+  }
+}

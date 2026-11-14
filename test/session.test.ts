@@ -365,6 +365,13 @@ test("a whole session over real sockets, including a restart", async (t) => {
   await assert.rejects(deb.session.request({ t: "use", item: "hammer", target: bob.id }), { message: "Not so fast" });
   await deb.session.request({ t: "use", item: "plane", target: bob.id });
 
+  // ---- an emote can answer someone's: everyone sees who it's for
+  bob.actions.emote("thumbs", deb.id);
+  await deb.until(
+    (p) => p.events.some((e) => e.t === "fx" && e.from === bob.id && e.fx.kind === "emote" && e.fx.to === deb.id),
+    "deb gets bob's thumbs up",
+  );
+
   // ---- a tab opened before hand items still flicks chips: everyone sees a coin, and old tabs the chip
   await reloaded.session.request({ t: "flick", target: bob.id });
   await assert.rejects(reloaded.session.request({ t: "flick", target: bob.id }), { message: "Not so fast" });

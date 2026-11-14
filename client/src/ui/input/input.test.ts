@@ -5,6 +5,7 @@ import { direction, intentOf } from "./intent.ts";
 import { countAt, fraction, snap, valueAt } from "./range.ts";
 import { first, step } from "./roving.ts";
 import { cursorOf, normalize, typeInto } from "./slots.ts";
+import { wedgeAngle, wedgeAt } from "./wheel.ts";
 
 test("keys become intents; shortcuts are left alone", () => {
   assert.equal(intentOf({ key: "ArrowUp" }), "up");
@@ -108,4 +109,25 @@ test("the coin counter rolls from the old value to the new one", () => {
   assert.equal(countAt(200, 100, 1), 100, "counts down too");
   assert.equal(countAt(3, 6.5, 1), 6.5, "a split pot's half coin is where it stops");
   assert.equal(countAt(3, 6.5, 0.5), Math.round(countAt(3, 6.5, 0.5)), "whole numbers on the way");
+});
+
+test("a wheel's items stand evenly round it, the first at the top, and each owns the wedge around it", () => {
+  assert.deepEqual(
+    [0, 1, 2, 3].map((i) => wedgeAngle(i, 4)),
+    [0, 90, 180, 270],
+  );
+  // y grows downwards on screen: straight up is the first item, then clockwise
+  assert.equal(wedgeAt(0, -100, 8, 20), 0, "up");
+  assert.equal(wedgeAt(100, 0, 8, 20), 2, "right");
+  assert.equal(wedgeAt(0, 100, 8, 20), 4, "down");
+  assert.equal(wedgeAt(-100, 0, 8, 20), 6, "left");
+  assert.equal(wedgeAt(70, -70, 8, 20), 1, "up and to the right");
+  assert.equal(wedgeAt(-10, -100, 8, 20), 0, "a little left of straight up is still the first");
+  assert.equal(wedgeAt(-30, -100, 8, 20), 0);
+  assert.equal(wedgeAt(-60, -100, 8, 20), 7, "further round, the last");
+});
+
+test("the mouse picks nothing from inside a wheel's hub, or from an empty wheel", () => {
+  assert.equal(wedgeAt(5, -8, 8, 20), -1);
+  assert.equal(wedgeAt(0, -100, 0, 20), -1);
 });
