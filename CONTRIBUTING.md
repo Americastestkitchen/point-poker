@@ -85,10 +85,9 @@ tabs keep the old client until they reload, so keep both compatible (see [AGENTS
   `FLY_API_TOKEN_PREVIEW` can create and delete apps in the Fly org, which previews need.
   `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` and `JIRA_SITES` are copied to dev, production
   and each preview, and `TOKEN_KEY_PROD` to production
-  (without them, previews fall back to `HOST_PASSCODE` and hand-typed tickets). The repository
-  variable `PREVIEW_SIGN_IN=own` makes previews use their own callback URL instead of the dev
-  site's relay; add `https://point-poker-pr-<number>.fly.dev/auth/jira/callback` to the app then.
-- **Local:** use `.env.local` (gitignored) for `npm start`.
+  (without them, previews fall back to `HOST_PASSCODE` and hand-typed tickets).
+- **Local:** use `.env.local` (gitignored) for `npm start` and `npm run dev:server`. See
+  [Jira locally](#jira-locally).
 
 ## Jira sign-in
 
@@ -104,14 +103,36 @@ The app lives at [developer.atlassian.com/console/myapps](https://developer.atla
   `read:sprint:jira-software`, `read:board-scope:jira-software`; User identity API `read:me`.
   `offline_access` isn't in the console: the server asks for it. Adding a scope later makes every
   dealer sign in again; the list is `SCOPES` in `server/auth/atlassian.ts`.
-- **Authorization → callback URLs:** `https://point-poker.fly.dev/auth/jira/callback`,
-  `https://point-poker-dev.fly.dev/auth/jira/callback` and `http://localhost:8787/auth/jira/callback`.
-  Atlassian only accepts exact URLs, so PR previews sign in through the dev site: a preview sends
-  `ATLASSIAN_CALLBACK_URL` (the dev site's) to Atlassian, and the dev site passes the answer on to
-  any address matching `ATLASSIAN_RELAY` (set in `fly.dev.toml`). Only a one-time code passes
-  through; the preview trades it for tokens itself. To sign in on another address (like a
-  Tailscale one), add its callback URL to the app.
+- **Authorization → callback URLs:** only `https://point-poker.fly.dev/auth/jira/callback` and
+  `https://point-poker-dev.fly.dev/auth/jira/callback`. Atlassian only accepts exact URLs, so PR
+  previews and local runs sign in through the dev site: they send `ATLASSIAN_CALLBACK_URL` (the
+  dev site's) to Atlassian, and the dev site passes the answer on to any address matching
+  `ATLASSIAN_RELAY` in `fly.dev.toml`: previews, `http://localhost:<port>` and `https://*.ts.net`
+  addresses. Only a one-time code passes through, and trading it for tokens takes the client
+  secret, so a new address means widening `ATLASSIAN_RELAY` (and its test in
+  `test/relay.test.ts`), never adding a callback to the app.
 - **Distribution:** sharing on, or only the app's owner can sign in.
+
+### Jira locally
+
+Most changes don't need Jira sign-in. Leave the Atlassian variables out of `.env.local`, and
+opening a table asks for nothing (or for `HOST_PASSCODE`, if you set one). Add
+`JIRA_BASE_URL`, `JIRA_EMAIL` and `JIRA_API_TOKEN` (your own
+[API token](https://id.atlassian.com/manage-profile/security/api-tokens)) to load real tickets.
+That token only ever reads: never write to Jira with it.
+
+To work on sign-in itself, sign in through the dev site like a preview does:
+
+```sh
+ATLASSIAN_CLIENT_ID=...
+ATLASSIAN_CLIENT_SECRET=...
+ATLASSIAN_CALLBACK_URL=https://point-poker-dev.fly.dev/auth/jira/callback
+JIRA_SITES=bostoncommonpress.atlassian.net
+TOKEN_KEY=any-long-random-string   # optional: stay signed in across restarts (kept in .data/)
+```
+
+This works on `npm start` (port 8787), `npm run dev` (Vite's port) and a Tailscale address,
+because the dev site passes the sign-in back to wherever it started.
 
 ## Handy commands
 
