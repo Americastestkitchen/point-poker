@@ -8,6 +8,7 @@ export interface EnvironmentInfo {
 
 export const ENVIRONMENTS = [
   { id: "basement", name: "The Backlog Basement" },
+  { id: "beach", name: "Async Atoll" },
 ] as const satisfies readonly EnvironmentInfo[];
 export type EnvironmentId = (typeof ENVIRONMENTS)[number]["id"];
 export const ENVIRONMENT_IDS = idsOf(ENVIRONMENTS);

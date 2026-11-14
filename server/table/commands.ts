@@ -185,6 +185,7 @@ export const COMMANDS = [
     move: "anytime",
     input: { environment: z.enum(ENVIRONMENT_IDS) },
     run({ s, changed, notice }, me, { environment }) {
+      if (s.environment === environment) return;
       s.environment = environment;
       notice(`🧳 The dealer moved the table to ${ENVIRONMENT[environment].name}`, { except: me.id });
       changed();

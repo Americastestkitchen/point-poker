@@ -1,10 +1,12 @@
 // The dealer's control panel (popup "dealer"), opened from the top bar.
 // "This round": Restart vote, Skip ticket, Cancel round (asks first), Pick a ticket; each one
-// closes the panel. The players with their state and a Kick (asks first), and "I play a card
-// too". What shows and what's enabled is decided in panel.ts. Dealer only: it follows the role.
+// closes the panel. The players with their state and a Kick (asks first), "I play a card too",
+// and which room the table is in. What shows and what's enabled is decided in panel.ts. Dealer
+// only: it follows the role.
 // Confirms are local dialogs inside this one, not popups.
 import { useEffect, useRef, useState } from "react";
-import { Button, ConfirmDialog, Dialog, ScrollArea, Toggle } from "../../ui/index.ts";
+import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../../../shared/catalog/environments.ts";
+import { Button, Carousel, ConfirmDialog, Dialog, ScrollArea, Toggle } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
 import {
@@ -131,6 +133,14 @@ function PanelBody() {
           </ScrollArea>
         )}
       </Section>
+
+      <Carousel
+        label="🧳 The table is in"
+        options={ENVIRONMENT_IDS}
+        value={room.environment}
+        onChange={(id) => dealerDo(actions.dealer.moveTo(id))}
+        render={(id) => ENVIRONMENT[id].name}
+      />
 
       <Toggle
         label="🃏 I play a card too"

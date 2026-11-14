@@ -26,8 +26,8 @@ function fakeCanvas() {
 }
 Object.assign(globalThis, { document: { createElement: fakeCanvas }, Path2D: function Path2D() {} });
 
-/** How big each prop may be (metres, its longest side), so it stays out of the cards' way. */
-const BUDGET = { statusScreen: 2, sign: 3, squeaky: 0.35 } as const;
+/** How big each prop may be (metres, its longest side), so it stays out of the cards' way. A screen or sign may stand on the floor. */
+const BUDGET = { statusScreen: 3, sign: 3, squeaky: 0.35 } as const;
 /** Every point and spot light costs every material on screen; only one may cast shadows. */
 const MAX_LIGHTS = 6;
 
