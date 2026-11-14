@@ -6,21 +6,16 @@ import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import { oneShot, wobble } from "../kit/animate.ts";
 import { bubble } from "../kit/bubble.ts";
+import { box, cylinder, plane, put, sphere } from "../kit/build.ts";
 import { liveCanvas } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
 import { chrome, ROOM } from "./room.ts";
 import { RED, TEAL } from "./textures.ts";
 
 /** Puts an egg against the wall at x = -5 (behind the dealer), facing into the room. */
-function onBackWall(o: THREE.Object3D, z: number, y: number) {
-  o.position.set(-ROOM.x + 0.03, y, z);
-  o.rotation.y = Math.PI / 2;
-}
+const onBackWall = (o: THREE.Object3D, z: number, y: number) => put(o, -ROOM.x + 0.03, y, z, Math.PI / 2);
 /** Puts an egg against the wall at x = +5 (behind the sign), facing the dealer. */
-function onFarWall(o: THREE.Object3D, z: number, y: number) {
-  o.position.set(ROOM.x - 0.03, y, z);
-  o.rotation.y = -Math.PI / 2;
-}
+const onFarWall = (o: THREE.Object3D, z: number, y: number) => put(o, ROOM.x - 0.03, y, z, -Math.PI / 2);
 
 const SPECIALS = [
   ["Spaghetti Code", "5.99"],
@@ -32,8 +27,7 @@ const CHEF_SAYS = ["Chef's pick!", "Ooh, good choice", "Comes with tests (no)", 
 
 /** The chalkboard of specials. Click it and chef circles one. */
 export function specialsBoard(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
-  const g = new THREE.Group();
-  onBackWall(g, -2.55, 1.95);
+  const g = onBackWall(new THREE.Group(), -2.55, 1.95);
   const W = 512,
     H = 448;
   const c = liveCanvas(W, H);
@@ -71,12 +65,9 @@ export function specialsBoard(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) 
     c.redraw();
   };
   draw();
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.31), new THREE.MeshBasicMaterial({ map: c.texture }));
-  board.position.z = 0.03;
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.64, 1.45, 0.05), toon("#8a5a2b"));
-  const swing = new THREE.Group(); // hangs from a nail at the top
-  swing.position.y = 0.72;
-  board.position.y = frame.position.y = -0.72;
+  const board = put(plane(1.5, 1.31, new THREE.MeshBasicMaterial({ map: c.texture })), 0, -0.72, 0.03);
+  const frame = put(box(1.64, 1.45, 0.05, toon("#8a5a2b")), 0, -0.72, 0);
+  const swing = put(new THREE.Group(), 0, 0.72, 0); // hangs from a nail at the top
   swing.add(frame, board);
   g.add(swing);
   const say = bubble(g, 1.6, 1.0);
@@ -100,8 +91,7 @@ export function specialsBoard(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) 
 
 /** "Days since last hotfix: 0". Click it and it makes it to 1, briefly. */
 export function hotfixSign(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
-  const g = new THREE.Group();
-  onFarWall(g, 2.5, 1.9);
+  const g = onFarWall(new THREE.Group(), 2.5, 1.9);
   const W = 320,
     H = 256;
   const c = liveCanvas(W, H);
@@ -123,9 +113,8 @@ export function hotfixSign(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
     c.redraw();
   };
   draw(0);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.72), new THREE.MeshBasicMaterial({ map: c.texture }));
-  sign.position.z = 0.02;
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.78, 0.03), toon("#333"));
+  const sign = put(plane(0.9, 0.72, new THREE.MeshBasicMaterial({ map: c.texture })), 0, 0, 0.02);
+  const back = box(0.96, 0.78, 0.03, toon("#333"));
   g.add(back, sign);
   const say = bubble(g, 1.4, 0.72);
   const shake = wobble(30, 3);
@@ -159,23 +148,16 @@ export function hotfixSign(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
 
 /** The order bell on the kitchen pass. Ding! */
 export function orderBell(s: THREE.Group, { pick, onFrame, sound, anchors }: EnvCtx) {
-  const g = new THREE.Group();
   // on the pass shelf, to the right of the order slip (as the dealer turns round)
-  g.position.set(-ROOM.x + 0.25, 1.18, anchors.statusScreen.position.z - 1.0);
-  g.rotation.y = Math.PI / 2;
+  const g = put(new THREE.Group(), -ROOM.x + 0.25, 1.18, anchors.statusScreen.position.z - 1.0, Math.PI / 2);
   g.scale.setScalar(1.6);
   const brass = new THREE.MeshStandardMaterial({ color: "#e0b24a", metalness: 0.6, roughness: 0.25 });
   const shine = chrome();
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.025, 16), toon("#2a2a2a"));
-  base.position.y = 0.0125;
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.065, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), brass);
-  dome.position.y = 0.025;
-  const plunger = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.04, 6), shine);
-  plunger.position.y = 0.105;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), shine);
-  knob.position.y = 0.128;
+  const base = put(cylinder(0.075, 0.08, 0.025, toon("#2a2a2a"), 16), 0, 0.0125, 0);
+  const domeGeo = new THREE.SphereGeometry(0.065, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const dome = put(new THREE.Mesh(domeGeo, brass), 0, 0.025, 0);
   const press = new THREE.Group();
-  press.add(plunger, knob);
+  press.add(put(cylinder(0.008, 0.008, 0.04, shine, 6), 0, 0.105, 0), put(sphere(0.014, shine, 8, 6), 0, 0.128, 0));
   g.add(base, dome, press);
   const say = bubble(g, 0.8, 0.35);
   const ring = wobble(40, 5);
@@ -198,16 +180,12 @@ export function orderBell(s: THREE.Group, { pick, onFrame, sound, anchors }: Env
 
 /** The pie case on the counter, one cherry slice left, labelled MVP. Eat it and it comes back. */
 export function pieCase(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
-  const g = new THREE.Group();
-  g.position.set(-3.0, 1.01, -ROOM.z + 0.4);
+  const g = put(new THREE.Group(), -3.0, 1.01, -ROOM.z + 0.4);
   g.scale.setScalar(1.4);
   const shine = chrome();
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.03, 20), shine);
-  stand.position.y = 0.015;
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.08, 10), shine);
-  stem.position.y = 0.06;
-  const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.02, 20), toon("#f4f1ea"));
-  plate.position.y = 0.11;
+  const stand = put(cylinder(0.24, 0.26, 0.03, shine, 20), 0, 0.015, 0);
+  const stem = put(cylinder(0.03, 0.05, 0.08, shine, 10), 0, 0.06, 0);
+  const plate = put(cylinder(0.25, 0.22, 0.02, toon("#f4f1ea"), 20), 0, 0.11, 0);
   const dome = new THREE.Mesh(
     new THREE.SphereGeometry(0.26, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
     new THREE.MeshStandardMaterial({
@@ -218,11 +196,8 @@ export function pieCase(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
       depthWrite: false,
     }),
   );
-  const lid = new THREE.Group();
-  lid.position.y = 0.12;
-  const handle = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), shine);
-  handle.position.y = 0.265;
-  lid.add(dome, handle);
+  const lid = put(new THREE.Group(), 0, 0.12, 0);
+  lid.add(dome, put(sphere(0.025, shine, 8, 6), 0, 0.265, 0));
   // the slice: a wedge of crust with cherry showing at the sides
   const wedge = new THREE.Shape();
   wedge.moveTo(0, 0);
@@ -232,23 +207,18 @@ export function pieCase(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
   const sliceGeo = new THREE.ExtrudeGeometry(wedge, { depth: 0.06, bevelEnabled: false, curveSegments: 4 });
   sliceGeo.rotateX(-Math.PI / 2);
   sliceGeo.translate(-0.09, 0, 0);
-  const slice = new THREE.Mesh(sliceGeo, [toon("#e8b468"), toon("#b31b2b")]);
-  slice.position.set(0, 0.12, 0.02);
-  slice.rotation.y = 0.5;
-  const tent = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.12, 0.06),
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(128, 64, (x) => {
-        x.fillStyle = "#fff";
-        x.fillRect(0, 0, 128, 64);
-        x.fillStyle = "#333";
-        x.font = `bold 40px ${FONT}`;
-        x.textAlign = "center";
-        x.fillText("MVP", 64, 48);
-      }),
+  const slice = put(new THREE.Mesh(sliceGeo, [toon("#e8b468"), toon("#b31b2b")]), 0, 0.12, 0.02, 0.5);
+  const label = new THREE.MeshBasicMaterial({
+    map: canvasTex(128, 64, (x) => {
+      x.fillStyle = "#fff";
+      x.fillRect(0, 0, 128, 64);
+      x.fillStyle = "#333";
+      x.font = `bold 40px ${FONT}`;
+      x.textAlign = "center";
+      x.fillText("MVP", 64, 48);
     }),
-  );
-  tent.position.set(0.02, 0.19, 0.12);
+  });
+  const tent = put(plane(0.12, 0.06, label), 0.02, 0.19, 0.12);
   tent.rotation.x = -0.3;
   g.add(stand, stem, plate, slice, tent, lid);
   const say = bubble(g, 0.8, 0.55);
@@ -289,82 +259,62 @@ const SAME_SONG = ["New song!", "...it's the same song", "Still the same song", 
 
 /** The jukebox in the corner. Change the song all you like. */
 export function jukebox(s: THREE.Group, { pick, onFrame, sound }: EnvCtx) {
-  const g = new THREE.Group();
   // in the far corner by the counter, angled at the table
-  g.position.set(ROOM.x - 0.45, 0, -2.75);
-  g.rotation.y = -Math.PI / 2 + 0.45;
+  const g = put(new THREE.Group(), ROOM.x - 0.45, 0, -2.75, -Math.PI / 2 + 0.45);
   const size = 1.15;
   const wood = toon("#8a3a1d");
   const gold = new THREE.MeshStandardMaterial({ color: "#ffb02e", metalness: 0.5, roughness: 0.3 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.05, 0.5), wood);
-  body.position.y = 0.525;
+  const body = put(box(0.8, 1.05, 0.5, wood), 0, 0.525, 0);
   body.castShadow = true;
-  const arch = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.5, 20, 1, false, -Math.PI / 2, Math.PI), wood);
+  const archGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 20, 1, false, -Math.PI / 2, Math.PI);
+  const arch = put(new THREE.Mesh(archGeo, wood), 0, 1.05, 0);
   arch.rotation.x = Math.PI / 2;
-  arch.position.y = 1.05;
-  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.025, 6, 20, Math.PI), gold);
-  trim.position.set(0, 1.05, 0.26);
-  const glass = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.5, 0.375),
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(256, 192, (x) => {
-        x.fillStyle = "#ffe7a6";
-        x.fillRect(0, 0, 256, 192);
-        x.fillStyle = "#8a3a1d";
-        x.font = `bold 22px ${FONT}`;
-        x.textAlign = "center";
-        x.fillText("NOW PLAYING", 128, 30);
-        x.font = `bold 20px ${FONT}`;
-        x.fillText("“Deploy Me Tender”", 128, 182);
-      }),
+  const trim = put(new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.025, 6, 20, Math.PI), gold), 0, 1.05, 0.26);
+  const nowPlaying = new THREE.MeshBasicMaterial({
+    map: canvasTex(256, 192, (x) => {
+      x.fillStyle = "#ffe7a6";
+      x.fillRect(0, 0, 256, 192);
+      x.fillStyle = "#8a3a1d";
+      x.font = `bold 22px ${FONT}`;
+      x.textAlign = "center";
+      x.fillText("NOW PLAYING", 128, 30);
+      x.font = `bold 20px ${FONT}`;
+      x.fillText("“Deploy Me Tender”", 128, 182);
     }),
-  );
-  glass.position.set(0, 1.03, 0.255);
-  const record = new THREE.Mesh(
-    new THREE.CircleGeometry(0.115, 24),
-    new THREE.MeshBasicMaterial({
-      map: canvasTex(128, 128, (x) => {
-        x.fillStyle = "#151515";
+  });
+  const glass = put(plane(0.5, 0.375, nowPlaying), 0, 1.03, 0.255);
+  const vinyl = new THREE.MeshBasicMaterial({
+    map: canvasTex(128, 128, (x) => {
+      x.fillStyle = "#151515";
+      x.beginPath();
+      x.arc(64, 64, 63, 0, Math.PI * 2);
+      x.fill();
+      x.strokeStyle = "#3a3a3a";
+      x.lineWidth = 2;
+      for (const r of [24, 36, 48, 56]) {
         x.beginPath();
-        x.arc(64, 64, 63, 0, Math.PI * 2);
-        x.fill();
-        x.strokeStyle = "#3a3a3a";
-        x.lineWidth = 2;
-        for (const r of [24, 36, 48, 56]) {
-          x.beginPath();
-          x.arc(64, 64, r, 0, Math.PI * 2);
-          x.stroke();
-        }
-        x.fillStyle = RED;
-        x.beginPath();
-        x.arc(64, 64, 16, 0, Math.PI * 2);
-        x.fill();
-        x.fillStyle = "#fff";
-        x.fillRect(61, 50, 6, 10);
-      }),
+        x.arc(64, 64, r, 0, Math.PI * 2);
+        x.stroke();
+      }
+      x.fillStyle = RED;
+      x.beginPath();
+      x.arc(64, 64, 16, 0, Math.PI * 2);
+      x.fill();
+      x.fillStyle = "#fff";
+      x.fillRect(61, 50, 6, 10);
     }),
-  );
-  record.position.set(0, 1.035, 0.258);
+  });
+  const record = put(new THREE.Mesh(new THREE.CircleGeometry(0.115, 24), vinyl), 0, 1.035, 0.258);
   // the light-up bars, which cycle colours
   const bars = [0, 1, 2].map((i) => {
-    const bar = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.05, 0.02),
-      new THREE.MeshBasicMaterial({ color: "#ff3fa4" }),
-    );
-    bar.position.set(0, 0.72 - i * 0.1, 0.255);
+    const bar = put(box(0.6, 0.05, 0.02, new THREE.MeshBasicMaterial({ color: "#ff3fa4" })), 0, 0.72 - i * 0.1, 0.255);
     g.add(bar);
     return bar.material;
   });
-  const grille = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.32), toon("#3a1a0c"));
-  grille.position.set(0, 0.3, 0.255);
-  for (const side of [-1, 1]) {
-    const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.0, 0.06), gold);
-    pillar.position.set(side * 0.37, 0.55, 0.24);
-    g.add(pillar);
-  }
+  const grille = put(plane(0.56, 0.32, toon("#3a1a0c")), 0, 0.3, 0.255);
+  for (const side of [-1, 1]) g.add(put(box(0.06, 1.0, 0.06, gold), side * 0.37, 0.55, 0.24));
   g.add(body, arch, trim, glass, record, grille);
-  const light = new THREE.PointLight("#ff6fb8", 1.2, 3, 1.8);
-  light.position.set(0, 0.8, 0.6);
+  const light = put(new THREE.PointLight("#ff6fb8", 1.2, 3, 1.8), 0, 0.8, 0.6);
   g.add(light);
   const say = bubble(g, 1.4, 1.8);
   const bounce = wobble(12, 3);

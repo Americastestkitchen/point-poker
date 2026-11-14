@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { GLASS, GLOW_BLUR, LAYERS, LOGO, NEON, type Tube } from "../../../../shared/brand.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
+import { plane } from "./build.ts";
 
 const PIXELS = 1024; // canvas width
 
@@ -52,7 +53,7 @@ export function neonLogo(width: number, how: (t: Tube) => "lit" | "glass" | "non
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, (width * box.height) / box.width), mat);
+  const mesh = plane(width, (width * box.height) / box.width, mat);
   return { mesh, mat };
 }
 
@@ -123,7 +124,7 @@ export function neonTubes(
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  return { mesh: new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat), mat };
+  return { mesh: plane(width, height, mat), mat };
 }
 
 /** A word or two in neon, `width` by `height` metres, like "OPEN". */

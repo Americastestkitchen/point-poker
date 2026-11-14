@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, woodTexture, wrapText } from "../../scene/art/textures.ts";
+import { box, cylinder, plane, put } from "../kit/build.ts";
 import { speckle, textLines } from "../kit/canvas.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
@@ -37,15 +38,9 @@ function chalkboard(): StatusScreen {
   const object = new THREE.Group();
   const status = statusCanvas(512, 384, paintChalk);
   const wood = toon("#a0703a");
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.94, 0.05), wood);
-  frame.position.z = -0.03;
-  const board = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.14, 0.84),
-    new THREE.MeshBasicMaterial({ map: status.texture }),
-  );
-  board.position.z = 0.0;
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.1), wood);
-  tray.position.set(0, -0.5, 0.03);
+  const frame = put(box(1.24, 0.94, 0.05, wood), 0, 0, -0.03);
+  const board = plane(1.14, 0.84, new THREE.MeshBasicMaterial({ map: status.texture }));
+  const tray = put(box(1.2, 0.04, 0.1, wood), 0, -0.5, 0.03);
   object.add(frame, board, tray);
   // three legs down to the sand (the anchor is a telly's height up)
   const legs: [number, number, number][] = [
@@ -54,8 +49,7 @@ function chalkboard(): StatusScreen {
     [0, 0, -0.5],
   ];
   for (const [x, tilt, back] of legs) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.5, 0.04), wood);
-    leg.position.set(x * 0.9, -0.75, back * 0.4);
+    const leg = put(box(0.05, 2.5, 0.04, wood), x * 0.9, -0.75, back * 0.4);
     leg.rotation.set(back < 0 ? -0.22 : 0.06, 0, tilt);
     leg.castShadow = true;
     object.add(leg);
@@ -104,13 +98,12 @@ function surfShackSign(): Sign {
   const edge = toon("#6b4a2e");
   const painted = toon("#ffffff", { map: plankSignTexture() });
   // a box's faces go +x, -x, +y, -y, +z (the front), -z
-  const face = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.06), [edge, edge, edge, edge, painted, edge]);
+  const face = box(w, h, 0.06, [edge, edge, edge, edge, painted, edge]);
   face.rotation.z = 0.03; // nailed up by hand
   face.castShadow = true;
   object.add(face);
   for (const x of [-0.95, 0.95]) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.75, 8), toon("#7a5a3a"));
-    post.position.set(x, -0.8, -0.06);
+    const post = put(cylinder(0.06, 0.07, 2.75, toon("#7a5a3a"), 8), x, -0.8, -0.06);
     post.castShadow = true;
     object.add(post);
   }
@@ -136,23 +129,14 @@ function surfShackSign(): Sign {
 
 /** The duck, dressed for the beach: a striped swim ring and sunglasses. */
 function beachDuck(duck: THREE.Group) {
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.088, 0.024, 8, 24),
-    toon("#ffffff", { map: stripesTexture("#e4573d", "#ffffff", 8) }),
-  );
+  const stripes = toon("#ffffff", { map: stripesTexture("#e4573d", "#ffffff", 8) });
+  const ring = put(new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.024, 8, 24), stripes), 0, 0.05, 0);
   ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.05;
   ring.castShadow = true;
   const shades = new THREE.Group();
   const black = new THREE.MeshBasicMaterial({ color: "#111" });
-  for (const s of [-1, 1]) {
-    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.018, 12), black);
-    lens.position.x = s * 0.024;
-    shades.add(lens);
-  }
-  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.004, 0.004), black);
-  shades.add(bridge);
-  shades.position.set(0.091, 0.148, 0);
-  shades.rotation.y = Math.PI / 2; // the duck looks along +x
+  for (const s of [-1, 1]) shades.add(put(new THREE.Mesh(new THREE.CircleGeometry(0.018, 12), black), s * 0.024, 0, 0));
+  shades.add(box(0.02, 0.004, 0.004, black));
+  put(shades, 0.091, 0.148, 0, Math.PI / 2); // the duck looks along +x
   duck.add(ring, shades);
 }

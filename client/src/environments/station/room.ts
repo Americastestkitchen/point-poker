@@ -6,6 +6,7 @@ import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import type { EnvCtx } from "../types.ts";
 import { blinker } from "../kit/animate.ts";
+import { box, cylinder, plane, put } from "../kit/build.ts";
 import { concreteTexture, edgeLineTexture, posterTexture, tileTexture, tileUv } from "./textures.ts";
 
 /** The room's shape, in metres. The table is at the origin; the tracks run along z past its far end. */
@@ -25,13 +26,6 @@ export const ROOM = {
   track: 4.25,
 } as const;
 
-/** Places `o` and returns it. */
-function put<T extends THREE.Object3D>(o: T, x: number, y: number, z: number, ry = 0): T {
-  o.position.set(x, y, z);
-  o.rotation.y = ry;
-  return o;
-}
-
 /** A flat plaque with text on it, facing +z. */
 export function plaque(
   width: number,
@@ -40,10 +34,7 @@ export function plaque(
   px = 512,
 ) {
   const h = Math.round((px * height) / width);
-  return new THREE.Mesh(
-    new THREE.PlaneGeometry(width, height),
-    toon("#ffffff", { map: canvasTex(px, h, (g) => draw(g, px, h)) }),
-  );
+  return plane(width, height, toon("#ffffff", { map: canvasTex(px, h, (g) => draw(g, px, h)) }));
 }
 
 /** The station's name, cream letters on a green-tiled board. */
@@ -78,8 +69,9 @@ export function buildPlatform(s: THREE.Group) {
   floor.receiveShadow = true;
   s.add(floor);
   // the yellow line, reading along the platform for someone looking at the tracks
-  const line = new THREE.Mesh(
-    new THREE.PlaneGeometry(length, 0.5),
+  const line = plane(
+    length,
+    0.5,
     toon("#ffffff", { map: edgeLineTexture(length), emissive: "#ffcc00", emissiveIntensity: 0 }),
   );
   line.rotation.x = -Math.PI / 2;
@@ -87,38 +79,34 @@ export function buildPlatform(s: THREE.Group) {
   const lineTurn = put(new THREE.Group(), edge - 0.31, 0.004, 0, -Math.PI / 2);
   lineTurn.add(line);
   s.add(lineTurn);
-  const coping = put(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, length), toon("#d8d3c6")), edge - 0.05, 0.01, 0);
+  const coping = put(box(0.1, 0.04, length, toon("#d8d3c6")), edge - 0.05, 0.01, 0);
   s.add(coping);
 
   // the trench and the tracks
   const grime = toon("#3a3530");
-  const lip = new THREE.Mesh(new THREE.PlaneGeometry(length, -trench), grime);
-  s.add(put(lip, edge, trench / 2, 0, Math.PI / 2));
-  const ballast = new THREE.Mesh(new THREE.PlaneGeometry(far - edge, length), toon("#2b2622"));
+  s.add(put(plane(length, -trench, grime), edge, trench / 2, 0, Math.PI / 2));
+  const ballast = put(plane(far - edge, length, toon("#2b2622")), (far + edge) / 2, trench, 0);
   ballast.rotation.x = -Math.PI / 2;
-  ballast.position.set((far + edge) / 2, trench, 0);
   s.add(ballast);
   const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(1.3, 0.08, 0.22), toon("#4a3d33"), 14);
   const m = new THREE.Matrix4();
   for (let i = 0; i < 14; i++) sleepers.setMatrixAt(i, m.makeTranslation(track, trench + 0.04, -3.9 + i * 0.6));
   s.add(sleepers);
   const steel = new THREE.MeshStandardMaterial({ color: "#9aa0a6", metalness: 0.8, roughness: 0.35 });
-  for (const dx of [-0.3, 0.3])
-    s.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, length), steel), track + dx, trench + 0.13, 0));
+  for (const dx of [-0.3, 0.3]) s.add(put(box(0.06, 0.1, length, steel), track + dx, trench + 0.13, 0));
 
   // walls: behind the dealer, across the tracks (down into the trench), and the two sides
   const wall = (w: number, h: number) => new THREE.Mesh(tileUv(new THREE.PlaneGeometry(w, h), w, h), tile);
   s.add(put(wall(length, ceiling), back, ceiling / 2, 0, Math.PI / 2));
   const farHeight = ceiling - trench;
   s.add(put(wall(length, farHeight), far, trench + farHeight / 2, 0, -Math.PI / 2));
-  const soot = new THREE.Mesh(new THREE.PlaneGeometry(length, 1.3), grime);
-  s.add(put(soot, far - 0.01, trench + 0.65, 0, -Math.PI / 2));
+  s.add(put(plane(length, 1.3, grime), far - 0.01, trench + 0.65, 0, -Math.PI / 2));
   for (const z of [-side, side]) {
     const facing = z < 0 ? 0 : Math.PI;
     s.add(put(wall(platformWidth, ceiling), back + platformWidth / 2, ceiling / 2, z, facing));
     s.add(put(tunnelMouth(tile), track, 0, z, facing));
     // the dark beyond the tunnel mouth
-    const tunnel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 3, 10), toon("#050505", { side: THREE.BackSide }));
+    const tunnel = box(1.5, 3, 10, toon("#050505", { side: THREE.BackSide }));
     s.add(put(tunnel, track, trench + 1.5, z + Math.sign(z) * 5));
   }
   // the green and gold bands every station has
@@ -131,13 +119,12 @@ export function buildPlatform(s: THREE.Group) {
     [0, side - 0.02, far - back, Math.PI],
   ];
   for (const [x, z, w, ry] of bands) {
-    s.add(put(new THREE.Mesh(new THREE.PlaneGeometry(w, 0.22), green), x, 2.85, z, ry));
-    s.add(put(new THREE.Mesh(new THREE.PlaneGeometry(w, 0.05), gold), x, 2.68, z, ry));
+    s.add(put(plane(w, 0.22, green), x, 2.85, z, ry));
+    s.add(put(plane(w, 0.05, gold), x, 2.68, z, ry));
   }
 
-  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(far - back, length), toon("#2c3230"));
+  const ceil = put(plane(far - back, length, toon("#2c3230")), 0, ceiling, 0);
   ceil.rotation.x = Math.PI / 2;
-  ceil.position.y = ceiling;
   s.add(ceil);
 
   // steel pillars along the platform
@@ -145,9 +132,9 @@ export function buildPlatform(s: THREE.Group) {
   const cream = toon("#e9e2cc");
   for (const x of [-2.9, 0.3]) {
     for (const z of [-3.1, 3.1]) {
-      s.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.26, ceiling, 0.26), paint), x, ceiling / 2, z));
-      s.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), paint), x, 0.15, z));
-      s.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.28), cream), x, 1.9, z));
+      s.add(put(box(0.26, ceiling, 0.26, paint), x, ceiling / 2, z));
+      s.add(put(box(0.34, 0.3, 0.34, paint), x, 0.15, z));
+      s.add(put(box(0.28, 0.12, 0.28, cream), x, 1.9, z));
     }
   }
 
@@ -155,12 +142,9 @@ export function buildPlatform(s: THREE.Group) {
   const wood = toon("#8a5a32");
   for (const z of [-3.62, 3.62]) {
     const bench = put(new THREE.Group(), -1.3, 0, z, z < 0 ? 0 : Math.PI);
-    for (let i = 0; i < 3; i++)
-      bench.add(put(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.04, 0.1), wood), 0, 0.46, -0.12 + i * 0.12));
-    for (let i = 0; i < 2; i++)
-      bench.add(put(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.04), wood), 0, 0.62 + i * 0.14, -0.2));
-    for (const x of [-0.7, 0.7])
-      bench.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.46, 0.36), paint), x, 0.23, -0.04));
+    for (let i = 0; i < 3; i++) bench.add(put(box(1.6, 0.04, 0.1, wood), 0, 0.46, -0.12 + i * 0.12));
+    for (let i = 0; i < 2; i++) bench.add(put(box(1.6, 0.1, 0.04, wood), 0, 0.62 + i * 0.14, -0.2));
+    for (const x of [-0.7, 0.7]) bench.add(put(box(0.06, 0.46, 0.36, paint), x, 0.23, -0.04));
     s.add(bench);
   }
 
@@ -181,7 +165,7 @@ export function buildPlatform(s: THREE.Group) {
   s.add(put(wayOut, back + 0.02, 2.3, 2.6, Math.PI / 2));
   // adverts
   const poster = (header: string, color: string, lines: string[]) =>
-    new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1.0), toon("#ffffff", { map: posterTexture(header, color, lines) }));
+    plane(0.75, 1.0, toon("#ffffff", { map: posterTexture(header, color, lines) }));
   s.add(
     put(poster("BURNDOWN", "#e8434f", ["feel the burn.", "", "now with", "extra scope!"]), 1.4, 1.5, -side + 0.02, 0),
   );
@@ -228,9 +212,7 @@ function tunnelMouth(tile: THREE.Material) {
   const mouth = new THREE.Group();
   mouth.add(new THREE.Mesh(tileUv(new THREE.ShapeGeometry(shape, 12), 1, 1), tile));
   // a dark ring round the arch
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 6, 16, Math.PI), toon("#1f5c4a"));
-  rim.position.set(0, spring, 0.02);
-  mouth.add(rim);
+  mouth.add(put(new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 6, 16, Math.PI), toon("#1f5c4a")), 0, spring, 0.02));
   return mouth;
 }
 
@@ -244,29 +226,22 @@ export function stripLight(anchor: EnvCtx["anchors"]["lamp"], { sound }: EnvCtx)
   const y = 2.62;
   const group = new THREE.Group();
   const metal = toon("#5d6468");
-  for (const dx of [-0.8, 0.8]) {
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, top - y), toon("#222"));
-    group.add(put(rod, x + dx, (top + y) / 2, z));
-  }
-  group.add(put(new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 0.3), metal), x, y + 0.03, z));
+  for (const dx of [-0.8, 0.8]) group.add(put(cylinder(0.008, 0.008, top - y, toon("#222")), x + dx, (top + y) / 2, z));
+  group.add(put(box(2.2, 0.06, 0.3, metal), x, y + 0.03, z));
   const tubeMat = new THREE.MeshBasicMaterial({ color: "#effffb" });
   for (const dz of [-0.07, 0.07]) {
-    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 2.0, 10), tubeMat);
+    const tube = put(cylinder(0.026, 0.026, 2.0, tubeMat, 10), x, y - 0.03, z + dz);
     tube.rotation.z = Math.PI / 2;
-    tube.position.set(x, y - 0.03, z + dz);
     group.add(tube);
   }
-  const spot = new THREE.SpotLight("#e6fff4", 11, 0, 1.1, 0.75, 1.1);
-  spot.position.set(x, y - 0.1, z);
+  const spot = put(new THREE.SpotLight("#e6fff4", 11, 0, 1.1, 0.75, 1.1), x, y - 0.1, z);
   spot.castShadow = true;
   spot.shadow.mapSize.set(1024, 1024);
   spot.shadow.bias = -0.0005;
   spot.shadow.camera.near = 0.2;
-  const target = new THREE.Object3D();
-  target.position.set(x, 0, z);
+  const target = put(new THREE.Object3D(), x, 0, z);
   spot.target = target;
-  const glow = new THREE.PointLight("#d8fff0", 1.2, 5, 1.6);
-  glow.position.set(x, y - 0.2, z);
+  const glow = put(new THREE.PointLight("#d8fff0", 1.2, 5, 1.6), x, y - 0.2, z);
   group.add(spot, target, glow);
 
   const blink = blinker({
@@ -302,9 +277,8 @@ export function ceilingLights() {
     [1.9, 2.4],
   ];
   spots.forEach(([x, z], i) => {
-    group.add(put(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 1.3), housing), x, ROOM.ceiling - 0.03, z));
-    const tube = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 1.2), i === 4 ? blinky : on);
-    group.add(put(tube, x, ROOM.ceiling - 0.07, z));
+    group.add(put(box(0.2, 0.05, 1.3, housing), x, ROOM.ceiling - 0.03, z));
+    group.add(put(box(0.08, 0.03, 1.2, i === 4 ? blinky : on), x, ROOM.ceiling - 0.07, z));
   });
   return {
     object: group,

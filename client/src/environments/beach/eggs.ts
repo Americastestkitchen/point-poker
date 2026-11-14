@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import { popup } from "../kit/bubble.ts";
+import { box, cylinder, plane, put, sphere } from "../kit/build.ts";
 import { lettering, liveCanvas } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
 import { SHORE_X } from "./shore.ts";
@@ -21,42 +22,30 @@ const faceTable = (o: THREE.Object3D) => o.lookAt(0, o.position.y, 0);
 
 /** A beach chair with a laptop on it, auto-replying to everyone. Click it to send one more. */
 function laptopChair({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(-2.9, 0, -3.9);
+  const g = put(new THREE.Group(), -2.9, 0, -3.9);
   faceTable(g);
   const frame = toon("#d8d0c0");
   const fabric = toon("#ffffff", { map: stripesTexture("#3fa7a3", "#f3e6c8", 6), side: THREE.DoubleSide });
-  const seat = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.6), fabric);
+  const seat = put(plane(0.55, 0.6, fabric), 0, 0.32, 0);
   seat.rotation.x = -Math.PI / 2 + 0.15;
-  seat.position.set(0, 0.32, 0);
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.75), fabric);
-  back.position.set(0, 0.62, -0.42);
+  const back = put(plane(0.55, 0.75, fabric), 0, 0.62, -0.42);
   back.rotation.x = -0.45;
   for (const s of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.05, 6), frame);
-    leg.position.set(s * 0.28, 0.45, -0.18);
+    const leg = put(cylinder(0.015, 0.015, 1.05, frame, 6), s * 0.28, 0.45, -0.18);
     leg.rotation.x = 0.75;
-    const front = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.42, 6), frame);
-    front.position.set(s * 0.28, 0.2, 0.22);
+    const front = put(cylinder(0.015, 0.015, 0.42, frame, 6), s * 0.28, 0.2, 0.22);
     front.rotation.x = -0.4;
     g.add(leg, front);
   }
   g.add(seat, back);
 
-  const laptop = new THREE.Group();
-  laptop.position.set(0, 0.36, 0.05);
+  const laptop = put(new THREE.Group(), 0, 0.36, 0.05);
   laptop.rotation.x = 0.15;
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.24), toon("#9aa3ad"));
+  const base = box(0.34, 0.02, 0.24, toon("#9aa3ad"));
   const screen = liveCanvas(256, 160);
-  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.012), toon("#9aa3ad"));
-  lid.position.set(0, 0.11, -0.12);
+  const lid = put(box(0.34, 0.22, 0.012, toon("#9aa3ad")), 0, 0.11, -0.12);
   lid.rotation.x = -0.25;
-  const display = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.31, 0.19),
-    new THREE.MeshBasicMaterial({ map: screen.texture }),
-  );
-  display.position.z = 0.007;
-  lid.add(display);
+  lid.add(put(plane(0.31, 0.19, new THREE.MeshBasicMaterial({ map: screen.texture })), 0, 0, 0.007));
   laptop.add(base, lid);
   g.add(laptop);
 
@@ -97,16 +86,12 @@ function laptopChair({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 
 /** "FREE WIFI" on a stake, with one bar. Click it and that bar goes too. */
 function wifiSign({ pick, onFrame, sound }: EnvCtx): THREE.Group {
-  const g = new THREE.Group();
-  g.position.set(-6.6, 0, 2.6);
+  const g = put(new THREE.Group(), -6.6, 0, 2.6);
   faceTable(g);
-  const stake = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 6), toon("#8a6440"));
-  stake.position.y = 0.75;
+  const stake = put(cylinder(0.03, 0.03, 1.5, toon("#8a6440"), 6), 0, 0.75, 0);
   const board = liveCanvas(256, 192);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.45), new THREE.MeshBasicMaterial({ map: board.texture }));
-  face.position.set(0, 1.45, 0.035);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.49, 0.06), toon("#b08a5a"));
-  back.position.y = 1.45;
+  const face = put(plane(0.6, 0.45, new THREE.MeshBasicMaterial({ map: board.texture })), 0, 1.45, 0.035);
+  const back = put(box(0.64, 0.49, 0.06, toon("#b08a5a")), 0, 1.45, 0);
   g.add(stake, back, face);
 
   const draw = (bars: number) => {
@@ -149,12 +134,10 @@ function bottle({ pick, onFrame, sound }: EnvCtx): THREE.Group {
     opacity: 0.75,
     roughness: 0.1,
   });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.36, 10), glass);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.07, 0.14, 10), glass);
-  neck.position.y = 0.24;
-  const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), toon("#a0703a"));
-  cork.position.y = 0.33;
-  const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 8), toon("#f3e3c0"));
+  const body = cylinder(0.09, 0.09, 0.36, glass, 10);
+  const neck = put(cylinder(0.035, 0.07, 0.14, glass, 10), 0, 0.24, 0);
+  const cork = put(cylinder(0.03, 0.03, 0.05, toon("#a0703a"), 8), 0, 0.33, 0);
+  const scroll = cylinder(0.04, 0.04, 0.24, toon("#f3e3c0"), 8);
   const bobber = new THREE.Group();
   bobber.add(body, neck, cork, scroll);
   bobber.rotation.z = Math.PI / 2.4;
@@ -194,43 +177,34 @@ function bottle({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 function crab({ pick, onFrame, sound }: EnvCtx): THREE.Group {
   const g = new THREE.Group();
   const red = toon("#e4573d");
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), red);
+  const shell = put(sphere(0.16, red, 12, 8), 0, 0.12, 0);
   shell.scale.set(1.3, 0.55, 1);
-  shell.position.y = 0.12;
   g.add(shell);
   for (const s of [-1, 1]) {
-    const claw = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), red);
+    const claw = put(sphere(0.06, red, 8, 6), s * 0.2, 0.14, 0.15);
     claw.scale.set(1.2, 0.8, 0.8);
-    claw.position.set(s * 0.2, 0.14, 0.15);
-    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.1, 4), red);
-    stalk.position.set(s * 0.05, 0.22, 0.1);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), toon("#111"));
-    eye.position.set(s * 0.05, 0.28, 0.1);
+    const stalk = put(cylinder(0.01, 0.01, 0.1, red, 4), s * 0.05, 0.22, 0.1);
+    const eye = put(sphere(0.022, toon("#111"), 8, 6), s * 0.05, 0.28, 0.1);
     g.add(claw, stalk, eye);
     for (let i = 0; i < 3; i++) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 4), red);
-      leg.position.set(s * 0.2, 0.06, -0.08 + i * 0.07);
+      const leg = put(cylinder(0.012, 0.012, 0.2, red, 4), s * 0.2, 0.06, -0.08 + i * 0.07);
       leg.rotation.z = s * 1.0;
       g.add(leg);
     }
   }
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), toon("#ddd"));
-  pole.position.set(0, 0.4, -0.06);
-  const flag = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.34, 0.16),
-    new THREE.MeshBasicMaterial({
-      side: THREE.DoubleSide,
-      map: canvasTex(256, 120, (c) => {
-        c.fillStyle = "#fff4e0";
-        c.fillRect(0, 0, 256, 120);
-        lettering(c, [
-          ["SCOPE", 44, "#c0392b"],
-          ["CREEP", 44, "#c0392b"],
-        ]);
-      }),
+  const pole = put(cylinder(0.008, 0.008, 0.5, toon("#ddd"), 4), 0, 0.4, -0.06);
+  const flagMat = new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide,
+    map: canvasTex(256, 120, (c) => {
+      c.fillStyle = "#fff4e0";
+      c.fillRect(0, 0, 256, 120);
+      lettering(c, [
+        ["SCOPE", 44, "#c0392b"],
+        ["CREEP", 44, "#c0392b"],
+      ]);
     }),
-  );
-  flag.position.set(0.17, 0.58, -0.06);
+  });
+  const flag = put(plane(0.34, 0.16, flagMat), 0.17, 0.58, -0.06);
   g.add(pole, flag);
   g.rotation.y = Math.PI; // claws towards the table; crabs walk sideways anyway
   g.traverse((o) => {
@@ -262,35 +236,28 @@ function crab({ pick, onFrame, sound }: EnvCtx): THREE.Group {
 function gull({ pick, onFrame, sound }: EnvCtx): THREE.Group {
   const g = new THREE.Group();
   const white = toon("#f4f4f0");
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), white);
+  const body = sphere(0.14, white, 10, 8);
   body.scale.set(1, 0.8, 2);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), white);
-  head.position.set(0, 0.07, 0.24);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.1, 6), toon("#f2b33d"));
+  const head = put(sphere(0.08, white, 10, 8), 0, 0.07, 0.24);
+  const beak = put(new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.1, 6), toon("#f2b33d")), 0, 0.06, 0.34);
   beak.rotation.x = Math.PI / 2;
-  beak.position.set(0, 0.06, 0.34);
-  const note = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.16, 0.16),
-    new THREE.MeshBasicMaterial({
-      side: THREE.DoubleSide,
-      map: canvasTex(128, 128, (c) => {
-        c.fillStyle = "#ffd23f";
-        c.fillRect(0, 0, 128, 128);
-        lettering(c, [
-          ["TODO:", 26, "#2a1d17"],
-          ["estimate", 22, "#2a1d17"],
-        ]);
-      }),
+  const noteMat = new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide,
+    map: canvasTex(128, 128, (c) => {
+      c.fillStyle = "#ffd23f";
+      c.fillRect(0, 0, 128, 128);
+      lettering(c, [
+        ["TODO:", 26, "#2a1d17"],
+        ["estimate", 22, "#2a1d17"],
+      ]);
     }),
-  );
-  note.position.set(0, -0.04, 0.42);
+  });
+  const note = put(plane(0.16, 0.16, noteMat), 0, -0.04, 0.42);
   const wingMat = toon("#d9dcdf", { side: THREE.DoubleSide });
   const wings = [-1, 1].map((s) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(s * 0.08, 0.04, 0);
-    const wing = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.22), wingMat);
+    const pivot = put(new THREE.Group(), s * 0.08, 0.04, 0);
+    const wing = put(plane(0.55, 0.22, wingMat), s * 0.27, 0, 0);
     wing.rotation.x = -Math.PI / 2;
-    wing.position.x = s * 0.27;
     pivot.add(wing);
     return { pivot, s };
   });

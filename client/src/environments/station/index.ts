@@ -2,6 +2,7 @@
 // minutes over. A split-flap board behind the dealer, the logo in tiles across the
 // tracks, a rubber rat in a conductor's cap, and a train that never stops here.
 import * as THREE from "three";
+import { put } from "../kit/build.ts";
 import type { Environment } from "../types.ts";
 import { departureBoard } from "./board.ts";
 import { buskerCase, ledTicker, lineMap, mindTheGap, paSpeaker, sprintTrain } from "./eggs.ts";
@@ -23,17 +24,10 @@ export default {
     object.add(lamp.object, strips.object);
 
     const ticker = ledTicker();
-    ticker.object.position.set(2.6, ROOM.ceiling - 0.95, -2.1);
-    ticker.object.rotation.y = -Math.PI / 2;
-    const pa = paSpeaker(ctx, ticker);
-    pa.position.set(2.6, ROOM.ceiling - 0.6, -3.1);
-    pa.rotation.y = -Math.PI / 2;
-    const map = lineMap(ctx, ticker);
-    map.position.set(ROOM.far - 0.03, 2.05, -2.85);
-    map.rotation.y = -Math.PI / 2;
-    const busker = buskerCase(ctx, ticker);
-    busker.position.set(2.0, 0, 2.75);
-    busker.rotation.y = -2.1;
+    put(ticker.object, 2.6, ROOM.ceiling - 0.95, -2.1, -Math.PI / 2);
+    const pa = put(paSpeaker(ctx, ticker), 2.6, ROOM.ceiling - 0.6, -3.1, -Math.PI / 2);
+    const map = put(lineMap(ctx, ticker), ROOM.far - 0.03, 2.05, -2.85, -Math.PI / 2);
+    const busker = put(buskerCase(ctx, ticker), 2.0, 0, 2.75, -2.1);
     object.add(ticker.object, pa, map, busker, sprintTrain(ctx, ticker));
     mindTheGap(ctx, edgeLine, ticker);
 

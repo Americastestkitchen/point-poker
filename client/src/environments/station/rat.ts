@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { arc, oneShot } from "../kit/animate.ts";
+import { cylinder, put, sphere } from "../kit/build.ts";
 import type { EnvCtx, Squeaky } from "../types.ts";
 
 export function rubberRat({ sound, onFrame }: EnvCtx): Squeaky {
@@ -37,38 +38,27 @@ function ratModel() {
   const rat = new THREE.Group();
   const fur = toon("#6f7179");
   const pink = toon("#f2a5b5");
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), fur);
+  const body = put(sphere(0.06, fur, 14, 10), 0, 0.05, 0);
   body.scale.set(0.85, 0.75, 1.25);
-  body.position.y = 0.05;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.04, 14, 10), fur);
+  const head = put(sphere(0.04, fur, 14, 10), 0, 0.085, 0.07);
   head.scale.set(1, 0.95, 1.2);
-  head.position.set(0, 0.085, 0.07);
-  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.05, 10), fur);
+  const snout = put(new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.05, 10), fur), 0, 0.075, 0.12);
   snout.rotation.x = Math.PI / 2;
-  snout.position.set(0, 0.075, 0.12);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), pink);
-  nose.position.set(0, 0.075, 0.146);
-  rat.add(body, head, snout, nose);
+  rat.add(body, head, snout, put(sphere(0.009, pink, 8, 6), 0, 0.075, 0.146));
   const black = new THREE.MeshBasicMaterial({ color: "#111" });
   for (const s of [-1, 1]) {
-    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.006, 12), fur);
+    const ear = put(cylinder(0.022, 0.022, 0.006, fur, 12), s * 0.032, 0.12, 0.055);
     ear.rotation.set(Math.PI / 2 - 0.2, 0, s * 0.5);
-    ear.position.set(s * 0.032, 0.12, 0.055);
-    const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.004, 10), pink);
-    inner.position.y = 0.003;
-    ear.add(inner);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), black);
-    eye.position.set(s * 0.02, 0.098, 0.105);
-    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), pink);
+    ear.add(put(cylinder(0.014, 0.014, 0.004, pink, 10), 0, 0.003, 0));
+    const eye = put(sphere(0.007, black, 8, 6), s * 0.02, 0.098, 0.105);
+    const foot = put(sphere(0.012, pink, 8, 6), s * 0.035, 0.006, 0.05);
     foot.scale.set(1, 0.5, 1.4);
-    foot.position.set(s * 0.035, 0.006, 0.05);
     const back = foot.clone();
     back.position.z = -0.05;
     rat.add(ear, eye, foot, back);
   }
   // the tail, curling up behind
-  const tail = new THREE.Group();
-  tail.position.set(0, 0.04, -0.07);
+  const tail = put(new THREE.Group(), 0, 0.04, -0.07);
   const curve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, 0, 0),
     new THREE.Vector3(0.02, -0.02, -0.06),
@@ -78,20 +68,13 @@ function ratModel() {
   tail.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.006, 5), pink));
   rat.add(tail);
   // the conductor's cap
-  const cap = new THREE.Group();
-  cap.position.set(0, 0.128, 0.06);
+  const cap = put(new THREE.Group(), 0, 0.128, 0.06);
   cap.rotation.x = -0.15;
-  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.03, 14), toon("#1d2f6b"));
-  crown.position.y = 0.012;
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0305, 0.0305, 0.008, 14), black);
-  band.position.y = 0.0;
-  const brim = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.026, 0.026, 0.004, 12, 1, false, -Math.PI / 2, Math.PI),
-    black,
-  );
-  brim.position.set(0, -0.003, 0.022);
-  const badge = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), toon("#ffd34d"));
-  badge.position.set(0, 0.014, 0.034);
+  const crown = put(cylinder(0.036, 0.03, 0.03, toon("#1d2f6b"), 14), 0, 0.012, 0);
+  const band = cylinder(0.0305, 0.0305, 0.008, black, 14);
+  const brimGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.004, 12, 1, false, -Math.PI / 2, Math.PI);
+  const brim = put(new THREE.Mesh(brimGeo, black), 0, -0.003, 0.022);
+  const badge = put(sphere(0.006, toon("#ffd34d"), 8, 6), 0, 0.014, 0.034);
   cap.add(crown, band, brim, badge);
   rat.add(cap);
   rat.traverse((o) => {
