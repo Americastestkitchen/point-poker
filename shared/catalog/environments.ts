@@ -10,6 +10,7 @@ export const ENVIRONMENTS = [
   { id: "basement", name: "The Backlog Basement" },
   { id: "beach", name: "Async Atoll" },
   { id: "diner", name: "Deploy Diner" },
+  { id: "station", name: "Standup Station" },
 ] as const satisfies readonly EnvironmentInfo[];
 export type EnvironmentId = (typeof ENVIRONMENTS)[number]["id"];
 export const ENVIRONMENT_IDS = idsOf(ENVIRONMENTS);
