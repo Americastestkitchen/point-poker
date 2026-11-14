@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { toon } from "../../../scene/art/materials.ts";
 import type { Prop, Squeaky } from "../../types.ts";
+import { arc, oneShot } from "../animate.ts";
 
 /** A rubber duck. `dress` can add to it (a swim ring, a hat) before it's placed. */
 export function rubberDuck(dress?: (duck: THREE.Group) => void): Prop<Squeaky> {
@@ -11,19 +12,19 @@ export function rubberDuck(dress?: (duck: THREE.Group) => void): Prop<Squeaky> {
     const duck = duckModel();
     dress?.(duck);
     object.add(duck);
-    let hop = 0;
+    const hop = oneShot(0.4);
     onFrame((dt) => {
-      if (hop <= 0) return;
-      hop = Math.max(0, hop - dt * 2.5);
-      duck.position.y = Math.sin(hop * Math.PI) * 0.12;
-      duck.rotation.y = (1 - hop) * Math.PI * 2;
-      duck.scale.setScalar(1 + Math.sin(hop * Math.PI) * 0.15);
+      const left = hop.step(dt);
+      if (left === null) return;
+      duck.position.y = arc(left) * 0.12;
+      duck.rotation.y = (1 - left) * Math.PI * 2;
+      duck.scale.setScalar(1 + arc(left) * 0.15);
     });
     return {
       object,
       squeak() {
         sound.tone(1400, 0.18, "square", 0.06, 2200);
-        hop = 1;
+        hop.kick();
       },
     };
   };

@@ -4,7 +4,8 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
-import { liveCanvas } from "../kit/canvas.ts";
+import { popup } from "../kit/bubble.ts";
+import { lettering, liveCanvas } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
 import { SHORE_X } from "./shore.ts";
 import { stripesTexture } from "./textures.ts";
@@ -17,24 +18,6 @@ export function eggs(ctx: EnvCtx): THREE.Group {
 
 /** Turns `o` (already placed) to face the middle of the table. */
 const faceTable = (o: THREE.Object3D) => o.lookAt(0, o.position.y, 0);
-
-/** Lines of text on a canvas, centred. */
-function lettering(
-  g: CanvasRenderingContext2D,
-  lines: readonly (readonly [text: string, size: number, color: string])[],
-) {
-  const { width, height } = g.canvas;
-  const total = lines.reduce((sum, [, size]) => sum + size * 1.25, 0);
-  let y = (height - total) / 2;
-  g.textAlign = "center";
-  g.textBaseline = "top";
-  for (const [text, size, color] of lines) {
-    g.font = `bold ${size}px ${FONT}`;
-    g.fillStyle = color;
-    g.fillText(text, width / 2, y, width - 20);
-    y += size * 1.25;
-  }
-}
 
 /** A beach chair with a laptop on it, auto-replying to everyone. Click it to send one more. */
 function laptopChair({ pick, onFrame, sound }: EnvCtx): THREE.Group {
@@ -177,30 +160,24 @@ function bottle({ pick, onFrame, sound }: EnvCtx): THREE.Group {
   bobber.rotation.z = Math.PI / 2.4;
   g.add(bobber);
 
-  const note = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.2, 1.1),
-    new THREE.MeshBasicMaterial({
-      transparent: true,
-      map: canvasTex(512, 256, (c) => {
-        c.fillStyle = "#f6ead0";
-        c.fillRect(0, 0, 512, 256);
-        c.strokeStyle = "#c8b48a";
-        c.lineWidth = 10;
-        c.strokeRect(5, 5, 502, 246);
-        lettering(c, [
-          ["pls estimate me", 54, "#3a2618"],
-          ["— a ticket, lost at sea since sprint 3", 24, "#6b4a2e"],
-        ]);
-      }),
+  const note = popup(
+    g,
+    canvasTex(512, 256, (c) => {
+      c.fillStyle = "#f6ead0";
+      c.fillRect(0, 0, 512, 256);
+      c.strokeStyle = "#c8b48a";
+      c.lineWidth = 10;
+      c.strokeRect(5, 5, 502, 246);
+      lettering(c, [
+        ["pls estimate me", 54, "#3a2618"],
+        ["— a ticket, lost at sea since sprint 3", 24, "#6b4a2e"],
+      ]);
     }),
+    { width: 2.2, height: 1.1, y: 1.4, seconds: 5, fadeIn: 0.25, fadeOut: 0.5 },
   );
-  note.position.y = 1.4;
-  note.visible = false;
-  g.add(note);
 
-  let readFor = 0;
   pick(bobber, () => {
-    readFor = 5;
+    note.show();
     sound.tone(500, 0.08, "square", 0.06, 1400);
     sound.noise(0.12, 2500, 0.08, 0.05);
   });
@@ -208,11 +185,7 @@ function bottle({ pick, onFrame, sound }: EnvCtx): THREE.Group {
     const drift = ((t * 0.35) % 36) - 18; // along the shore, end to end
     g.position.set(SHORE_X + 2.2, 0.12 + Math.sin(t * 1.3) * 0.06, drift);
     bobber.rotation.x = Math.sin(t * 0.9) * 0.3;
-    note.visible = readFor > 0;
-    if (readFor <= 0) return;
-    readFor -= dt;
-    note.lookAt(0, g.position.y + note.position.y, 0);
-    note.material.opacity = Math.min(1, readFor * 2, (5 - readFor) * 4);
+    if (note.update(dt)) note.mesh.lookAt(0, g.position.y + note.mesh.position.y, 0);
   });
   return g;
 }
