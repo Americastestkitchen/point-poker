@@ -2,7 +2,7 @@
 // Every message is a Zod schema; the TypeScript types come from the schemas.
 import { z } from "zod";
 import { EMOTE_IDS } from "./catalog/emotes.ts";
-import { ENVIRONMENT_IDS } from "./catalog/environments.ts";
+import { DEFAULT_ENVIRONMENT, ENVIRONMENT_IDS } from "./catalog/environments.ts";
 import { Look, LookInput } from "./look.ts";
 
 export const Phase = z.enum(["waiting", "voting", "revealed", "settled"]);
@@ -43,11 +43,16 @@ export type TicketSummary = z.infer<typeof TicketSummary>;
 export const Epic = z.object({ key: z.string(), summary: z.string(), url: z.string() });
 export type Epic = z.infer<typeof Epic>;
 
-/** The deck, the extra house rules and where the table is. */
+/** The deck and the extra house rules. */
 export const TableSettings = z.object({
   deck: z.array(Card),
   dealerPlays: z.boolean(),
-  environment: z.enum(ENVIRONMENT_IDS),
+  /**
+   * Always the Basement, whichever room the table is in (that's `environment` on the table).
+   * Tabs opened before tables could change rooms throw away a view that says anything else,
+   * and servers from before then drop a saved table without it.
+   */
+  environment: z.literal("basement"),
 });
 export type TableSettings = z.infer<typeof TableSettings>;
 
@@ -97,6 +102,8 @@ export const TableView = z.object({
   skipped: z.array(z.string()),
   jiraEnabled: z.boolean(),
   settings: TableSettings,
+  /** Which room the table is in. One this tab doesn't know yet shows as the default. */
+  environment: z.enum(ENVIRONMENT_IDS).catch(DEFAULT_ENVIRONMENT),
   /** Set when the dealer loaded an epic; its children become the queue. */
   epic: Epic.nullable(),
   queue: z.array(TicketSummary),

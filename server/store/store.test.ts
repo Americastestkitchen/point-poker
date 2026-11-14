@@ -33,6 +33,22 @@ test("tables saved in another format are dropped, not half-loaded", (t) => {
   assert.deepEqual(fileStore(dir, quiet).load(), []);
 });
 
+test("tables saved before rooms could change open in the Basement, and so do rooms this server doesn't know", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "pp-store-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { environment: _, ...before } = newTableState("OLDD", "k1", 1);
+  const unknown = { ...newTableState("NEWW", "k2", 2), environment: "moon-base" };
+  writeFileSync(join(dir, "rooms.json"), JSON.stringify([before, unknown]));
+  const loaded = fileStore(dir, quiet).load();
+  assert.deepEqual(
+    loaded.map((s) => [s.code, s.environment]),
+    [
+      ["OLDD", "basement"],
+      ["NEWW", "basement"],
+    ],
+  );
+});
+
 test("the memory store round-trips through JSON too", () => {
   const store = memoryStore();
   const tables = [newTableState("ABCD", "k", 1)];

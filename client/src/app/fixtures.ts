@@ -39,6 +39,7 @@ export function view(extra: Partial<TableView> = {}): TableView {
     skipped: [],
     jiraEnabled: false,
     settings: { deck: DECKS.classic.cards, dealerPlays: false, environment: "basement" },
+    environment: "basement",
     epic: null,
     queue: [],
     queueLabel: "",

@@ -39,6 +39,7 @@ export function viewFor(
     skipped: [...s.skipped],
     jiraEnabled,
     settings: s.settings,
+    environment: s.environment,
     epic: s.epic,
     queueLabel: s.queueLabel,
     queue: s.queue.map((q) => ({ ...q, played: s.history.some((h) => h.key === q.key) || s.skipped.includes(q.key) })),
