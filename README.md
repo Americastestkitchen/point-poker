@@ -30,11 +30,13 @@ For hot reload, run `npm run dev:server` and `npm run dev` together.
 ## Configuration
 
 Everything is optional. Without Jira you type tickets in by hand. Locally, put the variables
-in `.env.local`.
+in `.env.local`; you don't need Jira sign-in to work on the game
+([Jira locally](CONTRIBUTING.md#jira-locally)).
 
 | Variable                                         | What it does                                                                                                                                                   |
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ATLASSIAN_CLIENT_ID`, `ATLASSIAN_CLIENT_SECRET` | Dealers sign in with their own Jira account to open a table, and tickets load with their access. [Setting up the Atlassian app](CONTRIBUTING.md#jira-sign-in). |
+| `ATLASSIAN_CALLBACK_URL`                         | Sign in through another site's callback, like the dev site's for PR previews and local runs.                                                                   |
 | `TOKEN_KEY`                                      | A long random string that seals those sign-ins on disk. Without it they are lost on restart.                                                                   |
 | `JIRA_SITES`                                     | The Jira sites tables may use, like `acme.atlassian.net`. Without it any Atlassian account can open a table.                                                   |
 | `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`  | Instead of sign-in: one shared API token for every table.                                                                                                      |

@@ -6,8 +6,8 @@
 // - Access tokens last an hour and live in memory; `token(account)` refreshes them, one
 //   refresh at a time per account, and saves the rotated refresh token each time.
 // - Atlassian only sends dealers back to callback URLs registered on the app, so PR previews
-//   (each on its own address) sign in through the dev site: the dev site's callback passes the
-//   one-time code on to the preview it came from, which trades it for tokens itself.
+//   and local runs (each on its own address) sign in through the dev site: the dev site's
+//   callback passes the one-time code on to where it came from, which trades it for tokens itself.
 import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
@@ -40,9 +40,9 @@ export interface JiraLoginDeps {
   log: Log;
   /** Hosts of the Jira sites tables may use, like acme.atlassian.net. Empty allows any. */
   sites: string[];
-  /** The callback registered on the Atlassian app, when it isn't this server's own (previews). */
+  /** The callback registered on the Atlassian app, when it isn't this server's own (previews, local). */
   callbackUrl?: string;
-  /** Origins this server's callback passes sign-ins on to (PR previews). */
+  /** Origins this server's callback passes sign-ins on to (PR previews, local runs). */
   relay?: RegExp;
 }
 
@@ -162,7 +162,7 @@ export function jiraLogin(deps: JiraLoginDeps): DealerAuth & {
   async function start(req: IncomingMessage, res: ServerResponse) {
     const origin = originOf(req);
     const nonce = randomBytes(16).toString("base64url");
-    // the state says where to finish (a preview's address, through the dev site's callback)
+    // the state says where to finish (a preview's or local address, through the dev site's callback)
     const state = `${nonce}.${Buffer.from(origin).toString("base64url")}`;
     const secure = origin.startsWith("https:");
     redirect(res, atlassian.authorizeUrl(redirectUri(origin), state), [
@@ -176,7 +176,7 @@ export function jiraLogin(deps: JiraLoginDeps): DealerAuth & {
     const [nonce = "", from = ""] = (url.searchParams.get("state") ?? "").split(".");
     const startedAt = Buffer.from(from, "base64url").toString();
     if (startedAt && startedAt !== origin) {
-      // a preview's sign-in, sent back to the callback registered on the app: pass it on
+      // a preview's or local sign-in, sent back to the callback registered on the app: pass it on
       if (deps.relay?.test(startedAt)) return redirect(res, `${startedAt}/auth/jira/callback${url.search}`);
       res.writeHead(400, { "content-type": "text/plain" });
       return res.end("This sign-in didn't start here.");

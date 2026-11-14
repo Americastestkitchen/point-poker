@@ -9,9 +9,11 @@ primary_region = "iad"
 
 [env]
   PORT = "8080"
-  # PR previews sign in to Jira through this site's callback (the only one Atlassian knows);
-  # it passes each sign-in on to the preview that started it. Previews share this file: harmless there.
-  ATLASSIAN_RELAY = '^https://point-poker-pr-\d+\.fly\.dev$'
+  # PR previews and local runs sign in to Jira through this site's callback, so the Atlassian
+  # app only needs dev's and production's; it passes each sign-in on to where it started.
+  # Only a one-time code passes, and trading it for tokens takes the client secret, which
+  # stays where the sign-in started. Previews share this file: harmless there.
+  ATLASSIAN_RELAY = '^(https://point-poker-pr-\d+\.fly\.dev|http://localhost(:\d+)?|https://[a-z0-9-]+\.[a-z0-9-]+\.ts\.net(:\d+)?)$'
 
 [http_service]
   internal_port = 8080

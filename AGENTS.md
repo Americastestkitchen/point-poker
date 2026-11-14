@@ -34,7 +34,8 @@ sitting down only takes the invite link.
   - Open tabs keep running the old client against the new server until they reload. A
     protocol change that breaks old clients breaks games in progress.
 - **The dev site and previews forget their tables** when they redeploy or sleep. Previews
-  sign in to Jira through the dev site's callback.
+  and local runs sign in to Jira through the dev site's callback, so the dev site must keep
+  relaying them (`ATLASSIAN_RELAY`); don't add callback URLs to the Atlassian app for them.
 
 ## Where it's heading
 
