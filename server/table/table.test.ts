@@ -7,6 +7,8 @@ import { newTableState, TableState } from "./state.ts";
 import { FLICK_COOLDOWN_MS } from "../../shared/rules.ts";
 import type { Command } from "./commands.ts";
 import { ROLE_ERROR, Table, type JoinRequest, type TableEvent } from "./table.ts";
+import { Card, TableView } from "../../shared/protocol.ts";
+import { z } from "zod";
 
 const DEALER_KEY = "dealer-key";
 
@@ -516,4 +518,30 @@ test("a look is one object, cleaned up on the way in", async () => {
   );
   const odd = join({ name: "Odd", look: { color: "plaid", body: "blob" } });
   assert.deepEqual(player(odd).look, { color: "#ff6b4a", body: "bean", cosmetics: [] });
+});
+
+test("only the dealer picks the room, and only rooms that exist", async () => {
+  const { table, deb, ann, view, notices } = setup();
+  assert.equal(view().environment, "basement");
+  assert.equal((await table.run(ann.playerId, { t: "setEnvironment", environment: "basement" })).error, ROLE_ERROR);
+  assert.deepEqual(await table.run(deb.playerId, { t: "setEnvironment", environment: "moon-base" }), {
+    error: "That command didn't make sense",
+  });
+  assert.equal((await table.run(deb.playerId, { t: "setEnvironment", environment: "basement" })).error, undefined);
+  assert.deepEqual(
+    notices().map((n) => [n.text, n.except]),
+    [["🧳 The dealer moved the table to The Backlog Basement", deb.playerId]],
+  );
+  assert.equal(view().environment, "basement");
+});
+
+test("tabs opened before tables could change rooms still read every view", () => {
+  const { view } = setup();
+  // What those tabs check a view against: a room id from a list that only had the Basement.
+  const before = TableView.extend({
+    settings: z.object({ deck: z.array(Card), dealerPlays: z.boolean(), environment: z.enum(["basement"]) }),
+  });
+  assert.ok(before.safeParse({ ...view(), environment: "moon-base" }).success);
+  // and a newer tab that doesn't know a room yet shows the default one
+  assert.equal(TableView.parse({ ...view(), environment: "moon-base" }).environment, "basement");
 });

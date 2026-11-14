@@ -3,6 +3,7 @@
 // defineCommand() in the list; the Command type, the checks and the dispatch all come from it.
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
 import { LookInput, validateLook } from "../../shared/look.ts";
 import type { Ticket } from "../../shared/protocol.ts";
 import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
@@ -174,6 +175,18 @@ export const COMMANDS = [
     run({ s, changed }, me, { plays }) {
       s.settings.dealerPlays = plays;
       if (!plays) me.vote = null;
+      changed();
+    },
+  }),
+  /** Moves the table to another room. Only the looks change, so it works mid-round. */
+  defineCommand({
+    t: "setEnvironment",
+    role: "dealer",
+    move: "anytime",
+    input: { environment: z.enum(ENVIRONMENT_IDS) },
+    run({ s, changed, notice }, me, { environment }) {
+      s.environment = environment;
+      notice(`🧳 The dealer moved the table to ${ENVIRONMENT[environment].name}`, { except: me.id });
       changed();
     },
   }),

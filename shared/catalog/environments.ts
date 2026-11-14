@@ -1,5 +1,5 @@
 // Places a table can be. Their 3D content lives in client/src/environments/<id>/.
-import { idsOf } from "./registry.ts";
+import { byId, idsOf } from "./registry.ts";
 
 export interface EnvironmentInfo {
   id: string;
@@ -11,3 +11,6 @@ export const ENVIRONMENTS = [
 ] as const satisfies readonly EnvironmentInfo[];
 export type EnvironmentId = (typeof ENVIRONMENTS)[number]["id"];
 export const ENVIRONMENT_IDS = idsOf(ENVIRONMENTS);
+export const ENVIRONMENT = byId(ENVIRONMENTS);
+/** Where a new table opens, and where a room nobody here knows falls back to. */
+export const DEFAULT_ENVIRONMENT: EnvironmentId = "basement";

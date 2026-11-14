@@ -2,6 +2,7 @@
 // so saving a table is JSON.stringify and loading it is a schema check.
 import { z } from "zod";
 import { DECKS } from "../../shared/catalog/decks.ts";
+import { DEFAULT_ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
 import { Look } from "../../shared/look.ts";
 import { Epic, JiraSite, Phase, RoundResult, TableSettings, Ticket, TicketSummary } from "../../shared/protocol.ts";
 
@@ -45,6 +46,11 @@ export const TableState = z.object({
   /** Tokens of players the dealer kicked; they can't rejoin this table. */
   banned: z.array(z.string()),
   settings: TableSettings,
+  /**
+   * Which room the table is in. Tables saved before it had none, and a room this server
+   * doesn't know (after a rollback) would drop the table, so both load in the default.
+   */
+  environment: z.enum(ENVIRONMENT_IDS).catch(DEFAULT_ENVIRONMENT),
   epic: Epic.nullable(),
   queue: z.array(TicketSummary),
   queueLabel: z.string(),
@@ -76,6 +82,7 @@ export function newTableState(code: string, dealerKey: string, now: number, jira
     skipped: [],
     banned: [],
     settings: { deck: DECKS.classic.cards, dealerPlays: false, environment: "basement" },
+    environment: DEFAULT_ENVIRONMENT,
     epic: null,
     queue: [],
     queueLabel: "",
