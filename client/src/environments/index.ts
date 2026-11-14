@@ -5,6 +5,7 @@ import type { Environment } from "./types.ts";
 const ENVIRONMENTS: Record<EnvironmentId, () => Promise<{ default: Environment }>> = {
   basement: () => import("./basement/index.ts"),
   beach: () => import("./beach/index.ts"),
+  diner: () => import("./diner/index.ts"),
 };
 
 export async function loadEnvironment(id: EnvironmentId): Promise<Environment> {
