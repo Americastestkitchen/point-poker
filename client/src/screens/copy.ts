@@ -1,5 +1,6 @@
 // Copying to the clipboard. When the browser won't (no permission, plain http), the text shows
 // up in a kit dialog to select and copy by hand: never the browser's prompt().
+import { createValue } from "../../../shared/value.ts";
 import type { Toasts } from "../ui/index.ts";
 
 export interface ClipboardLike {
@@ -20,12 +21,7 @@ export interface CopyOptions {
 }
 
 export function createCopy(deps: { clipboard: () => ClipboardLike | undefined; toasts: Pick<Toasts, "show"> }) {
-  let fallback: CopyFallback | null = null;
-  const listeners = new Set<() => void>();
-  const set = (next: CopyFallback | null) => {
-    fallback = next;
-    for (const l of [...listeners]) l();
-  };
+  const fallback = createValue<CopyFallback | null>(null);
 
   return {
     /** Copies `text`; true when it's on the clipboard, false when it went to the dialog instead. */
@@ -37,19 +33,14 @@ export function createCopy(deps: { clipboard: () => ClipboardLike | undefined; t
         deps.toasts.show(done);
         return true;
       } catch {
-        set({ title, text });
+        fallback.set({ title, text });
         return false;
       }
     },
     /** For useSyncExternalStore: what the fallback dialog shows, or null when it's closed. */
-    fallback: () => fallback,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
-    dismiss() {
-      if (fallback) set(null);
-    },
+    fallback: fallback.get,
+    subscribe: fallback.subscribe,
+    dismiss: () => fallback.set(null),
   };
 }
 
