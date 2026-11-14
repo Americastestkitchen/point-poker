@@ -38,7 +38,7 @@ export function mountTableView(
     rig: CameraRig;
     ticket: TicketPaper;
     pot: Pot;
-    screen: StatusScreen;
+    screen: Pick<StatusScreen, "show">;
   },
 ): TableView {
   const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;

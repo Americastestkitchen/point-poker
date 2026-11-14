@@ -5,7 +5,10 @@ import type { Actions } from "../app/actions.ts";
 import type { Store } from "../app/store.ts";
 import type { Audio } from "../audio/sfx.ts";
 import { loadEnvironment } from "../environments/index.ts";
-import { mountEnvironment } from "../environments/mount.ts";
+import { DEFAULT_ENVIRONMENT, ENVIRONMENT } from "../../../shared/catalog/environments.ts";
+import { createCurtain } from "./engine/curtain.ts";
+import { DEFAULT_EXPOSURE } from "./engine/stage.ts";
+import { createRoom } from "./room.ts";
 import { createCameraRig } from "./engine/camera.ts";
 import { bindInput } from "./engine/input.ts";
 import { mountFirstPerson } from "./first-person.ts";
@@ -29,18 +32,44 @@ export interface SceneDeps {
 export async function mountScene(stage: Stage, deps: SceneDeps) {
   const { store, actions, audio } = deps;
   mountShowcase(stage, store);
-  // The Basement for now; following the table to its room comes with #10.
-  const env = mountEnvironment(await loadEnvironment("basement"), {
-    anchors: layout.anchors,
-    sound: audio.room,
-    pick: stage.picking.register,
-    onFrame: stage.onFrame,
-    // you clicked the squeaky: your bean reaches out and pokes it
-    squeaked: () => table.mine()?.play("poke"),
+  const furniture = buildTable(layout);
+  stage.scene.add(furniture.object);
+  const room = createRoom({
+    load: loadEnvironment,
+    mount: {
+      anchors: layout.anchors,
+      sound: audio.room,
+      pick: stage.picking.register,
+      onFrame: stage.onFrame,
+      // you clicked the squeaky: your bean reaches out and pokes it
+      squeaked: () => table.mine()?.play("poke"),
+    },
+    stage: {
+      add: (o) => stage.scene.add(o),
+      remove: (o) => stage.scene.remove(o),
+      look({ background, fog, exposure }) {
+        stage.scene.background = background;
+        stage.scene.fog = fog;
+        stage.renderer.toneMappingExposure = exposure ?? DEFAULT_EXPOSURE;
+      },
+    },
+    table: furniture,
+    curtain: createCurtain(stage),
+    failed(id, error) {
+      reportError(error);
+      store.events.emit({
+        t: "toast",
+        text: `🧳 ${ENVIRONMENT[id].name} didn't load. Reload the page to try again.`,
+        level: "error",
+      });
+    },
   });
-  stage.scene.background = env.background;
-  stage.scene.fog = env.fog;
-  stage.scene.add(env.root, buildTable(layout, env.tableMaterials));
+  // The title screens are in the default room; at a table, you're wherever the table is.
+  const roomOf = (s: ReturnType<Store["getState"]>) => s.room?.environment ?? DEFAULT_ENVIRONMENT;
+  await room.show(roomOf(store.getState()));
+  store.subscribe((s, prev) => {
+    if (s.room?.environment !== prev.room?.environment) void room.show(roomOf(s));
+  });
 
   const ticket = createTicketPaper(layout);
   stage.picking.register(ticket.mesh, actions.openTicket);
@@ -58,7 +87,7 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
     rig,
     ticket,
     pot,
-    screen: env.props.statusScreen,
+    screen: room.screen,
   });
   bindInput(stage, { actions, rig, allowsWorldKeys: deps.allowsWorldKeys });
 
