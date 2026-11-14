@@ -40,6 +40,8 @@ export interface Backdrop {
   object: THREE.Object3D;
   background: THREE.Color;
   fog: THREE.Fog | null;
+  /** How bright the camera sees the room (tone mapping exposure); the stage's default if left out. */
+  exposure?: number;
 }
 
 /** What a room is handed to build with. Everything it registers here goes when the room does. */
