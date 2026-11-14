@@ -1,6 +1,7 @@
 // Puts a room up: hands it what it builds with, places its props on their
-// anchors, wires the squeaky's click, and takes it all down again. A room only
-// builds; everything it registers goes through here, so dispose() leaves nothing behind.
+// anchors, wires the squeaky's click (it squeaks for everyone), and takes it all
+// down again. A room only builds; everything it registers goes through here, so
+// dispose() leaves nothing behind.
 import * as THREE from "three";
 import type { RoomSound } from "../audio/sfx.ts";
 import type { Anchor, Layout } from "../scene/layout/layout.ts";
@@ -15,7 +16,7 @@ export interface MountDeps {
   pick(object: THREE.Object3D, onPick: () => void): () => void;
   /** Runs `fn` every frame; returns how to stop it. */
   onFrame(fn: (dt: number, t: number) => void): () => void;
-  /** You clicked the squeaky, after it squeaked (your bean pokes it). */
+  /** You clicked the squeaky, after it squeaked for you: your bean pokes it, and everyone else's squeaks too. */
   squeaked(): void;
 }
 
