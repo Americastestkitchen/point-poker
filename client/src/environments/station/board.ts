@@ -3,6 +3,8 @@
 // and it gets later the longer you stand there.
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
+import { box, cylinder, plane, put } from "../kit/build.ts";
+import { between, jitter } from "../kit/random.ts";
 import { statusCanvas, type PaintStatus, type StatusLines } from "../kit/status.ts";
 import type { EnvCtx, StatusScreen } from "../types.ts";
 import { ROOM } from "./room.ts";
@@ -56,12 +58,6 @@ function rowsOf(lines: StatusLines): string[] {
   return [lines.title.toUpperCase(), sub[0] ?? "", sub[1] ?? "", lines.status.toUpperCase()];
 }
 
-/** A cheap repeatable hash, so each flap takes its own time to settle. */
-const jitter = (a: number, b: number) => {
-  const s = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
-  return s - Math.floor(s);
-};
-
 export function departureBoard({ sound, onFrame }: EnvCtx): StatusScreen {
   /** Seconds since the board went up. */
   let clock = 0;
@@ -75,7 +71,7 @@ export function departureBoard({ sound, onFrame }: EnvCtx): StatusScreen {
     const before = flip.from[r]?.charAt(i) ?? "";
     if (before === target) return [target, false];
     const start = flip.at + r * 0.12 + i * 0.03;
-    const settle = start + 0.25 + jitter(r, i) * 0.45;
+    const settle = start + 0.25 + jitter(r, i) * 0.45; // each flap takes its own time to settle
     if (clock < start) return [before, true];
     if (clock >= settle) return [target, false];
     return [FLAPS.charAt(Math.floor((clock - start) / 0.05 + jitter(i, r) * 30) % FLAPS.length), true];
@@ -125,23 +121,14 @@ export function departureBoard({ sound, onFrame }: EnvCtx): StatusScreen {
   const object = new THREE.Group();
   const width = 1.7;
   const height = (width * H) / W;
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(width + 0.1, height + 0.1, 0.12), toon("#1a1a1a"));
-  const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(width, height),
-    new THREE.MeshBasicMaterial({ map: status.texture }),
-  );
-  face.position.z = 0.061;
+  const frame = box(width + 0.1, height + 0.1, 0.12, toon("#1a1a1a"));
+  const face = put(plane(width, height, new THREE.MeshBasicMaterial({ map: status.texture })), 0, 0, 0.061);
   object.add(frame, face);
   // hung from the ceiling on two rods
   const rodLength = ROOM.ceiling - 1.95 - height / 2 - 0.05;
-  for (const x of [-0.6, 0.6]) {
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, rodLength), toon("#333"));
-    rod.position.set(x, height / 2 + 0.05 + rodLength / 2, 0);
-    object.add(rod);
-  }
-  const light = new THREE.PointLight("#ffb02e", 0.8, 2.5, 2);
-  light.position.set(0, 0, 0.5);
-  object.add(light);
+  for (const x of [-0.6, 0.6])
+    object.add(put(cylinder(0.012, 0.012, rodLength, toon("#333")), x, height / 2 + 0.05 + rodLength / 2, 0));
+  object.add(put(new THREE.PointLight("#ffb02e", 0.8, 2.5, 2), 0, 0, 0.5));
 
   let minute = 0;
   let clack = 0;
@@ -152,8 +139,8 @@ export function departureBoard({ sound, onFrame }: EnvCtx): StatusScreen {
       status.draw();
       clack -= dt;
       if (turning > 0 && clack <= 0) {
-        clack = 0.03 + Math.random() * 0.03;
-        sound.noise(0.015, 2200 + Math.random() * 1800, Math.min(0.035, 0.006 * turning));
+        clack = between(0.03, 0.06);
+        sound.noise(0.015, between(2200, 4000), Math.min(0.035, 0.006 * turning));
       }
       if (turning === 0) flip = null;
     } else if (nowMinute !== minute) status.draw();

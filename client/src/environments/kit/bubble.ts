@@ -2,6 +2,7 @@
 // rises and fades. Rooms show what a click did with them (no UI toasts in the world).
 import * as THREE from "three";
 import { FONT } from "../../scene/art/textures.ts";
+import { plane, put } from "./build.ts";
 import { liveCanvas } from "./canvas.ts";
 
 export interface PopupOptions {
@@ -26,8 +27,7 @@ export interface PopupOptions {
  */
 export function popup(parent: THREE.Object3D, map: THREE.Texture, o: PopupOptions) {
   const mat = new THREE.MeshBasicMaterial({ map, transparent: true, opacity: 0, depthWrite: false });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(o.width, o.height), mat);
-  mesh.position.set(0, o.y, o.z ?? 0);
+  const mesh = put(plane(o.width, o.height, mat), 0, o.y, o.z ?? 0);
   mesh.visible = false;
   parent.add(mesh);
   let life = 0; // 1 → 0 while it's up

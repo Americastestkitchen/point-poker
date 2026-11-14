@@ -5,6 +5,7 @@ import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import type { EnvCtx, Squeaky } from "../types.ts";
 import { arc, oneShot } from "../kit/animate.ts";
+import { cylinder, put, sphere } from "../kit/build.ts";
 
 /** A little over life size, so it reads from across the table. */
 const SIZE = 1.15;
@@ -17,15 +18,12 @@ export function ketchupBottle({ sound, onFrame }: EnvCtx): Squeaky {
   const bottle = new THREE.Group();
   const red = toon("#b81c1c");
   const white = toon("#f4f1ea");
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.052, HEIGHT, 16), red);
-  body.position.y = HEIGHT / 2;
-  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.048, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2), red);
+  const body = put(cylinder(0.048, 0.052, HEIGHT, red, 16), 0, HEIGHT / 2, 0);
+  const domeGeo = new THREE.SphereGeometry(0.048, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  const shoulder = put(new THREE.Mesh(domeGeo, red), 0, HEIGHT, 0);
   shoulder.scale.y = 0.5;
-  shoulder.position.y = HEIGHT;
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 0.04, 12), white);
-  cap.position.y = HEIGHT + 0.035;
-  const nozzle = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.035, 8), white);
-  nozzle.position.y = NOZZLE - 0.0175;
+  const cap = put(cylinder(0.026, 0.03, 0.04, white, 12), 0, HEIGHT + 0.035, 0);
+  const nozzle = put(new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.035, 8), white), 0, NOZZLE - 0.0175, 0);
   const label = new THREE.Mesh(
     new THREE.CylinderGeometry(0.0505, 0.0515, 0.07, 16, 1, true),
     toon("#ffffff", {
@@ -48,7 +46,7 @@ export function ketchupBottle({ sound, onFrame }: EnvCtx): Squeaky {
 
   // the blob flies out of the nozzle and lands as a splat beside the bottle
   const blobMat = toon("#b0141c", { transparent: true });
-  const blob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), blobMat);
+  const blob = sphere(0.022, blobMat, 10, 8);
   const REST = new THREE.Vector3(0, NOZZLE - 0.04, 0); // tucked inside the cap until it flies
   blob.position.copy(REST);
   blob.visible = false;

@@ -6,6 +6,7 @@ import { NEON } from "../../../../shared/brand.ts";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, wrapText } from "../../scene/art/textures.ts";
 import { textLines } from "../kit/canvas.ts";
+import { box, plane, put } from "../kit/build.ts";
 import { flickeringNeonLogo } from "../kit/neon.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
@@ -59,8 +60,7 @@ export default {
 function neonSign({ onFrame }: EnvCtx): Sign {
   const object = new THREE.Group();
   const logo = flickeringNeonLogo(2.2);
-  const light = new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5);
-  light.position.z = 0.45; // just out from the wall
+  const light = put(new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5), 0, 0, 0.45); // just out from the wall
   object.add(logo.object, light);
   onFrame((_, t) => {
     light.intensity = logo.update(t) ? 3 : 2.4;
@@ -72,32 +72,24 @@ function neonSign({ onFrame }: EnvCtx): Sign {
 function telly({ anchors, onFrame, pick, sound }: EnvCtx): StatusScreen {
   const object = new THREE.Group();
   const status = statusCanvas(512, 384, paintTelly);
-  const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.55), toon("#5a5048"));
-  const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.56, 0.42),
-    new THREE.MeshBasicMaterial({ map: status.texture }),
-  );
-  screen.position.z = 0.28;
-  box.add(screen);
+  const tv = box(0.7, 0.55, 0.55, toon("#5a5048"));
+  tv.add(put(plane(0.56, 0.42, new THREE.MeshBasicMaterial({ map: status.texture })), 0, 0, 0.28));
   // The shelf and the telly's glow sit square to the wall; only the telly is turned towards the table.
   const wall = new THREE.Group();
   wall.rotation.y = -anchors.statusScreen.yaw;
-  const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 1.6), woodTexMat());
-  shelf.position.set(0.02, -0.3, -0.3);
-  const light = new THREE.PointLight("#6fc3ff", 1.5, 3.5, 1.5);
-  light.position.set(0.52, 0, 0);
-  wall.add(shelf, light);
-  object.add(box, wall);
+  const shelf = put(box(0.8, 0.05, 1.6, woodTexMat()), 0.02, -0.3, -0.3);
+  wall.add(shelf, put(new THREE.PointLight("#6fc3ff", 1.5, 3.5, 1.5), 0.52, 0, 0));
+  object.add(tv, wall);
   const thump = wobble(30, 6);
   const rolling = oneShot(0.6);
-  pick(box, () => {
+  pick(tv, () => {
     thump.kick(0.06);
     rolling.kick();
     sound.noise(0.08, 250, 0.3);
     sound.noise(0.5, 6000, 0.05, 0.05);
   });
   onFrame((dt) => {
-    box.rotation.z = thump.step(dt);
+    tv.rotation.z = thump.step(dt);
     const roll = rolling.step(dt);
     if (roll !== null) status.draw(roll > 0 ? 0.2 + Math.random() * 0.5 : 0);
     else if (Math.random() < 0.02) status.draw(Math.random() * 0.08);

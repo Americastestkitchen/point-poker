@@ -4,6 +4,8 @@
 import * as THREE from "three";
 import { LOGO } from "../../../../shared/brand.ts";
 import { context2d } from "../../scene/art/textures.ts";
+import { cylinder, plane, put, sphere } from "../kit/build.ts";
+import { oneOf } from "../kit/random.ts";
 import type { EnvCtx, Sign } from "../types.ts";
 
 /** Tiles across the logo, and each tile's size on the canvas. */
@@ -12,13 +14,12 @@ const TILE = 11;
 /** The gold border, in tiles. */
 const BORDER = 3;
 
+type Shades = readonly [string, ...string[]];
 /** Shades of each tile colour; a tile picks one, so the wall looks hand-laid. */
-const GROUND = ["#174c3d", "#1b5a49", "#195243", "#1f604f"];
-const CREAM = ["#f4ecd2", "#ece2c4", "#f8f0da"];
-const PINK = ["#ff3f8e", "#f0307f", "#ff5a9e"];
-const GOLD = ["#c79a3a", "#b98b30", "#d2a548"];
-
-const pick = (shades: readonly string[]) => shades[Math.floor(Math.random() * shades.length)] ?? "#000";
+const GROUND: Shades = ["#174c3d", "#1b5a49", "#195243", "#1f604f"];
+const CREAM: Shades = ["#f4ecd2", "#ece2c4", "#f8f0da"];
+const PINK: Shades = ["#ff3f8e", "#f0307f", "#ff5a9e"];
+const GOLD: Shades = ["#c79a3a", "#b98b30", "#d2a548"];
 
 /** The logo drawn one pixel per tile: which tiles are cyan tube, pink tube, or wall. */
 function tileMask(across: number, down: number): (x: number, y: number) => "cream" | "pink" | null {
@@ -61,7 +62,7 @@ export function mosaicSign({ onFrame }: EnvCtx): Sign {
     for (let x = 0; x < cols; x++) {
       const inside = x >= BORDER && y >= BORDER && x < cols - BORDER && y < rows - BORDER;
       const tone = inside ? mask(x - BORDER, y - BORDER) : null;
-      g.fillStyle = !inside ? pick(GOLD) : tone === "pink" ? pick(PINK) : tone === "cream" ? pick(CREAM) : pick(GROUND);
+      g.fillStyle = oneOf(!inside ? GOLD : tone === "pink" ? PINK : tone === "cream" ? CREAM : GROUND);
       g.fillRect(x * TILE + 1, y * TILE + 1, TILE - 1.5, TILE - 1.5);
     }
   }
@@ -73,25 +74,18 @@ export function mosaicSign({ onFrame }: EnvCtx): Sign {
   const height = (width * rows) / cols;
   const object = new THREE.Group();
   const glaze = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, metalness: 0.05 });
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(width, height), glaze);
-  face.position.z = 0.02;
-  object.add(face);
+  object.add(put(plane(width, height, glaze), 0, 0, 0.02));
   // two brass lamps over it, and the light they throw
   const brass = new THREE.MeshStandardMaterial({ color: "#c79a3a", metalness: 0.7, roughness: 0.35 });
   const bulb = new THREE.MeshBasicMaterial({ color: "#fff1c4" });
   for (const x of [-0.7, 0.7]) {
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3), brass);
+    const arm = put(cylinder(0.012, 0.012, 0.3, brass), x, height / 2 + 0.1, 0.15);
     arm.rotation.x = Math.PI / 2;
-    arm.position.set(x, height / 2 + 0.1, 0.15);
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.1, 10, 1, true), brass);
-    shade.position.set(x, height / 2 + 0.08, 0.3);
+    const shade = put(new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.1, 10, 1, true), brass), x, height / 2 + 0.08, 0.3);
     shade.rotation.x = -0.5;
-    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), bulb);
-    glow.position.set(x, height / 2 + 0.05, 0.31);
-    object.add(arm, shade, glow);
+    object.add(arm, shade, put(sphere(0.035, bulb, 8, 6), x, height / 2 + 0.05, 0.31));
   }
-  const light = new THREE.PointLight("#ffe2a8", 1.6, 4.5, 1.6);
-  light.position.set(0, height / 2, 0.8);
+  const light = put(new THREE.PointLight("#ffe2a8", 1.6, 4.5, 1.6), 0, height / 2, 0.8);
   object.add(light);
   // the lamps hum along with the strip lights, a touch unsteady
   onFrame((_, t) => {

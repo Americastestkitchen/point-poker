@@ -6,6 +6,7 @@ import { NEON } from "../../../../shared/brand.ts";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, wrapText } from "../../scene/art/textures.ts";
 import { oneShot } from "../kit/animate.ts";
+import { box, cylinder, plane, put } from "../kit/build.ts";
 import { textLines } from "../kit/canvas.ts";
 import { flickeringNeonLogo, neonText, neonTubes } from "../kit/neon.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
@@ -74,10 +75,8 @@ function dinerSign({ onFrame }: EnvCtx): Sign {
   const object = new THREE.Group();
   const logo = flickeringNeonLogo(2.0);
   logo.object.position.y = 0.3;
-  const board = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.95, 0.06), toon("#2b1c2c"));
-  board.position.set(0, 0.05, -0.04);
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(2.3, 2.05, 0.04), chrome());
-  edge.position.set(0, 0.05, -0.07);
+  const board = put(box(2.2, 1.95, 0.06, toon("#2b1c2c")), 0, 0.05, -0.04);
+  const edge = put(box(2.3, 2.05, 0.04, chrome()), 0, 0.05, -0.07);
   // OPEN 24/7 in a rounded red tube, under the logo
   const frame = neonTubes(1.9, 0.42, (g, W, H, tube) =>
     tube(() => {
@@ -91,12 +90,10 @@ function dinerSign({ onFrame }: EnvCtx): Sign {
   frame.mesh.position.set(0, -0.62, 0.001);
   open.mesh.position.set(-0.4, -0.62, 0.002);
   hours.mesh.position.set(0.46, -0.62, 0.003);
-  const light = new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5);
-  light.position.z = 0.5;
+  const light = put(new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5), 0, 0, 0.5);
   // a touch bigger than the Basement's, and a little low so the board clears the ceiling
-  const face = new THREE.Group();
+  const face = put(new THREE.Group(), 0, -0.07, 0);
   face.scale.setScalar(1.12);
-  face.position.y = -0.07;
   face.add(edge, board, logo.object, frame.mesh, open.mesh, hours.mesh);
   object.add(face, light);
   onFrame((_, t) => {
@@ -114,38 +111,25 @@ function orderRail({ anchors, onFrame }: EnvCtx): StatusScreen {
   const object = new THREE.Group();
   const status = statusCanvas(384, 512, paintSlip);
   // The slip hangs from its clip and sways in the kitchen's draught.
-  const pivot = new THREE.Group();
-  pivot.position.y = 0.44;
-  const slip = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.63, 0.84),
-    new THREE.MeshBasicMaterial({ map: status.texture, color: "#f2efe8" }),
-  );
-  slip.position.y = -0.44;
-  const clip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.03), chrome());
-  clip.position.y = -0.02;
-  pivot.add(slip, clip);
+  const pivot = put(new THREE.Group(), 0, 0.44, 0);
+  const slipMat = new THREE.MeshBasicMaterial({ map: status.texture, color: "#f2efe8" });
+  pivot.add(put(plane(0.63, 0.84, slipMat), 0, -0.44, 0), put(box(0.12, 0.05, 0.03, chrome()), 0, -0.02, 0));
   object.add(pivot);
   // The rail and the old orders sit square to the wall; only the slip is turned towards the table.
   const wall = new THREE.Group();
   wall.rotation.y = -anchors.statusScreen.yaw;
   const shine = chrome();
   const toWall = -ROOM.x - anchors.statusScreen.position.x; // the wall is this far along x
-  const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.9, 8), shine);
+  const rail = put(cylinder(0.018, 0.018, 1.9, shine, 8), 0, 0.45, 0);
   rail.rotation.x = Math.PI / 2;
-  rail.position.y = 0.45;
   wall.add(rail);
-  for (const z of [-0.93, 0.93]) {
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(-toWall, 0.03, 0.03), shine);
-    bracket.position.set(toWall / 2, 0.45, z);
-    wall.add(bracket);
-  }
+  for (const z of [-0.93, 0.93]) wall.add(put(box(-toWall, 0.03, 0.03, shine), toWall / 2, 0.45, z));
   const oldOrder = new THREE.MeshBasicMaterial({ map: oldOrderTexture(), color: "#e8e2d4" });
   for (const [z, tilt] of [
     [0.62, 0.06],
     [-0.66, -0.08],
   ] as const) {
-    const old = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), oldOrder);
-    old.position.set(0, 0.25, z);
+    const old = put(plane(0.3, 0.4, oldOrder), 0, 0.25, z);
     old.rotation.set(0, Math.PI / 2, tilt);
     wall.add(old);
   }
