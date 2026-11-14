@@ -247,12 +247,12 @@ test("a whole session over real sockets, including a restart", async (t) => {
   await deb.until((p) => p.events.some((e) => e.t === "joined" && e.player.id === bob.id), "joined event");
 
   // ---- commands get answers: only the dealer runs the round, and failures say why
-  await assert.rejects(ann.actions.dealer.reveal(), { message: "Only the dealer can do that" });
-  await assert.rejects(deb.actions.dealer.deal(), { message: "Load a ticket first" });
-  await assert.rejects(deb.actions.dealer.load("nope"), {
+  await assert.rejects(ann.actions.dealer.wait.reveal(), { message: "Only the dealer can do that" });
+  await assert.rejects(deb.actions.dealer.wait.deal(), { message: "Load a ticket first" });
+  await assert.rejects(deb.actions.dealer.wait.load("nope"), {
     message: "That doesn't look like a Jira link or key (like SD-1234)",
   });
-  await assert.rejects(deb.actions.dealer.load("https://x.atlassian.net/browse/SD-9"), {
+  await assert.rejects(deb.actions.dealer.wait.load("https://x.atlassian.net/browse/SD-9"), {
     message: "SD-9: Jira isn't configured on the server",
   });
 
@@ -262,13 +262,13 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.deepEqual(ann.player(bob.id)?.look, { color: "#ffd23f", body: "pear", cosmetics: ["fez"] });
 
   // ---- a round: vote, change a vote, reveal, settle, re-settle
-  await deb.actions.dealer.typeIn("Login page");
+  await deb.actions.dealer.wait.typeIn("Login page");
   await ann.untilState((s) => s.phase === "voting" && s.round === 1, "voting");
   await bob.untilState((s) => s.phase === "voting", "bob sees voting");
   assert.equal(ann.state.ticket?.key, "TICKET");
   assert.equal(ann.state.ticket?.summary, "Login page");
   assert.ok(ann.events.some((e) => e.t === "dealt"));
-  await assert.rejects(deb.actions.dealer.refresh(), { message: "A ticket typed in by hand isn't in Jira" });
+  await assert.rejects(deb.actions.dealer.wait.refresh(), { message: "A ticket typed in by hand isn't in Jira" });
 
   ann.actions.vote(2);
   bob.actions.vote(5);
@@ -294,20 +294,20 @@ test("a whole session over real sockets, including a restart", async (t) => {
     }
   }
 
-  await deb.actions.dealer.reveal();
+  await deb.actions.dealer.wait.reveal();
   await bob.untilState((s) => s.phase === "revealed", "revealed");
   assert.equal(bob.player(ann.id)?.vote, 3);
   assert.equal(bob.player(bob.id)?.vote, 5);
   assert.equal(bob.state.pot, 8);
   assert.ok(bob.events.some((e) => e.t === "revealed"));
 
-  await deb.actions.dealer.settle(5);
+  await deb.actions.dealer.wait.settle(5);
   await ann.untilState((s) => s.phase === "settled" && s.finalPoints === 5, "settled at 5");
   assert.deepEqual(ann.state.winners, [bob.id]);
   assert.equal(ann.player(bob.id)?.chips, 8);
   assert.equal(ann.state.houseWon, false);
 
-  await deb.actions.dealer.settle(2);
+  await deb.actions.dealer.wait.settle(2);
   await ann.untilState((s) => s.finalPoints === 2, "re-settled at 2");
   assert.deepEqual(ann.state.winners, [ann.id]);
   assert.equal(ann.player(ann.id)?.chips, 8);
@@ -325,7 +325,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   );
 
   // ---- nobody close enough: the house rakes it in
-  await deb.actions.dealer.next();
+  await deb.actions.dealer.wait.next();
   await ann.untilState((s) => s.phase === "waiting" && !s.ticket, "back to waiting");
   await deb.session.request({ t: "manualTicket", key: "SD-2", summary: "Search", description: "" });
   await ann.untilState((s) => s.phase === "voting" && s.round === 2, "round 2");
@@ -334,15 +334,15 @@ test("a whole session over real sockets, including a restart", async (t) => {
   ann.actions.vote(1);
   bob.actions.vote(1);
   await deb.untilState((s) => s.players.filter((p) => p.hasVoted).length === 2, "round 2 votes");
-  await deb.actions.dealer.reveal();
-  await deb.actions.dealer.settle(8);
+  await deb.actions.dealer.wait.reveal();
+  await deb.actions.dealer.wait.settle(8);
   await bob.untilState((s) => s.phase === "settled", "house round settled");
   assert.equal(bob.state.houseWon, true);
   assert.deepEqual(bob.state.winners, [deb.id]);
   assert.equal(bob.player(deb.id)?.chips, 2);
 
   // ---- reloading mid-vote keeps your card
-  await deb.actions.dealer.next();
+  await deb.actions.dealer.wait.next();
   await deb.session.request({ t: "manualTicket", key: "SD-3", summary: "Signup", description: "" });
   await ann.untilState((s) => s.round === 3 && s.phase === "voting", "round 3");
   ann.actions.vote(5);
@@ -393,7 +393,7 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.deepEqual([coins("use"), coins("flick")], [1, 1], "only one coin flew");
 
   // ---- skip and cancel pay nobody
-  await deb.actions.dealer.skip();
+  await deb.actions.dealer.wait.skip();
   await reloaded.untilState((s) => s.phase === "waiting" && s.skipped.includes("SD-3"), "skipped");
   await reloaded.until((p) => p.toasts().includes("⏭️ The dealer skipped SD-3"), "skip toast");
   assert.equal(reloaded.player(ann.id)?.chips, 8);
@@ -401,14 +401,14 @@ test("a whole session over real sockets, including a restart", async (t) => {
 
   await deb.session.request({ t: "manualTicket", key: "SD-4", summary: "Cancel me", description: "" });
   await reloaded.untilState((s) => s.ticket?.key === "SD-4", "round 4");
-  await deb.actions.dealer.cancel();
+  await deb.actions.dealer.wait.cancel();
   await reloaded.untilState((s) => s.phase === "waiting" && !s.ticket, "cancelled");
   await bob.until((p) => p.toasts().includes("🎩 The dealer cancelled this round"), "cancel toast");
 
   // ---- kick: the player is gone and can't come back
   const cat = await join(code, look("Cat"));
   await deb.untilState((s) => s.players.length === 4, "cat sat down");
-  await deb.actions.dealer.kick(cat.id);
+  await deb.actions.dealer.wait.kick(cat.id);
   await cat.until((p) => p.closed, "cat kicked");
   assert.equal(cat.closeCode, 4001);
   assert.deepEqual(cat.store.getState().connection, { status: "closed", room: code, reason: "Removed by the dealer" });

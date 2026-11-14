@@ -1,7 +1,7 @@
 // The game UI's root. Before you sit down it shows the title screens; at the table, the HUD
 // (GameScreen) and the look editor when it's open. It owns what happens once for the whole
-// screen: the one toast adapter (event-stream toasts, joins, leaves, being removed, someone pointing at you or
-// answering your emote), opening
+// screen: the one toast adapter (event-stream toasts, including failed actions nobody waits on, with
+// the bonk; joins, leaves, being removed, someone pointing at you or answering your emote), opening
 // the ticket when the 3D paper is clicked, the window title (and the dealer's "all in" chime),
 // and Esc opening the game menu.
 // Options and How to play open from the title menu and the game menu alike.
