@@ -155,7 +155,12 @@ export class Table {
     this.ctx.changed();
   }
 
-  /** Runs a command as it came off the wire: checks its shape, the player's role and the phase, then applies the rules. */
+  /**
+   * Runs a command as it came off the wire: checks its shape, the player's role and the phase, then applies the rules.
+   * Once a command it ran has finished, however it ended, everyone gets a fresh view: it may have changed something
+   * even if it then failed. A command refused before it runs changed nothing, so nobody hears about it.
+   * The announcement goes out before this resolves, so the transport sends the view ahead of the command's result.
+   */
   async run(playerId: string, cmd: unknown): Promise<CommandResult> {
     const me = findPlayer(this.s, playerId);
     if (!me) return { error: "You're not at this table" };
@@ -173,6 +178,8 @@ export class Table {
     } catch (e) {
       this.deps.log.error("command failed", spec.t, e);
       return { error: "Something went wrong" };
+    } finally {
+      this.ctx.changed();
     }
   }
 
@@ -200,7 +207,11 @@ export class Table {
     return id;
   }
 
-  /** Loads a ticket and deals it. An epic fills the queue with its children and deals the first one. Latest load wins. */
+  /**
+   * Loads a ticket and deals it. An epic fills the queue with its children and deals the first one. Latest load wins.
+   * Commands await it, so the table shows the dealt ticket once the command finishes; only the epic's queue,
+   * shown while its first child is still loading, needs announcing here.
+   */
   private async load(ref: string, label: string): Promise<string | void> {
     const s = this.s;
     const current = this.ctx.claimTicket();
@@ -218,13 +229,13 @@ export class Table {
           s.epic = { key: ticket.key, summary: ticket.summary, url: ticket.url };
           s.queue = children.tickets;
           s.queueLabel = children.label;
+          // show the queue now, while the first child is still on its way
           this.ctx.changed();
         }
         ticket = await tickets.get(first.key);
         if (!current()) return;
       }
       startRound(s, ticket);
-      this.ctx.changed();
     } catch (e) {
       if (current()) return `${label}: ${e instanceof Error ? e.message : String(e)}`;
     }

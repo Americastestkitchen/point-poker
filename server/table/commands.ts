@@ -1,6 +1,8 @@
 // Every command a player can send, as data: its name, who may send it, which
 // round move it is, what it carries, and what it does. A new command is one more
 // defineCommand() in the list; the Command type, the checks and the dispatch all come from it.
+// The table sends everyone a fresh view once a command finishes, so a command only calls
+// changed() to show something before it's done: a change made before it waits on Jira.
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
@@ -31,6 +33,10 @@ export interface PlayerCtx {
   readonly s: TableState;
   now(): number;
   log(line: string): void;
+  /**
+   * Sends everyone a fresh view now. The table already does this when the command finishes,
+   * so call it only to show a change before then: one made before an `await`.
+   */
   changed(): void;
   /** A toast for everyone but `except`, or for `to` alone. */
   notice(text: string, opts?: { level?: "error"; except?: string; to?: string }): void;
@@ -94,7 +100,7 @@ export const COMMANDS = [
     role: "player",
     move: "vote",
     input: { value: z.number().nullable() },
-    run({ s, changed, fx }, me, { value }) {
+    run({ s, fx }, me, { value }) {
       if (!isVoter(s, me)) return "You're sitting this one out";
       const vote = pickVote(s, value);
       if (value !== null && vote === null) return "That card isn't in the deck";
@@ -104,12 +110,10 @@ export const COMMANDS = [
         if (vote === null) return "Your card's already up. Pick another one instead";
         if (vote === before) return;
         changeRevealedVote(s, me, vote);
-        changed();
         return;
       }
       me.vote = vote;
       if (before !== null && me.vote !== null && before !== me.vote) fx(me.id, { kind: "adjust" }, { except: me.id });
-      changed();
     },
   }),
   /**
@@ -136,9 +140,8 @@ export const COMMANDS = [
     role: "player",
     move: "anytime",
     input: { look: LookInput },
-    run({ changed }, me, { look }) {
+    run(_ctx, me, { look }) {
       me.look = validateLook(look);
-      changed();
     },
   }),
 
@@ -160,12 +163,11 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: { key: z.string(), summary: z.string(), description: z.string() },
-    run({ s, changed, claimTicket }, _me, cmd) {
+    run({ s, claimTicket }, _me, cmd) {
       const summary = clean(cmd.summary, 300);
       if (!summary) return "The ticket needs a summary";
       claimTicket();
       startRound(s, manualTicket(clean(cmd.key, 30), summary, clean(cmd.description, 6000)));
-      changed();
     },
   }),
   defineCommand({
@@ -173,7 +175,7 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: {},
-    async run({ s, changed, claimQueue, upcoming }) {
+    async run({ s, claimQueue, upcoming }) {
       const lastProject = s.ticket?.key.split("-")[0];
       const current = claimQueue();
       try {
@@ -184,7 +186,6 @@ export const COMMANDS = [
         s.queue = tickets;
         s.queueLabel = label;
         s.epic = null;
-        changed();
       } catch (e) {
         if (current()) return `Couldn't load the sprint: ${e instanceof Error ? e.message : String(e)}`;
       }
@@ -195,12 +196,11 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: {},
-    run({ s, changed, claimQueue }) {
+    run({ s, claimQueue }) {
       claimQueue();
       s.queue = [];
       s.queueLabel = "";
       s.epic = null;
-      changed();
     },
   }),
   defineCommand({
@@ -208,10 +208,9 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: { plays: z.boolean() },
-    run({ s, changed }, me, { plays }) {
+    run({ s }, me, { plays }) {
       s.settings.dealerPlays = plays;
       if (!plays) me.vote = null;
-      changed();
     },
   }),
   /** Moves the table to another room. Only the looks change, so it works mid-round. */
@@ -220,11 +219,10 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: { environment: z.enum(ENVIRONMENT_IDS) },
-    run({ s, changed, notice }, me, { environment }) {
+    run({ s, notice }, me, { environment }) {
       if (s.environment === environment) return;
       s.environment = environment;
       notice(`🧳 The dealer moved the table to ${ENVIRONMENT[environment].name}`, { except: me.id });
-      changed();
     },
   }),
   defineCommand({
@@ -232,9 +230,8 @@ export const COMMANDS = [
     role: "dealer",
     move: "deal",
     input: {},
-    run({ s, changed }) {
+    run({ s }) {
       startRound(s);
-      changed();
     },
   }),
   defineCommand({
@@ -242,9 +239,8 @@ export const COMMANDS = [
     role: "dealer",
     move: "reveal",
     input: {},
-    run({ s, changed }) {
+    run({ s }) {
       reveal(s);
-      changed();
     },
   }),
   defineCommand({
@@ -252,7 +248,7 @@ export const COMMANDS = [
     role: "dealer",
     move: "settle",
     input: { finalPoints: z.number() },
-    run({ s, changed, now, log }, _me, { finalPoints }) {
+    run({ s, now, log }, _me, { finalPoints }) {
       if (!s.settings.deck.some((c) => c.points === finalPoints)) return "That card isn't in the deck";
       if (s.phase === "settled") {
         // the dealer changed their mind: take back the last payout first
@@ -291,7 +287,6 @@ export const COMMANDS = [
             ...(switched.length ? { atReveal: Object.fromEntries(switched.map((w) => [w.name, w.from])) } : {}),
           }),
       );
-      changed();
     },
   }),
   defineCommand({
@@ -304,6 +299,7 @@ export const COMMANDS = [
       ctx.claimTicket();
       endRound(s);
       const next = nextInQueue(s);
+      // show the round ending now, while the next ticket is still on its way
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
     },
@@ -314,11 +310,10 @@ export const COMMANDS = [
     role: "dealer",
     move: "cancel",
     input: {},
-    run({ s, changed, notice, claimTicket }, me) {
+    run({ s, notice, claimTicket }, me) {
       claimTicket();
       endRound(s);
       notice("🎩 The dealer cancelled this round", { except: me.id });
-      changed();
     },
   }),
   /** Skip the current ticket (no payout) and deal the next one in the queue. */
@@ -337,6 +332,7 @@ export const COMMANDS = [
       ctx.claimTicket();
       endRound(s);
       ctx.notice(`⏭️ The dealer skipped ${skippedKey}`, { except: me.id });
+      // show the round ending now, while the next ticket is still on its way
       ctx.changed();
       if (next) return ctx.load(next.key, next.key);
     },
@@ -347,7 +343,7 @@ export const COMMANDS = [
     role: "dealer",
     move: "refresh",
     input: {},
-    async run({ s, changed, notice, fetchTicket }, me) {
+    async run({ s, notice, fetchTicket }, me) {
       const before = s.ticket;
       // outside waiting there's always a ticket out; this only tells the compiler
       if (!before) return "There's no ticket to refresh";
@@ -364,7 +360,6 @@ export const COMMANDS = [
         return;
       }
       s.ticket = fresh;
-      changed();
       notice(`🔄 ${before.key} was updated`);
     },
   }),
@@ -373,14 +368,13 @@ export const COMMANDS = [
     role: "dealer",
     move: "anytime",
     input: { id: z.string() },
-    run({ s, changed, notice, remove }, me, { id }) {
+    run({ s, notice, remove }, me, { id }) {
       const p = s.players.find((x) => x.id === id);
       if (!p) return "They're not at this table";
       if (p.id === me.id || p.id === s.dealerId) return "You can't remove yourself";
       s.banned.push(p.token);
       remove(p, "Removed by the dealer");
       notice(`👋 ${p.name} was removed from the table`);
-      changed();
     },
   }),
 ] as const;

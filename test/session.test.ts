@@ -353,6 +353,17 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(reloaded.store.getState().ui.myVote, 5, "the reloaded page remembers your card");
   assert.equal(bob.player(ann.id)?.vote, null, "and still nobody else sees it");
 
+  // ---- the view with your new card arrives before the answer to your vote (client/src/app/vote.ts relies on it)
+  const sent = reloaded.wire.length;
+  await reloaded.session.request({ t: "vote", value: 8 });
+  const since = reloaded.wire.slice(sent);
+  const answer = since.findIndex((m) => m.t === "result");
+  assert.ok(answer >= 0, "the vote was answered");
+  assert.ok(
+    since.slice(0, answer).some((m) => m.t === "view" && m.view.players.find((p) => p.id === ann.id)?.vote === 8),
+    "the view with the new card came before the answer",
+  );
+
   // ---- hand items: everyone sees one used, whoever used it included, and each has a cooldown
   deb.actions.items.pick("hammer");
   deb.actions.items.use(bob.id);
