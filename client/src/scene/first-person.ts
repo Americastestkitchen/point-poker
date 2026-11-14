@@ -2,7 +2,8 @@
 // hidden on your screen (everyone else sees it as usual); this draws a first-person body in its
 // place instead, posed like your bean every frame. It's drawn in a pass of its own after the
 // room, so your arms are always in front of the table and the cards, never through them. The
-// room's lights light it, so it looks like it's in the room.
+// room's lights light it, so it looks like it's in the room: each room hands its lights over
+// with lightsYourBody as it goes up.
 import * as THREE from "three";
 import type { Store } from "../app/store.ts";
 import type { Avatar } from "../avatar/avatar.ts";
@@ -21,11 +22,6 @@ export function mountFirstPerson(
   },
 ) {
   const { scene, camera, renderer } = stage;
-  // the lights that are in the room now (the environment's) light your body too
-  scene.traverse((o) => {
-    if (o instanceof THREE.Light) o.layers.enable(LAYER);
-  });
-
   let fp: { body: FirstPersonBody; look: Avatar["look"] } | null = null;
 
   stage.onFrame(() => {
@@ -66,6 +62,17 @@ export function mountFirstPerson(
     renderer.shadowMap.autoUpdate = shadows;
     renderer.autoClear = autoClear;
     scene.background = background;
+  });
+}
+
+/**
+ * Lets the lights in `room` light your body as well as the room. Call it on each room as it goes
+ * up: a room's lights are new every time, even when it's a room you've been in before, and
+ * without them your body is drawn unlit, all black.
+ */
+export function lightsYourBody(room: THREE.Object3D) {
+  room.traverse((o) => {
+    if (o instanceof THREE.Light) o.layers.enable(LAYER);
   });
 }
 

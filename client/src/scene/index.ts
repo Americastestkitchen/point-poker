@@ -11,7 +11,7 @@ import { DEFAULT_EXPOSURE } from "./engine/stage.ts";
 import { createRoom } from "./room.ts";
 import { createCameraRig } from "./engine/camera.ts";
 import { bindInput } from "./engine/input.ts";
-import { mountFirstPerson } from "./first-person.ts";
+import { lightsYourBody, mountFirstPerson } from "./first-person.ts";
 import type { Stage } from "./engine/stage.ts";
 import { layout } from "./layout/layout.ts";
 import { createFlights } from "./table/flights.ts";
@@ -48,7 +48,10 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
       },
     },
     stage: {
-      add: (o) => stage.scene.add(o),
+      add: (o) => {
+        lightsYourBody(o);
+        stage.scene.add(o);
+      },
       remove: (o) => stage.scene.remove(o),
       look({ background, fog, exposure }) {
         stage.scene.background = background;
