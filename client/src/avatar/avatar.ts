@@ -21,8 +21,6 @@ export interface Avatar {
   readonly group: THREE.Group;
   /** An invisible cylinder that's easy to click. */
   readonly hitbox: THREE.Mesh;
-  /** Placing or squaring up a card right now. */
-  readonly busyWithCard: boolean;
   /** What they look like now. */
   readonly look: Look;
   /** The pose from the last update(), for your first-person body to copy. */
@@ -147,9 +145,6 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   return {
     group,
     hitbox,
-    get busyWithCard() {
-      return animator.busyWithCard;
-    },
     get look() {
       return look;
     },

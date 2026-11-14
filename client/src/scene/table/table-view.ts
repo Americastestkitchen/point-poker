@@ -302,8 +302,7 @@ export function mountTableView(
   return {
     mine: () => seats.get(meId())?.avatar ?? null,
     update(dt, t) {
-      const voting = store.getState().room?.phase === "voting";
-      for (const s of seats.values()) s.update(dt, t, voting);
+      for (const s of seats.values()) s.update(dt, t);
     },
   };
 }

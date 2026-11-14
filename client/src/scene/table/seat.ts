@@ -17,7 +17,7 @@ export interface Seat {
   showChips(amount: number, seed: number): void;
   /** Where winnings fly to. */
   stackPosition(out?: THREE.Vector3): THREE.Vector3;
-  update(dt: number, t: number, voting: boolean): void;
+  update(dt: number, t: number): void;
   /** Takes the seat off the table. */
   remove(): void;
 }
@@ -61,24 +61,12 @@ export function createSeat(stage: Stage, player: PublicPlayer, deps: { layout: L
 
     stackPosition: (out = new THREE.Vector3()) => stack.getWorldPosition(out),
 
-    update(dt, t, voting) {
+    update(dt, t) {
       avatar.group.position.lerp(pos, Math.min(1, dt * 4));
       let dr = facing - avatar.group.rotation.y;
       dr = Math.atan2(Math.sin(dr), Math.cos(dr));
       avatar.group.rotation.y += dr * Math.min(1, dt * 4);
       avatar.update(dt, t);
-      // idle fidget: now and then someone straightens their face-down card
-      if (
-        voting &&
-        card.group.visible &&
-        !card.isFaceUp &&
-        avatar.group.visible &&
-        !avatar.busyWithCard &&
-        Math.random() < dt / 11
-      ) {
-        avatar.play("adjustCard");
-        card.nudge(0.2);
-      }
       card.update(dt);
     },
 
