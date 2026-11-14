@@ -5,6 +5,7 @@ import type { Actions } from "../app/actions.ts";
 import type { Store } from "../app/store.ts";
 import type { Audio } from "../audio/sfx.ts";
 import { loadEnvironment } from "../environments/index.ts";
+import { mountEnvironment } from "../environments/mount.ts";
 import { createCameraRig } from "./engine/camera.ts";
 import { bindInput } from "./engine/input.ts";
 import { mountFirstPerson } from "./first-person.ts";
@@ -28,8 +29,15 @@ export interface SceneDeps {
 export async function mountScene(stage: Stage, deps: SceneDeps) {
   const { store, actions, audio } = deps;
   mountShowcase(stage, store);
-  // The Basement for now; switching on settings.environment comes with #10.
-  const env = await (await loadEnvironment("basement")).build({ layout, audio });
+  // The Basement for now; following the table to its room comes with #10.
+  const env = mountEnvironment(await loadEnvironment("basement"), {
+    anchors: layout.anchors,
+    sound: audio.room,
+    pick: stage.picking.register,
+    onFrame: stage.onFrame,
+    // you clicked the squeaky: your bean reaches out and pokes it
+    squeaked: () => table.mine()?.play("poke"),
+  });
   stage.scene.background = env.background;
   stage.scene.fog = env.fog;
   stage.scene.add(env.root, buildTable(layout, env.tableMaterials));
@@ -52,18 +60,11 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
     pot,
     screen: env.props.statusScreen,
   });
-  const { squeaky } = env.props;
-  stage.picking.register(squeaky.object, () => {
-    squeaky.squeak();
-    table.mine()?.play("poke");
-  });
   bindInput(stage, { actions, rig, allowsWorldKeys: deps.allowsWorldKeys });
-  audio.ambience(env.ambience);
 
   stage.onFrame((dt) => rig.update(dt));
   stage.onFrame((dt, t) => table.update(dt, t));
   // after the table, so your body copies the pose your bean has this frame
   mountFirstPerson(stage, { store, mine: table.mine });
   stage.onFrame((dt) => flights.update(dt));
-  stage.onFrame((dt, t) => env.update(dt, t));
 }
