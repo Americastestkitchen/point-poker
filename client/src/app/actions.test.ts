@@ -49,6 +49,23 @@ test("no voting outside a round, or for a dealer who sits out", () => {
   assert.deepEqual([...sent, ...dealer.sent], []);
 });
 
+test("after the reveal you can swap the card you played, until the dealer calls it", () => {
+  const { sent, store, events, actions } = setup();
+  const up = withPlayers(view({ phase: "revealed", round: 1, ticket: ticket("SD-1") }), (p) =>
+    p.id === "ann" ? { hasVoted: true, vote: 2 } : {},
+  );
+  store.receive(up);
+  actions.vote(2);
+  assert.deepEqual(sent, [], "the card you already have does nothing");
+  actions.vote(5);
+  assert.deepEqual(sent, [{ t: "vote", value: 5 }]);
+  assert.equal(store.getState().ui.myVote, 5);
+  assert.deepEqual(events.at(-1), { t: "played", value: 5, changed: true });
+  store.receive({ ...up, phase: "settled", finalPoints: 5 });
+  actions.vote(3);
+  assert.equal(sent.length, 1, "settling locks it");
+});
+
 test("your card comes from your view, so a fresh page still knows it", () => {
   const { store } = setup();
   const mine = view({ phase: "voting", round: 1, ticket: ticket("SD-1") });

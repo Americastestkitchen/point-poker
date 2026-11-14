@@ -97,6 +97,40 @@ export function cardFront(value: number): THREE.CanvasTexture {
   return t;
 }
 
+const swapCache = new Map<string, THREE.CanvasTexture>();
+/** A little sticker over a floating card: "3 → 5", the old card struck through. 256×96. */
+export function swapTag(from: number, to: number): THREE.CanvasTexture {
+  const key = `${from}:${to}`;
+  let t = swapCache.get(key);
+  if (t) return t;
+  t = canvasTex(256, 96, (g) => {
+    roundRect(g, 4, 4, 248, 88, 44);
+    g.fillStyle = "#1b1410";
+    g.fill();
+    g.strokeStyle = "#e6be5a";
+    g.lineWidth = 5;
+    g.stroke();
+    g.font = `bold 52px ${FONT}`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillStyle = "rgba(244,239,227,0.55)";
+    g.fillText(String(from), 62, 52);
+    const w = g.measureText(String(from)).width;
+    g.strokeStyle = "#e05a4f";
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(62 - w / 2 - 6, 58);
+    g.lineTo(62 + w / 2 + 6, 44);
+    g.stroke();
+    g.fillStyle = "#e6be5a";
+    g.fillText("→", 128, 50);
+    g.fillStyle = "#f4efe3";
+    g.fillText(String(to), 194, 52);
+  });
+  swapCache.set(key, t);
+  return t;
+}
+
 let back: THREE.CanvasTexture | null = null;
 export function cardBack(): THREE.CanvasTexture {
   back ??= canvasTex(256, 368, (g) => {

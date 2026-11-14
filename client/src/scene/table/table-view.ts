@@ -7,7 +7,7 @@ import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
-import { PLACE_PAT } from "../../avatar/animator.ts";
+import { PLACE_PAT, SWAP_GRAB, SWAP_SLAP } from "../../avatar/animator.ts";
 import type { Avatar } from "../../avatar/avatar.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
@@ -128,15 +128,19 @@ export function mountTableView(
           card.turnDown();
         } else card.hide();
       } else if (revealed && p.vote !== null) {
+        // your own card follows your hand, so a swap you just made doesn't snap back while it's on its way
+        const myVote = store.getState().ui.myVote;
+        const value = mine && myVote !== null ? myVote : p.vote;
         if (!card.group.visible) card.show(null);
         if (!card.isFaceUp) {
           // on the reveal, cards turn one after another
           const stagger = happened("revealed");
-          card.turnUp(p.vote, {
+          card.turnUp(value, {
             delay: stagger ? 0.25 * flipIndex++ : 0,
             onTurn: stagger ? () => audio.flip() : undefined,
           });
-        }
+        } else if (card.value !== value) swapCard(seat, value, mine); // they changed their mind
+        card.setWas(p.revealedVote);
       } else card.hide();
 
       // chip stack (winners' stacks update after the chips land)
@@ -147,6 +151,7 @@ export function mountTableView(
 
     // the pot
     if (potDoes === "fill") pot.fill(st.pot);
+    else if (st.phase === "revealed") pot.restack(st.pot);
     else if (potDoes === "clear") pot.clear();
     else if (potDoes === "payOut") {
       const winners = st.winners.map((id) => seats.get(id)).filter((s): s is Seat => !!s);
@@ -191,6 +196,16 @@ export function mountTableView(
             ? `FINAL ${st.finalPoints} PTS`
             : "";
     screen.show(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", status);
+  }
+
+  /** After the reveal: the bean grabs its card back off the felt and slaps the new one down, face up. */
+  function swapCard(seat: Seat, value: number, mine: boolean) {
+    seat.avatar.play("swapCard");
+    // your own comes up in front of your eyes; everyone else's in their bean's hand
+    const hand = mine
+      ? () => camera.localToWorld(new THREE.Vector3(0.12, -0.12, -0.45))
+      : () => seat.avatar.handWorldPos();
+    seat.card.swap(value, hand, { grab: SWAP_GRAB, slap: SWAP_SLAP, onSlap: audio.slap });
   }
 
   function headOf(id: string): THREE.Vector3 {
@@ -279,6 +294,11 @@ export function mountTableView(
         return;
       case "played": {
         const seat = seats.get(meId());
+        if (seat && store.getState().room?.phase === "revealed") {
+          // changing your mind during the discussion: face up, for everyone to see
+          if (seat.card.group.visible) swapCard(seat, e.value, true);
+          return;
+        }
         if (seat) {
           if (e.changed && seat.card.group.visible) {
             // swapping it: the card stays on the felt and both hands square it up, as everyone sees

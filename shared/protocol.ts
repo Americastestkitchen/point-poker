@@ -67,6 +67,11 @@ export const PublicPlayer = z.object({
   hasVoted: z.boolean(),
   /** Everyone's once the cards are up; before that only your own. */
   vote: z.number().nullable(),
+  /**
+   * The card they had at the reveal, once they've changed it since (null until then, or before
+   * the reveal). A server from before votes could change after the reveal doesn't send it.
+   */
+  revealedVote: z.number().nullable().default(null),
   chips: z.number(),
   lastWin: z.number(),
 });
@@ -81,6 +86,8 @@ export const RoundResult = z.object({
   share: z.number(),
   /** Nobody was within one card, so the dealer raked in the pot. */
   houseWon: z.boolean().optional(),
+  /** Who changed their card after the reveal: the card they had then, and the one that counted. */
+  switched: z.array(z.object({ name: z.string(), from: z.number(), to: z.number() })).optional(),
 });
 export type RoundResult = z.infer<typeof RoundResult>;
 

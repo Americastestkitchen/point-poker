@@ -33,6 +33,8 @@ export interface Pot {
   readonly state: PotState;
   /** Stacks `amount` in the pot, the chips dropping in one after another. */
   fill(amount: number): void;
+  /** Someone changed their card after the reveal: the full pot restacks to `amount` on the spot. */
+  restack(amount: number): void;
   /** Every chip flies to one of `to` (they take turns); `landed` runs once they're all there. */
   payOut(to: { stackPosition(out?: THREE.Vector3): THREE.Vector3 }[], landed: () => void): void;
   clear(): void;
@@ -45,6 +47,8 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
   group.position.set(p.x, p.y, p.z);
   stage.scene.add(group);
   let state: PotState = "empty";
+  /** What the pot was last stacked with. */
+  let holds = 0;
 
   return {
     get state() {
@@ -53,6 +57,7 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
 
     fill(amount) {
       state = "full";
+      holds = amount;
       stackChips(group, amount, 99);
       group.children.forEach((c, i) => {
         const to = c.position.clone();
@@ -68,6 +73,13 @@ export function createPot(stage: Stage, deps: { layout: Layout; flights: Flights
           done: () => i % 3 === 0 && audio.chip(),
         });
       });
+    },
+
+    restack(amount) {
+      if (state !== "full" || amount === holds) return;
+      holds = amount;
+      stackChips(group, amount, 99);
+      audio.chip();
     },
 
     payOut(to, landed) {

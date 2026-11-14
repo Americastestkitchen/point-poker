@@ -73,6 +73,8 @@ function Body({ body }: { body: DockBody }) {
       );
     case "vote":
       return <Hand cards={body.cards} label="Your cards" onPress={press} />;
+    case "change":
+      return <Hand cards={body.cards} label="Change your card" settle onPress={press} />;
     case "settle":
       return <Hand cards={body.cards} label="Final points" settle onPress={press} />;
     case "spread":

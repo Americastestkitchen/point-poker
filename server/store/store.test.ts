@@ -49,6 +49,27 @@ test("tables saved before rooms could change open in the Basement, and so do roo
   );
 });
 
+test("tables saved mid-reveal before votes could change after it load, and their players can still switch", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "pp-store-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { revealedVote: _, ...oldPlayer } = {
+    id: "p1",
+    token: "t1",
+    name: "Ann",
+    look: { color: "#3bceac", body: "bean", cosmetics: [] },
+    seat: 0,
+    vote: 3,
+    revealedVote: null,
+    chips: 0,
+    lastWin: 0,
+  };
+  const before = { ...newTableState("OLDD", "k1", 1), phase: "revealed", players: [oldPlayer] };
+  writeFileSync(join(dir, "rooms.json"), JSON.stringify([before]));
+  const [loaded] = fileStore(dir, quiet).load();
+  assert.equal(loaded?.players[0]?.revealedVote, null);
+  assert.equal(loaded?.players[0]?.vote, 3);
+});
+
 test("the memory store round-trips through JSON too", () => {
   const store = memoryStore();
   const tables = [newTableState("ABCD", "k", 1)];

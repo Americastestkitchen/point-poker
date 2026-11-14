@@ -15,10 +15,12 @@ export function createActions(session: Pick<Session, "request" | "fx">, store: S
     store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
 
   return {
-    /** Put a card down (or swap the one you put down). */
+    /** Put a card down (or swap the one you put down, even after the reveal until the dealer calls it). */
     vote(value: number) {
       const s = store.getState();
-      if (s.room?.phase !== "voting" || !myPlayer(s)?.plays || s.ui.myVote === value) return;
+      const phase = s.room?.phase;
+      const open = phase === "voting" || (phase === "revealed" && s.ui.myVote !== null);
+      if (!open || !myPlayer(s)?.plays || s.ui.myVote === value) return;
       const changed = s.ui.myVote !== null;
       store.vote({ t: "played", value });
       store.events.emit({ t: "played", value, changed });

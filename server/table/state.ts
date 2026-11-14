@@ -15,6 +15,11 @@ export const PlayerState = z.object({
   /** 0..MAX_PLAYERS-1; the dealer sits at -1. */
   seat: z.number(),
   vote: z.number().nullable(),
+  /**
+   * The card they had down at the reveal, once they've changed it during the discussion
+   * (null until then). Tables saved before players could change after the reveal had none.
+   */
+  revealedVote: z.number().nullable().default(null),
   chips: z.number(),
   /** What the last settle paid this player, so a re-settle can take it back. */
   lastWin: z.number(),

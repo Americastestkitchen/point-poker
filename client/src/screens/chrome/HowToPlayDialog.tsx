@@ -11,7 +11,7 @@ import s from "./HowToPlayDialog.module.css";
 const STEPS = [
   "The dealer puts a Jira ticket on the table.",
   "Everyone picks a card for how big they think it is. Nobody sees yours yet.",
-  "The dealer flips the cards and picks the final points.",
+  "The dealer flips the cards. Talked round? Swap your card while everyone argues, then the dealer picks the final points.",
   "Closest guess wins the pot (just for fun), but only if it's within one card of the final call. Ties split it.",
 ] as const;
 

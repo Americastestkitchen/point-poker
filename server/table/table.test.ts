@@ -104,6 +104,75 @@ test("a card that isn't in the deck is refused and leaves your card where it was
   assert.equal(player(ann).hasVoted, false);
 });
 
+test("after the reveal you can change your card until the dealer calls it, and the final card counts", async () => {
+  const { table, deb, ann, bob, run, view, player, deal, logs, events } = setup();
+  await deal("Login page");
+  await run(ann, { t: "vote", value: 2 });
+  await run(bob, { t: "vote", value: 5 });
+  await run(deb, { t: "reveal" });
+  assert.equal(view().pot, 7);
+  events.length = 0;
+
+  // Ann is talked round: everyone sees her new card and the one she had at the reveal
+  await run(ann, { t: "vote", value: 3 });
+  for (const who of [deb, ann, bob]) {
+    const p = view(who).players.find((x) => x.id === ann.playerId)!;
+    assert.deepEqual([p.revealedVote, p.vote], [2, 3]);
+  }
+  assert.equal(player(bob).revealedVote, null, "Bob didn't change");
+  assert.equal(view().pot, 8, "the pot is what the cards add up to now");
+  assert.deepEqual(
+    events.filter((e) => e.t === "fx"),
+    [],
+    "no face-down fiddle: the swap is in the view, face up",
+  );
+
+  // switching again keeps the card from the reveal
+  await run(ann, { t: "vote", value: 5 });
+  await run(ann, { t: "vote", value: 3 });
+  assert.equal(player(ann).revealedVote, 2);
+
+  // the dealer calls 3: Ann's final card wins the pot
+  await run(deb, { t: "settle", finalPoints: 3 });
+  assert.deepEqual(view().winners, [ann.playerId]);
+  assert.equal(player(ann).chips, 8);
+  assert.deepEqual(view().history.at(-1)?.switched, [{ name: "Ann", from: 2, to: 3 }]);
+  const pointed = JSON.parse(logs.at(-1)!.slice(8));
+  assert.deepEqual(pointed.votes, { Ann: 3, Bob: 5 });
+  assert.deepEqual(pointed.atReveal, { Ann: 2 });
+
+  // settling locks every vote, even when the dealer changes the call
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: 5 }), { error: "The dealer already called it" });
+  await run(deb, { t: "settle", finalPoints: 5 });
+  assert.equal(player(ann).vote, 3);
+  assert.deepEqual(view().history.at(-1)?.switched, [{ name: "Ann", from: 2, to: 3 }]);
+
+  // a new vote starts everyone fresh
+  await run(deb, { t: "deal" });
+  assert.equal(player(ann).revealedVote, null);
+});
+
+test("after the reveal you can only swap a card you played, not take it back or play late", async () => {
+  const { table, deb, ann, bob, run, view, player, deal, logs } = setup();
+  await deal();
+  await run(ann, { t: "vote", value: 2 });
+  await run(deb, { t: "reveal" });
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: null }), {
+    error: "Your card's already up. Pick another one instead",
+  });
+  assert.deepEqual(await table.run(bob.playerId, { t: "vote", value: 3 }), {
+    error: "You didn't play a card this round",
+  });
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: 7 }), { error: "That card isn't in the deck" });
+  await run(ann, { t: "vote", value: 2 }); // the same card: nothing changes
+  assert.equal(player(ann).revealedVote, null);
+  assert.equal(view().pot, 2);
+  // a round where nobody switched says nothing about it
+  await run(deb, { t: "settle", finalPoints: 2 });
+  assert.equal(view().history.at(-1)?.switched, undefined);
+  assert.equal(JSON.parse(logs.at(-1)!.slice(8)).atReveal, undefined);
+});
+
 test("a dealer sitting out can't vote", async () => {
   const { table, deb, view, deal } = setup();
   await deal();
@@ -262,9 +331,11 @@ test("a move the phase doesn't allow is refused with a reason, and changes nothi
     "The cards are already up",
     "That card isn't in the deck",
   ]);
-  assert.deepEqual(await tries(ann, { t: "vote", value: 3 }), ["Voting is over"]);
+  // Ann played nothing, so there's no card of hers to change after the reveal
+  assert.deepEqual(await tries(ann, { t: "vote", value: 3 }), ["You didn't play a card this round"]);
   await run(deb, { t: "settle", finalPoints: 3 });
   assert.deepEqual(await tries(deb, { t: "skip" }), ["This round is already paid out"]);
+  assert.deepEqual(await tries(ann, { t: "vote", value: 3 }), ["The dealer already called it"]);
   assert.equal(view().phase, "settled");
 });
 

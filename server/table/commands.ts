@@ -8,7 +8,15 @@ import { LookInput, validateLook } from "../../shared/look.ts";
 import type { Ticket } from "../../shared/protocol.ts";
 import { FLICK_COOLDOWN_MS, nextInQueue, parseIssueKey } from "../../shared/rules.ts";
 import { payOut, takeBack } from "./coins.ts";
-import { endRound, reveal, settleRound, startRound, type Move } from "./round.ts";
+import {
+  changeRevealedVote,
+  endRound,
+  reveal,
+  settleRound,
+  startRound,
+  switchedSinceReveal,
+  type Move,
+} from "./round.ts";
 import { clean, isVoter, manualTicket, pickVote } from "./rules.ts";
 import type { PlayerState, TableState } from "./state.ts";
 import type { TableFx } from "./table.ts";
@@ -66,7 +74,10 @@ export function defineCommand<const T extends string, R extends Role, S extends 
 }
 
 export const COMMANDS = [
-  /** Put a card down, or swap it; null takes it back. */
+  /**
+   * Put a card down, or swap it; null takes it back. After the reveal you can still swap the card
+   * you played (face up, for everyone to see) until the dealer calls it.
+   */
   defineCommand({
     t: "vote",
     role: "player",
@@ -77,6 +88,14 @@ export const COMMANDS = [
       const vote = pickVote(s, value);
       if (value !== null && vote === null) return "That card isn't in the deck";
       const before = me.vote;
+      if (s.phase === "revealed") {
+        if (before === null) return "You didn't play a card this round";
+        if (vote === null) return "Your card's already up. Pick another one instead";
+        if (vote === before) return;
+        changeRevealedVote(s, me, vote);
+        changed();
+        return;
+      }
       me.vote = vote;
       if (before !== null && me.vote !== null && before !== me.vote) fx(me.id, { kind: "adjust" }, { except: me.id });
       changed();
@@ -228,6 +247,9 @@ export const COMMANDS = [
       const result = payOut(s, votes, finalPoints);
       settleRound(s, finalPoints, result);
       const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? id;
+      const switched = switchedSinceReveal(s)
+        .filter(({ player }) => votes.has(player.id))
+        .map(({ player, from, to }) => ({ name: player.name, from, to }));
       s.history.push({
         key: s.ticket?.key ?? "?",
         summary: s.ticket?.summary ?? "",
@@ -236,6 +258,7 @@ export const COMMANDS = [
         share: result.share,
         winners: result.winners.map(name),
         houseWon: result.houseWon,
+        ...(switched.length ? { switched } : {}),
       });
       // a permanent trail in the server logs (`fly logs`), so a forgotten Jira update can be recovered
       log(
@@ -247,6 +270,8 @@ export const COMMANDS = [
             summary: s.ticket?.summary,
             points: finalPoints,
             votes: Object.fromEntries([...votes].map(([id, v]) => [name(id), v])),
+            // whoever changed their card during the discussion, with the card they had at the reveal
+            ...(switched.length ? { atReveal: Object.fromEntries(switched.map((w) => [w.name, w.from])) } : {}),
           }),
       );
       changed();

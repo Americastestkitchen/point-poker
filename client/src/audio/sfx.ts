@@ -169,6 +169,11 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
       sfx.tone(2400 + Math.random() * 500, 0.08, "sine", 0.12, undefined, delay);
       sfx.tone(3600, 0.05, "sine", 0.06, undefined, delay + 0.02);
     },
+    /** Someone changed their mind after the reveal and smacked a new card down. */
+    slap: () => {
+      sfx.noise(0.08, 900, 0.45);
+      sfx.tone(180, 0.12, "sine", 0.25, 90);
+    },
     bonk: () => {
       sfx.tone(520, 0.25, "sine", 0.35, 140);
       sfx.noise(0.06, 1200, 0.2);
