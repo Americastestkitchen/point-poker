@@ -2,13 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Command } from "../../../server/table/commands.ts";
 import type { ClientFx } from "../../../shared/protocol.ts";
+import { ITEM } from "../../../shared/catalog/items.ts";
 import { createActions } from "./actions.ts";
 import type { GameEvent } from "./events.ts";
 import { ticket, view, withPlayers } from "./fixtures.ts";
+import { cooldownOf, coolingFor } from "./items.ts";
 import { createStore } from "./store.ts";
 
 /** A fake session: records what would have gone over the wire and answers with `reply`. */
 function setup(me = "ann", reply: (cmd: Command) => string | undefined = () => undefined) {
+  const clock = { now: 1_000_000 };
   const sent: (Command | ClientFx)[] = [];
   const store = createStore();
   const events: GameEvent[] = [];
@@ -21,11 +24,11 @@ function setup(me = "ann", reply: (cmd: Command) => string | undefined = () => u
     },
     fx: (fx: ClientFx) => void sent.push(fx),
   };
-  const actions = createActions(session, store);
+  const actions = createActions(session, store, () => clock.now);
   store.welcomed(me);
   store.receive(view({ phase: "voting", round: 1, ticket: ticket("SD-1") }));
   events.length = 0;
-  return { sent, store, events, actions };
+  return { sent, store, events, actions, clock };
 }
 
 test("playing a card sends the vote, remembers it and tells the scene", () => {
@@ -124,11 +127,54 @@ test("dealer actions resolve when the server says yes and reject with its reason
   ]);
 });
 
-test("a failed action nobody waits on becomes a toast; a flick that's too soon stays quiet", async () => {
+test("clicking someone uses the item you've picked, and the chip is what you start with", () => {
+  const { sent, store, actions } = setup();
+  actions.items.use("bob");
+  actions.items.pick("hammer");
+  assert.equal(store.getState().ui.item, "hammer");
+  actions.items.use("bob");
+  assert.deepEqual(sent, [
+    { t: "use", item: "chip", target: "bob" },
+    { t: "use", item: "hammer", target: "bob" },
+  ]);
+});
+
+test("the scroll wheel walks the hotbar, round and round", () => {
+  const { store, actions } = setup();
+  const item = () => store.getState().ui.item;
+  actions.items.pick("point");
+  actions.items.cycle(-1);
+  assert.equal(item(), "plane", "back from the first is the last");
+  actions.items.cycle(1);
+  assert.equal(item(), "point");
+  actions.items.cycle(2);
+  assert.equal(item(), "chip");
+});
+
+test("an item that's cooling down isn't sent, and each item cools on its own", () => {
+  const { sent, store, actions, clock } = setup();
+  actions.items.pick("hammer");
+  actions.items.use("bob");
+  actions.items.use("bob");
+  assert.equal(sent.length, 1, "the second bonk waits");
+  assert.equal(coolingFor(store.getState().ui.itemsUsed, "hammer", clock.now), cooldownOf("hammer"));
+  actions.items.pick("plane");
+  actions.items.use("bob");
+  assert.equal(sent.length, 2, "the plane is ready meanwhile");
+  clock.now += ITEM.hammer.cooldownMs;
+  actions.items.pick("hammer");
+  actions.items.use("bob");
+  assert.equal(sent.length, 2, "a moment longer than the server's cooldown, so a click never lands early");
+  clock.now += cooldownOf("hammer") - ITEM.hammer.cooldownMs;
+  actions.items.use("bob");
+  assert.deepEqual(sent.at(-1), { t: "use", item: "hammer", target: "bob" });
+});
+
+test("a failed action nobody waits on becomes a toast; an item the server refuses stays quiet", async () => {
   const { events, actions } = setup("ann", (cmd) =>
-    cmd.t === "flick" ? "Not so fast" : cmd.t === "setLook" ? "Nope" : undefined,
+    cmd.t === "use" ? "Not so fast" : cmd.t === "setLook" ? "Nope" : undefined,
   );
-  actions.flick("bob");
+  actions.items.use("bob");
   actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: [] });
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(events, [{ t: "toast", text: "Nope", level: "error" }]);

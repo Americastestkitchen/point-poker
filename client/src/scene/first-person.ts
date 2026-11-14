@@ -42,7 +42,8 @@ export function mountFirstPerson(
     // where your bean sits (it glides there like everyone's), just below and in front of your eyes
     fp.body.group.position.copy(avatar.group.position);
     fp.body.group.quaternion.copy(avatar.group.quaternion);
-    fp.body.apply(avatar.pose);
+    // something new in your hand joins your body's layer
+    if (fp.body.apply(avatar.pose)) onLayer(fp.body.group);
   });
 
   stage.afterRender(() => {

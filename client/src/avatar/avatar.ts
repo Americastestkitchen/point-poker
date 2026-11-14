@@ -6,7 +6,7 @@ import { COSMETIC, fills } from "../../../shared/catalog/cosmetics.ts";
 import { EMOTE, isEmote } from "../../../shared/catalog/emotes.ts";
 import type { Look } from "../../../shared/look.ts";
 import { toon } from "../scene/art/materials.ts";
-import { createAnimator, type ClipId, type HandPose, type Pose } from "./animator.ts";
+import { createAnimator, type ClipId, type Gesture, type HandPose, type Pose } from "./animator.ts";
 import { anchorsFor, type AnchorId, type Anchors, type Spot } from "./bodies/anchors.ts";
 import { BODY_SHAPES } from "./bodies/index.ts";
 import { BUILDERS, DEALER_GEAR, SLOT_ANCHOR } from "./cosmetics/index.ts";
@@ -16,6 +16,9 @@ import { buildBelly } from "./parts/belly.ts";
 import { buildChair } from "./parts/chair.ts";
 import { buildFace, type Face } from "./parts/face.ts";
 import { createLabels } from "./parts/labels.ts";
+import { createHeld, HAMMER_REACH } from "./parts/props.ts";
+import { createStars } from "./parts/stars.ts";
+import { FIRST_PERSON_ARMS } from "./first-person.ts";
 
 export interface Avatar {
   readonly group: THREE.Group;
@@ -28,6 +31,16 @@ export interface Avatar {
   /** Colour, shape and what they're wearing. A new shape is swapped in place; callers never rebuild. */
   setLook(look: Look): void;
   play(clip: ClipId): void;
+  /**
+   * Plays a gesture aimed at someone: the arm follows `target` (a point in the room) for as
+   * long as the gesture lasts, so it keeps pointing at them while either of you moves.
+   */
+  aim(gesture: Exclude<Gesture, "poke">, target: () => THREE.Vector3): void;
+  /**
+   * Your own bean: hidden on your screen, where your first-person body copies its pose with the
+   * arms swapped over, so it aims the mirror image of what everyone else sees it do.
+   */
+  setFirstPerson(on: boolean): void;
   setHandPose(pose: HandPose): void;
   /** A point on the bean to attach things to. */
   anchor(name: AnchorId): THREE.Object3D;
@@ -40,10 +53,15 @@ export interface Avatar {
   setBubble(text: string): void;
   /** Where a flicked chip hits: the same spot on every shape. */
   headWorldPos(out?: THREE.Vector3): THREE.Vector3;
+  /** The top of the head, where a hammer lands. */
+  crownWorldPos(out?: THREE.Vector3): THREE.Vector3;
   /** Where the right hand is right now. */
   handWorldPos(out?: THREE.Vector3): THREE.Vector3;
   update(dt: number, t: number): void;
 }
+
+/** Shoulder to hand, at rest (parts/arms.ts). */
+const ARM_LENGTH = 0.3;
 
 const marker = (spot: Spot) => {
   const o = new THREE.Object3D();
@@ -68,6 +86,38 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   hitbox.position.y = 1.0;
   group.add(hitbox, body);
   const labels = createLabels(group);
+  // over the bean, not on it: they keep circling where the head was while it's flat
+  const stars = createStars(group);
+  // in the hand the gestures use
+  const held = createHeld(() => parts.anchors.handR);
+  let firstPerson = false;
+  /** Who the gesture going on is aimed at. */
+  let target: (() => THREE.Vector3) | null = null;
+  const toTarget = new THREE.Vector3();
+
+  /** Points the animator's aim at the target: the shoulder angles that face it, and the stretch that reaches it. */
+  function takeAim(at: THREE.Vector3) {
+    const shoulder = parts.arms.shoulderR.position;
+    body.worldToLocal(toTarget.copy(at));
+    let scale = 1;
+    if (firstPerson) {
+      // your first-person body draws this arm on its other side, a bit bigger, higher and further forward
+      toTarget.x = -toTarget.x;
+      toTarget.y -= FIRST_PERSON_ARMS.up;
+      toTarget.z -= FIRST_PERSON_ARMS.forward;
+      scale = FIRST_PERSON_ARMS.scale;
+    }
+    toTarget.sub(shoulder);
+    const far = toTarget.length();
+    if (far < 1e-3) return;
+    toTarget.divideScalar(far);
+    // the arm hangs along the shoulder's -y: turned by z it swings sideways, then by x forward and up
+    animator.setAim({
+      x: Math.atan2(-toTarget.z, -toTarget.y),
+      z: Math.asin(Math.min(1, Math.max(-1, toTarget.x))),
+      reach: Math.max(1, (far - HAMMER_REACH * scale) / (ARM_LENGTH * scale)),
+    });
+  }
 
   let parts!: { face: Face; arms: Arms; anchors: Record<AnchorId, THREE.Object3D>; fit: Anchors };
   /** What's on, with the parts that spin or move when talking, and whether it grows with the eyes. */
@@ -116,6 +166,8 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     if (dealer) for (const gear of DEALER_GEAR) anchors[gear.anchor].add(gear.build());
     parts = { face, arms, anchors, fit: A };
     labels.fit(shape);
+    stars.fit(A.head.y);
+    held.reset();
     dress();
   }
 
@@ -165,6 +217,17 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       if (isEmote(clip)) labels.showEmoji(EMOTE[clip].emoji);
     },
 
+    aim(gesture, at) {
+      target = at;
+      takeAim(at());
+      animator.play(gesture);
+    },
+
+    setFirstPerson(on) {
+      firstPerson = on;
+      group.visible = !on;
+    },
+
     setHandPose(pose) {
       animator.handPose = pose;
     },
@@ -181,9 +244,14 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
 
     setBubble: (text) => labels.setBubble(text),
     headWorldPos: (out = new THREE.Vector3()) => body.localToWorld(out.set(0, 1.15, 0.1)),
+    crownWorldPos: (out = new THREE.Vector3()) => body.localToWorld(out.set(0, parts.fit.head.y, 0)),
     handWorldPos: (out = new THREE.Vector3()) => parts.anchors.handR.getWorldPosition(out),
 
     update(dt, t) {
+      if (target) {
+        if (animator.aiming) takeAim(target());
+        else target = null;
+      }
       pose = animator.update(dt, t);
       const b = pose.body;
       body.scale.set(b.sx, b.sy, b.sx);
@@ -192,6 +260,8 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       parts.arms.apply(pose.arms);
       parts.face.apply(pose.face);
       labels.apply(pose.emote);
+      held.apply(pose.prop);
+      stars.apply(pose.dizzy, t);
       const { mouthOpen, eyeScale } = pose.face;
       for (const w of worn) {
         if (w.spin) w.spin.rotation.y += dt * 12;

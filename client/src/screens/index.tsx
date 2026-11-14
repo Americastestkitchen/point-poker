@@ -36,7 +36,7 @@ export interface GameUiDeps {
 export interface GameUi {
   /** The screen tree, for mountUi(). */
   ui: ReactNode;
-  /** May the 3D world take this key press (emotes, recenter)? False while the UI has the keyboard. */
+  /** May the 3D world take this key press (emotes, hand items, recenter)? False while the UI has the keyboard. */
   allowsWorldKeys(): boolean;
   /** Lets go of the mic and timers; call it after unmounting `ui`. */
   dispose(): void;

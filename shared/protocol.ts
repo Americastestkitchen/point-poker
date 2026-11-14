@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { EMOTE_IDS } from "./catalog/emotes.ts";
 import { DEFAULT_ENVIRONMENT, ENVIRONMENT_IDS } from "./catalog/environments.ts";
+import { ITEM_IDS } from "./catalog/items.ts";
 import { Look, LookInput } from "./look.ts";
 
 export const Phase = z.enum(["waiting", "voting", "revealed", "settled"]);
@@ -136,7 +137,12 @@ export type ClientFx = z.infer<typeof ClientFx>;
 /** Effects everyone sees, including ones the server makes from commands. */
 export const Fx = z.discriminatedUnion("kind", [
   ...ClientFx.options,
-  /** A chip flies at someone's head. */
+  /** Someone used a hand item on `to`: a bonk, a chip, a paper plane, or just pointing. */
+  z.object({ kind: z.literal("use"), item: z.enum(ITEM_IDS), to: z.string() }),
+  /**
+   * A chip flies at someone's head. Sent alongside every coin's `use`, for tabs opened before hand
+   * items: they don't know `use`, and still see the coin as the chip it used to be.
+   */
   z.object({ kind: z.literal("flick"), to: z.string() }),
   /** Someone swapped their face-down card (others only see them fiddle with it). */
   z.object({ kind: z.literal("adjust") }),

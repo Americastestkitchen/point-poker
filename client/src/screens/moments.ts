@@ -3,7 +3,7 @@
 //
 // - useViewChanges: what changed with each new view (ViewChange: synced, joined, left, dealt,
 //   ticketChanged, allIn, revealed, settled), once per new view, with the state it arrived in.
-// - useGameEvents: the event stream (GameEvent: toast, fx, played, openTicket, bonked).
+// - useGameEvents: the event stream (GameEvent: toast, fx, played, openTicket, hit).
 // - useMoments: both, through one handler.
 //
 // Nothing is replayed on mount: a component only hears what happens while it's mounted.

@@ -1,6 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createAnimator, SWAP_GRAB, SWAP_SLAP, type Animator, type Pose } from "./animator.ts";
+import {
+  BONK_HIT,
+  createAnimator,
+  DIZZY,
+  FLICK_RELEASE,
+  POINT,
+  SWAP_GRAB,
+  SWAP_SLAP,
+  THROW_RELEASE,
+  type Animator,
+  type Pose,
+} from "./animator.ts";
 
 /** Runs the animator for `seconds` at 60fps and returns every pose. */
 function run(a: Animator, seconds: number, from = 0): Pose[] {
@@ -131,4 +142,102 @@ test("a poke reaches out to the felt and comes back, without holding up a card",
   assert.ok(Math.max(...poses.map((p) => p.arms[1].stretch)) > 2, "reaches out");
   assert.equal(a.busyWithCard, false);
   assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.01, "back at rest");
+});
+
+/** The right arm `sec` seconds into `poses`. */
+const rightArm = (poses: Pose[], sec: number) => poses[Math.round(sec * 60) - 1]!.arms[1];
+const AIM = { x: -1.7, z: -0.4, reach: 9 };
+
+test("pointing swings the right arm round to whoever it's aimed at and keeps it there a couple of seconds", () => {
+  const a = still();
+  a.setAim(AIM);
+  a.play("point");
+  assert.equal(a.aiming, true);
+  const poses = run(a, POINT + 0.4);
+  for (const sec of [0.6, 1.5, 2.2]) {
+    const arm = rightArm(poses, sec);
+    assert.ok(Math.abs(arm.x - AIM.x) < 0.02 && Math.abs(arm.z - AIM.z) < 0.02, `on them at ${sec}s`);
+    assert.ok(arm.stretch > 2 && arm.stretch < AIM.reach * 0.5, "held out towards them, not all the way over");
+    assert.equal(poses[Math.round(sec * 60) - 1]!.prop, "finger", "with a finger out");
+  }
+  assert.equal(poses.at(-1)!.prop, null);
+  assert.equal(a.aiming, false);
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].x + 1.15) < 0.01, "back at rest");
+});
+
+test("the arm follows whoever it's aimed at while it points", () => {
+  const a = still();
+  a.setAim(AIM);
+  a.play("point");
+  run(a, 1);
+  a.setAim({ ...AIM, z: 0.5 });
+  assert.ok(Math.abs(run(a, 0.5, 1).at(-1)!.arms[1].z - 0.5) < 0.02);
+});
+
+test("the hammer goes all the way over with the arm held high, then comes down on them", () => {
+  const a = still();
+  a.setAim(AIM);
+  a.play("bonk");
+  const poses = run(a, 1.3);
+  const up = rightArm(poses, 0.28);
+  assert.ok(up.x < AIM.x - 0.6, "held high over them");
+  assert.ok(up.stretch > AIM.reach * 0.7, "already stretched most of the way");
+  const down = rightArm(poses, BONK_HIT + 0.05);
+  assert.ok(Math.abs(down.x - AIM.x) < 0.1, "down on their head");
+  assert.ok(Math.abs(down.stretch - AIM.reach) < 0.3, "at full stretch");
+  assert.equal(poses[Math.round(BONK_HIT * 60)]!.prop, "hammer");
+  assert.equal(poses.at(-1)!.prop, null, "the hammer goes away again");
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "and the arm snaps back");
+});
+
+test("each item is in the hand until it's let go", () => {
+  const held = (clip: "flick" | "throw", seconds: number) => {
+    const a = still();
+    a.setAim(AIM);
+    a.play(clip);
+    return run(a, seconds).map((p) => p.prop);
+  };
+  const frame = (sec: number) => Math.round(sec * 60);
+  const chip = held("flick", 0.5);
+  assert.equal(chip[frame(FLICK_RELEASE) - 2], "chip");
+  assert.equal(chip[frame(FLICK_RELEASE) + 1], null, "the chip is off the thumb");
+  const plane = held("throw", 0.7);
+  assert.equal(plane[frame(THROW_RELEASE) - 2], "plane");
+  assert.equal(plane[frame(THROW_RELEASE) + 1], null, "the plane is in the air");
+});
+
+test("a poke isn't aimed at anyone", () => {
+  const a = still();
+  a.play("poke");
+  assert.equal(a.aiming, false);
+});
+
+test("a hammer blow flattens the bean, which springs back up seeing stars", () => {
+  const a = still();
+  a.play("squashed");
+  const poses = run(a, DIZZY + 0.2);
+  assert.ok(poses[8]!.body.sy < 0.65, "flat within a blink");
+  assert.ok(poses[8]!.body.sx > 1.25, "and spread out");
+  assert.ok(poses[20]!.body.sy < 0.65, "it stays down a beat");
+  assert.ok(poses[30]!.dizzy > 1.5, "seeing stars");
+  assert.equal(poses.at(-1)!.dizzy, 0, "the head clears");
+  assert.ok(Math.abs(poses.at(-1)!.body.sy - 1) < 0.03, "back in shape");
+});
+
+test("a paper plane bops softer than a chip bonks", () => {
+  const dip = (clip: "bonked" | "bopped") => {
+    const a = still();
+    a.play(clip);
+    return 1 - Math.min(...run(a, 1).map((p) => p.body.sy));
+  };
+  assert.ok(dip("bopped") > 0.02 && dip("bopped") < dip("bonked") * 0.6);
+});
+
+test("being pointed at widens the eyes for a moment, and nothing else", () => {
+  const b = still();
+  b.play("noticed");
+  const seen = run(b, 0.1).at(-1)!;
+  assert.ok(seen.face.eyeScale > 1.1 && Math.abs(seen.body.rotX) < 1e-9);
+  const settled = run(b, 1, 0.1).at(-1)!;
+  assert.equal(settled.face.eyeScale, 1);
 });

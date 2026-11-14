@@ -178,6 +178,22 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
       sfx.tone(520, 0.25, "sine", 0.35, 140);
       sfx.noise(0.06, 1200, 0.2);
     },
+    /** Hand items: a finger jabbed at someone. */
+    point: () => {
+      sfx.tone(880, 0.05, "triangle", 0.1);
+      sfx.tone(1320, 0.07, "triangle", 0.1, undefined, 0.07);
+    },
+    /** The hammer's arm on its way over, and a thrown paper plane. */
+    swing: () => sfx.noise(0.3, 500, 0.22),
+    whoosh: () => sfx.noise(0.35, 1400, 0.12),
+    /** The toy hammer landing: a thump, and the squeak in and out. */
+    squeak: () => {
+      sfx.tone(160, 0.14, "sine", 0.3, 70);
+      sfx.tone(700, 0.09, "square", 0.12, 1900);
+      sfx.tone(1700, 0.16, "square", 0.1, 800, 0.1);
+    },
+    /** A paper plane bopping a head. */
+    tap: () => sfx.noise(0.05, 2600, 0.3),
     hover: () => sfx.tone(1800, 0.03, "sine", 0.03),
     pop: () => sfx.tone(600, 0.1, "triangle", 0.15, 1200),
     /** UI kit: a button or menu item was chosen. */

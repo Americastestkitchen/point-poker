@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player } from "../app/fixtures.ts";
-import { connectionNotice, eventNotice, viewNotice } from "./notices.ts";
+import { connectionNotice, eventNotice, forYouNotice, viewNotice } from "./notices.ts";
 
 test("others sitting down and anyone leaving get a toast; you sitting down doesn't", () => {
   assert.equal(viewNotice({ t: "joined", player: player("ann") }, "bob")?.text, "👋 ANN sat down");
@@ -21,7 +21,20 @@ test("toasts from the event stream keep their level; errors bonk", () => {
     tone: "error",
     bonk: true,
   });
-  assert.equal(eventNotice({ t: "bonked" }), null);
+  assert.equal(eventNotice({ t: "hit", item: "hammer" }), null);
+});
+
+test("someone pointing at you says so; pointing at someone else, or anything else used on you, doesn't", () => {
+  const players = [player("ann"), player("bob")];
+  const use = (item: "point" | "hammer", to: string) =>
+    forYouNotice({ t: "fx", from: "ann", fx: { kind: "use", item, to } }, players, "bob");
+  assert.equal(use("point", "bob")?.text, "👉 ANN is pointing at you");
+  assert.equal(use("point", "cat"), null);
+  assert.equal(use("hammer", "bob"), null, "you can't miss a hammer");
+  assert.equal(
+    forYouNotice({ t: "fx", from: "gone", fx: { kind: "use", item: "point", to: "bob" } }, players, "bob"),
+    null,
+  );
 });
 
 test("being removed by the dealer says so, once", () => {

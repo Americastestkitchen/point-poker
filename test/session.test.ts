@@ -353,12 +353,26 @@ test("a whole session over real sockets, including a restart", async (t) => {
   assert.equal(reloaded.store.getState().ui.myVote, 5, "the reloaded page remembers your card");
   assert.equal(bob.player(ann.id)?.vote, null, "and still nobody else sees it");
 
-  // ---- chip flicks have a cooldown the server enforces
+  // ---- hand items: everyone sees one used, whoever used it included, and each has a cooldown
+  deb.actions.items.pick("hammer");
+  deb.actions.items.use(bob.id);
+  const bonked = (p: { events: (ViewChange | GameEvent)[] }) =>
+    p.events.filter(
+      (e) => e.t === "fx" && e.from === deb.id && e.fx.kind === "use" && e.fx.item === "hammer" && e.fx.to === bob.id,
+    ).length;
+  await bob.until((p) => bonked(p) === 1, "bob gets bonked");
+  await deb.until((p) => bonked(p) === 1, "deb sees her own hammer swing");
+  await assert.rejects(deb.session.request({ t: "use", item: "hammer", target: bob.id }), { message: "Not so fast" });
+  await deb.session.request({ t: "use", item: "plane", target: bob.id });
+
+  // ---- a tab opened before hand items still flicks chips: everyone sees a coin, and old tabs the chip
   await reloaded.session.request({ t: "flick", target: bob.id });
   await assert.rejects(reloaded.session.request({ t: "flick", target: bob.id }), { message: "Not so fast" });
-  await bob.until((p) => p.events.some((e) => e.t === "fx" && e.fx.kind === "flick"), "bob gets bonked");
+  const coins = (kind: "use" | "flick") =>
+    bob.events.filter((e) => e.t === "fx" && e.from === reloaded.id && e.fx.kind === kind).length;
+  await bob.until(() => coins("flick") === 1, "bob gets bonked");
   await new Promise((r) => setTimeout(r, 100));
-  assert.equal(bob.events.filter((e) => e.t === "fx" && e.fx.kind === "flick").length, 1, "only one chip flew");
+  assert.deepEqual([coins("use"), coins("flick")], [1, 1], "only one coin flew");
 
   // ---- skip and cancel pay nobody
   await deb.actions.dealer.skip();

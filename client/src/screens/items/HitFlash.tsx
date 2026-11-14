@@ -1,24 +1,31 @@
-// "BONK!" across the whole screen when a chip hits you (region "flash"; never takes the
-// pointer), and the whole page, canvas included, shakes for a moment. A second hit restarts
-// both. The shake sits out under prefers-reduced-motion (the CSS decides).
+// What you see when someone's hand item lands on you (region "flash"; never takes the pointer):
+// a word across the whole screen ("BONK!"), the whole page, canvas included, shaking for a
+// moment. hit.ts says which item does what. A second hit restarts the flash and the shake.
+// The shake sits out under prefers-reduced-motion (the CSS decides).
 import { useEffect, useRef, useState } from "react";
+import { cx } from "../../ui/index.ts";
 import { useGameEvents } from "../moments.ts";
-import s from "./BonkFlash.module.css";
+import { HIT_LOOK, type HitLook } from "./hit.ts";
+import s from "./HitFlash.module.css";
 
 /** How long the screen shakes (the CSS animation is the same length). */
 const SHAKE_MS = 360;
 /** The body's class while it shakes (a CSS module name, so it can't clash). */
-const SHAKE = s.shake ?? "pp-bonk-shake";
+const SHAKE = s.shake ?? "pp-hit-shake";
 
-export function BonkFlash() {
-  // which hit is showing (a new one restarts the animation), or null when it's done
-  const [hit, setHit] = useState<number | null>(null);
+export function HitFlash() {
+  // transient animation state: which hit is showing (a new one restarts the animation)
+  const [hit, setHit] = useState<{ id: number; look: HitLook } | null>(null);
   const hits = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useGameEvents((e) => {
-    if (e.t !== "bonked") return;
-    setHit(++hits.current);
+    if (e.t !== "hit") return;
+    const look = HIT_LOOK[e.item];
+    if (!look) return;
+    const id = ++hits.current;
+    setHit({ id, look });
+    if (!look.shake) return;
     // on the body, so the canvas under the UI shakes too; off and on again restarts it
     const body = document.body;
     body.classList.remove(SHAKE);
@@ -40,13 +47,13 @@ export function BonkFlash() {
     <div className={s.layer} aria-hidden>
       {hit !== null && (
         <div
-          key={hit}
-          className={s.flash}
+          key={hit.id}
+          className={cx(s.flash, hit.look.soft && s.soft)}
           onAnimationEnd={(e) => {
             if (e.target === e.currentTarget) setHit(null);
           }}
         >
-          <span className={s.word}>BONK!</span>
+          <span className={s.word}>{hit.look.word}</span>
         </div>
       )}
     </div>

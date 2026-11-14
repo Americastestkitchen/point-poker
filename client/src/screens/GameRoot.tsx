@@ -1,6 +1,6 @@
 // The game UI's root. Before you sit down it shows the title screens; at the table, the HUD
 // (GameScreen) and the look editor when it's open. It owns what happens once for the whole
-// screen: the one toast adapter (event-stream toasts, joins, leaves, being removed), opening
+// screen: the one toast adapter (event-stream toasts, joins, leaves, being removed, someone pointing at you), opening
 // the ticket when the 3D paper is clicked, the window title (and the dealer's "all in" chime),
 // and Esc opening the game menu.
 // Options and How to play open from the title menu and the game menu alike.
@@ -11,7 +11,7 @@ import { OptionsDialog } from "./chrome/OptionsDialog.tsx";
 import { useAppState, useGame } from "./game.tsx";
 import { focusOf, menuKeyAllowed } from "./keys.ts";
 import { useGameEvents, useViewChanges } from "./moments.ts";
-import { connectionNotice, eventNotice, viewNotice, type Notice } from "./notices.ts";
+import { connectionNotice, eventNotice, forYouNotice, viewNotice, type Notice } from "./notices.ts";
 import { CopyFallback } from "./parts/CopyFallback.tsx";
 import { chimeFor, tabTitle } from "./tab.ts";
 import { GameScreen } from "./GameScreen.tsx";
@@ -46,7 +46,10 @@ function useNotices() {
     toasts.show(n.text, { tone: n.tone });
     if (n.bonk) audio.bonk();
   };
-  useGameEvents((e) => show(eventNotice(e)));
+  useGameEvents((e, s) => {
+    show(eventNotice(e));
+    show(forYouNotice(e, s.room?.players ?? [], s.me?.id));
+  });
   useViewChanges((c, s) => show(viewNotice(c, s.me?.id)));
   useEffect(
     () =>

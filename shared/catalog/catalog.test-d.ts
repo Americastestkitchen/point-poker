@@ -5,6 +5,7 @@ import { COSMETIC, type CosmeticId } from "./cosmetics.ts";
 import type { DeckId } from "./decks.ts";
 import { EMOTE, isEmote, type EmoteId } from "./emotes.ts";
 import type { EnvironmentId } from "./environments.ts";
+import type { ItemId } from "./items.ts";
 import { idsOf } from "./registry.ts";
 
 // Ids stay literal unions; if one widened to string, Record<Id, …> registries would stop catching missing entries.
@@ -14,6 +15,7 @@ assertType<Equal<Widened<CosmeticId>, false>>();
 assertType<Equal<Widened<EmoteId>, false>>();
 assertType<Equal<Widened<EnvironmentId>, false>>();
 assertType<Equal<Widened<DeckId>, false>>();
+assertType<Equal<Widened<ItemId>, false>>();
 
 // idsOf gives z.enum its non-empty tuple, and refuses an empty list.
 assertType<Equal<typeof BODY_IDS, [BodyId, ...BodyId[]]>>();

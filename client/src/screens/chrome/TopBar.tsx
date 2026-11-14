@@ -2,9 +2,10 @@
 // the corner: the menu (☰, Esc), the mic, your coins (the leaderboard) and, for the dealer, the
 // dealer's controls. A line about the connection shows up beside them while it's down.
 // Invite, Character, Sound and Help live in the game menu.
-import { useRef, type PointerEvent } from "react";
+import { useRef } from "react";
 import { Button, CoinCounter, cx, KeyHint, Spinner, Tooltip } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, useMicStatus, usePopup } from "../game.tsx";
+import { useLetGoAfterTouch } from "../parts/touch.ts";
 import { connectionLabel, micPressed, micTip } from "./model.ts";
 import { useWallet } from "./wallet.ts";
 import s from "./TopBar.module.css";
@@ -67,28 +68,6 @@ export function TopBar() {
       </div>
     </nav>
   );
-}
-
-/**
- * A tap shouldn't leave a chip focused: its tooltip would stay up over the HUD, and a popup it
- * opens would hand focus back to it. So after a touch (or pen) press the chip lets go of focus;
- * the mouse and the keyboard keep the kit's focus model. It lets go after the press, not on
- * pointerup: a tap focuses the button with the mouse events the browser makes up after it.
- */
-function useLetGoAfterTouch(action: () => void) {
-  const touched = useRef(false);
-  return {
-    onPointerDown: (e: PointerEvent<HTMLElement>) => {
-      touched.current = e.pointerType !== "mouse";
-    },
-    onPress() {
-      action();
-      if (!touched.current) return;
-      touched.current = false;
-      const el = document.activeElement;
-      if (el instanceof HTMLElement) el.blur();
-    },
-  };
 }
 
 /** On/off for the mic. Your voice's loudness glows around it (written straight to the element). */

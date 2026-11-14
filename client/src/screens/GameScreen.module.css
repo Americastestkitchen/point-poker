@@ -60,13 +60,19 @@
   align-items: flex-start;
   padding-top: 4dvh;
 }
+/* the hotbar hugs the right edge of the room, halfway up */
+.items {
+  grid-area: stage;
+  justify-content: flex-end;
+  align-items: center;
+}
 .dock {
   grid-area: dock;
   justify-content: center;
   align-items: flex-end;
   max-height: var(--dock-max);
 }
-/* the bonk flash covers the whole screen, edge to edge, above the other regions */
+/* the hit flash covers the whole screen, edge to edge, above the other regions */
 .flash {
   position: absolute;
   inset: 0;
@@ -92,6 +98,11 @@
   }
   .ticket > * {
     flex: 1;
+  }
+  /* the hotbar is a row at the bottom of the room, just over the dock */
+  .items {
+    justify-content: center;
+    align-items: flex-end;
   }
 }
 

@@ -11,14 +11,15 @@ import { BODY_SHAPES } from "./bodies/index.ts";
 import type { BodyShape } from "./bodies/body.ts";
 import { buildArms, type Arms } from "./parts/arms.ts";
 import { buildBelly } from "./parts/belly.ts";
+import { createHeld } from "./parts/props.ts";
 
 export interface FirstPersonBody {
   /** Stands where your bean does, facing the same way. */
   readonly group: THREE.Group;
   /** Colour and shape. A new shape is built in place. */
   setLook(look: Look): void;
-  /** Copies your bean's pose. */
-  apply(pose: Pose): void;
+  /** Copies your bean's pose, with whatever it's holding. Returns true when something new was built to hold. */
+  apply(pose: Pose): boolean;
 }
 
 /** Where the head starts squashing (body space), and how much of it is left above that. */
@@ -30,7 +31,8 @@ export function neckOf(shape: BodyShape) {
  * Like any FPS, your arms are a bit bigger than your bean's and sit higher and further forward,
  * so a wave or a flick comes up into view instead of happening below the bottom of the screen.
  */
-const ARMS = { scale: 1.1, up: 0.05, forward: 0.1 };
+export const FIRST_PERSON_ARMS = { scale: 1.1, up: 0.05, forward: 0.1 };
+const ARMS = FIRST_PERSON_ARMS;
 
 export function createFirstPersonBody(initial: Look): FirstPersonBody {
   let look = initial;
@@ -39,8 +41,13 @@ export function createFirstPersonBody(initial: Look): FirstPersonBody {
   const body = new THREE.Group();
   group.add(body);
   let arms!: Arms;
+  // what your bean holds in its right hand, you hold in yours: the arm drawn on this body's left.
+  const held = createHeld(() => arms.handL);
+  let holding: Pose["prop"] = null;
 
   function build() {
+    held.reset();
+    holding = null;
     release(body, material);
     const shape = BODY_SHAPES[look.body];
     const neck = neckOf(shape);
@@ -74,6 +81,10 @@ export function createFirstPersonBody(initial: Look): FirstPersonBody {
       // which is its own left; swapped, you do all that with your right hand
       const [l, r] = pose.arms;
       arms.apply([inView({ ...r, z: -r.z }, -1), inView({ ...l, z: -l.z }, 1)]);
+      held.apply(pose.prop);
+      const fresh = pose.prop !== holding && pose.prop !== null;
+      holding = pose.prop;
+      return fresh;
     },
   };
 }

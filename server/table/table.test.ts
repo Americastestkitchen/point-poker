@@ -4,7 +4,7 @@ import { fakeTickets, ticket } from "../tickets/fake.ts";
 import { noTickets } from "../tickets/none.ts";
 import type { TicketSource } from "../tickets/source.ts";
 import { newTableState, TableState } from "./state.ts";
-import { FLICK_COOLDOWN_MS } from "../../shared/rules.ts";
+import { ITEM, type ItemId } from "../../shared/catalog/items.ts";
 import type { Command } from "./commands.ts";
 import { ROLE_ERROR, Table, type JoinRequest, type TableEvent } from "./table.ts";
 import { Card, TableView } from "../../shared/protocol.ts";
@@ -551,32 +551,80 @@ test("a table's snapshot is plain JSON that loads back into the same table", asy
   });
 });
 
-test("chip flicks have a cooldown the server enforces", async () => {
+test("every hand item has its own cooldown, which the server enforces", async () => {
   const { table, ann, bob, events, tick } = setup();
-  const flicks = () => events.filter((e) => e.t === "fx" && e.fx.kind === "flick").length;
-  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
-  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), { error: "Not so fast" });
+  const used = () => events.flatMap((e) => (e.t === "fx" && e.fx.kind === "use" ? [`${e.from}:${e.fx.item}`] : []));
+  const use = (who: { playerId: string }, item: ItemId, target: string) =>
+    table.run(who.playerId, { t: "use", item, target });
+  assert.deepEqual(await use(ann, "hammer", bob.playerId), {});
+  assert.deepEqual(await use(ann, "hammer", bob.playerId), { error: "Not so fast" });
+  assert.deepEqual(await use(ann, "plane", bob.playerId), {}, "another item is ready meanwhile");
+  assert.deepEqual(await use(bob, "hammer", ann.playerId), {}, "and everyone has their own cooldown");
+  tick(ITEM.plane.cooldownMs);
+  assert.deepEqual(await use(ann, "plane", bob.playerId), {});
+  assert.deepEqual(await use(ann, "hammer", bob.playerId), { error: "Not so fast" }, "the hammer takes longer");
+  assert.deepEqual(used(), [
+    `${ann.playerId}:hammer`,
+    `${ann.playerId}:plane`,
+    `${bob.playerId}:hammer`,
+    `${ann.playerId}:plane`,
+  ]);
   assert.deepEqual(
-    await table.run(bob.playerId, { t: "flick", target: ann.playerId }),
-    {},
-    "everyone has their own cooldown",
+    events.find((e) => e.t === "fx"),
+    { t: "fx", from: ann.playerId, fx: { kind: "use", item: "hammer", to: bob.playerId } },
+    "everyone sees it, whoever used it included",
   );
-  tick(FLICK_COOLDOWN_MS);
+
+  tick(ITEM.hammer.cooldownMs);
+  assert.deepEqual(await use(ann, "point", ann.playerId), { error: "You can't use that on yourself" });
+  assert.deepEqual(await use(ann, "point", "nobody"), { error: "There's nobody in that seat" });
+  assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "anvil", target: bob.playerId }), {
+    error: "That command didn't make sense",
+  });
+  assert.equal(used().length, 4, "nothing on yourself, an empty chair, or with an item that doesn't exist");
+  assert.deepEqual(await use(ann, "point", bob.playerId), {}, "and a refused use doesn't start the cooldown");
+});
+
+test("items work in every phase, and never touch the round", async () => {
+  const { table, ann, bob, deb, run, deal } = setup();
+  const use = (item: ItemId) => run(ann, { t: "use", item, target: bob.playerId });
+  await use("point");
+  await deal();
+  await run(ann, { t: "vote", value: 3 });
+  await use("hammer");
+  await run(deb, { t: "reveal" });
+  await use("plane");
+  await run(deb, { t: "settle", finalPoints: 3 });
+  const before = table.snapshot();
+  await use("chip");
+  assert.deepEqual(table.snapshot(), before);
+});
+
+test("tabs opened before hand items still flick chips and see them fly", async () => {
+  const { table, ann, bob, events, tick } = setup();
+  const fx = () => events.flatMap((e) => (e.t === "fx" ? [e.fx] : []));
+  // an old tab's flick is the chip, for old and new tabs alike
   assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
-  assert.equal(flicks(), 3);
-  tick(FLICK_COOLDOWN_MS);
+  const coin = [
+    { kind: "use", item: "chip", to: bob.playerId },
+    { kind: "flick", to: bob.playerId },
+  ];
+  assert.deepEqual(fx(), coin);
+  assert.deepEqual(
+    await table.run(ann.playerId, { t: "use", item: "chip", target: bob.playerId }),
+    { error: "Not so fast" },
+    "and shares the coin's cooldown",
+  );
+  tick(ITEM.chip.cooldownMs);
+  // a new tab's coin reaches old tabs as the chip they know
+  assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "chip", target: bob.playerId }), {});
+  assert.deepEqual(fx(), [...coin, ...coin]);
+  // nothing else does: an old tab doesn't know hammers
+  assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "hammer", target: bob.playerId }), {});
+  assert.equal(fx().filter((f) => f.kind === "flick").length, 2);
   assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: ann.playerId }), {
-    error: "You can't flick yourself",
+    error: "You can't use that on yourself",
   });
-  assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: "nobody" }), {
-    error: "There's nobody in that seat",
-  });
-  assert.equal(flicks(), 3, "no flicking yourself or empty chairs");
-  assert.deepEqual(
-    await table.run(ann.playerId, { t: "flick", target: bob.playerId }),
-    {},
-    "and a refused flick doesn't start the cooldown",
-  );
 });
 
 test("a look is one object, cleaned up on the way in", async () => {
