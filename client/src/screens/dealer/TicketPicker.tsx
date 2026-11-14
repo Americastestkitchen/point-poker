@@ -91,7 +91,7 @@ const isNarrow = () => matchMedia(NARROW).matches;
 
 /** Mounted only while the picker is open: its drafts and typo message start fresh each time. */
 function PickerBody() {
-  const { actions, dealerDo, ticketLoad, invite } = useGame();
+  const { actions, ticketLoad, invite } = useGame();
   const room = useRoom();
   const load = useTicketLoad();
   const [jiraDraft, setJiraDraft] = useState("");
@@ -135,12 +135,12 @@ function PickerBody() {
     if (r.t === "empty") return jiraField.current?.focus();
     if (r.t === "invalid") return setInvalid(r.error);
     setInvalid(null);
-    ticketLoad.run(actions.dealer.load(r.ref), r.text);
+    ticketLoad.run(actions.dealer.wait.load(r.ref), r.text);
   };
   const submitManual = () => {
     const summary = manualSubmit(manualDraft);
     if (!summary || loading) return;
-    dealerDo(actions.dealer.typeIn(summary));
+    actions.dealer.typeIn(summary);
     setManualDraft("");
   };
 
@@ -189,7 +189,7 @@ function PickerBody() {
             variant="ghost"
             className={s.sprint}
             disabled={loading}
-            onPress={() => ticketLoad.run(actions.dealer.loadSprint(), "Loading this sprint's tickets…")}
+            onPress={() => ticketLoad.run(actions.dealer.wait.loadSprint(), "Loading this sprint's tickets…")}
           >
             📋 Or pick from this sprint
           </Button>
@@ -205,7 +205,7 @@ function PickerBody() {
       <Queue
         room={room}
         disabled={loading}
-        onPick={(key) => ticketLoad.run(actions.dealer.load(key), `Fetching ${key}…`)}
+        onPick={(key) => ticketLoad.run(actions.dealer.wait.load(key), `Fetching ${key}…`)}
       />
 
       <div className={s.manual} data-open={manualShown || undefined}>
@@ -313,7 +313,7 @@ function QueueItem({
 
 /** Who's here, the invite link (the thing to do while nobody is) and "I'll vote too". */
 function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
-  const { actions, dealerDo } = useGame();
+  const { actions } = useGame();
   const people = peopleLine(room.players);
   return (
     <footer className={s.foot}>
@@ -331,7 +331,7 @@ function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
       <Toggle
         label="🃏 I play a card too"
         checked={room.settings.dealerPlays}
-        onChange={(on) => dealerDo(actions.dealer.setPlays(on))}
+        onChange={(on) => actions.dealer.setPlays(on)}
       />
     </footer>
   );

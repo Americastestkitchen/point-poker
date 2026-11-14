@@ -1,6 +1,11 @@
 // Everything the player can do. The UI and the scene call these; nothing else
-// talks to the server. Dealer actions return promises that settle when the
-// server answers, and reject with its reason (like a Jira error).
+// talks to the server. Each dealer action comes two ways, and the one a caller
+// picks decides who shows a failure, so it shows exactly once:
+// - `actions.dealer.reveal()` returns nothing: nobody waits on it, and if the
+//   server says no, its reason shows as an error toast (with the bonk).
+// - `actions.dealer.wait.reveal()` returns the promise, which rejects with the
+//   server's reason (like a Jira error) and shows nothing: the caller that waits
+//   on it (a form, the ticket loader) shows the failure itself.
 import type { Command } from "../../../server/table/commands.ts";
 import type { EmoteId } from "../../../shared/catalog/emotes.ts";
 import type { EnvironmentId } from "../../../shared/catalog/environments.ts";
@@ -20,6 +25,32 @@ export function createActions(
   /** For actions nobody waits on: a failure shows up as a toast. */
   const report = (e: unknown) =>
     store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
+  /** The fire-and-forget form of a dealer action: it returns nothing and reports its own failure. */
+  const told =
+    <A extends unknown[]>(action: (...args: A) => Promise<void>) =>
+    (...args: A): void => {
+      action(...args).catch(report);
+    };
+  /** Dealer actions that settle when the server answers and reject with its reason. */
+  const wait = {
+    /** Loads a Jira ticket (or an epic's tickets) and deals it. */
+    load: (ref: string) => run({ t: "loadTicket", ref }),
+    typeIn: (summary: string) => run({ t: "manualTicket", key: "", summary, description: "" }),
+    loadSprint: () => run({ t: "fetchQueue" }),
+    clearQueue: () => run({ t: "clearQueue" }),
+    setPlays: (plays: boolean) => run({ t: "dealerPlays", plays }),
+    /** Moves the table to another room, for everyone. */
+    moveTo: (environment: EnvironmentId) => run({ t: "setEnvironment", environment }),
+    deal: () => run({ t: "deal" }),
+    reveal: () => run({ t: "reveal" }),
+    settle: (finalPoints: number) => run({ t: "settle", finalPoints }),
+    next: () => run({ t: "nextRound" }),
+    cancel: () => run({ t: "cancelRound" }),
+    skip: () => run({ t: "skip" }),
+    /** Fetches the ticket that's out from Jira again; votes and the round stay. */
+    refresh: () => run({ t: "refreshTicket" }),
+    kick: (id: string) => run({ t: "kick", id }),
+  };
 
   return {
     /** Put a card down (or swap the one you put down, even after the reveal until the dealer calls it). */
@@ -71,22 +102,29 @@ export function createActions(
 
     dealer: {
       /** Loads a Jira ticket (or an epic's tickets) and deals it. */
-      load: (ref: string) => run({ t: "loadTicket", ref }),
-      typeIn: (summary: string) => run({ t: "manualTicket", key: "", summary, description: "" }),
-      loadSprint: () => run({ t: "fetchQueue" }),
-      clearQueue: () => run({ t: "clearQueue" }),
-      setPlays: (plays: boolean) => run({ t: "dealerPlays", plays }),
+      load: told(wait.load),
+      typeIn: told(wait.typeIn),
+      loadSprint: told(wait.loadSprint),
+      clearQueue: told(wait.clearQueue),
+      setPlays: told(wait.setPlays),
       /** Moves the table to another room, for everyone. */
-      moveTo: (environment: EnvironmentId) => run({ t: "setEnvironment", environment }),
-      deal: () => run({ t: "deal" }),
-      reveal: () => run({ t: "reveal" }),
-      settle: (finalPoints: number) => run({ t: "settle", finalPoints }),
-      next: () => run({ t: "nextRound" }),
-      cancel: () => run({ t: "cancelRound" }),
-      skip: () => run({ t: "skip" }),
-      /** Fetches the ticket that's out from Jira again; votes and the round stay. */
-      refresh: () => run({ t: "refreshTicket" }),
-      kick: (id: string) => run({ t: "kick", id }),
+      moveTo: told(wait.moveTo),
+      deal: told(wait.deal),
+      reveal: told(wait.reveal),
+      settle: told(wait.settle),
+      next: told(wait.next),
+      cancel: told(wait.cancel),
+      skip: told(wait.skip),
+      /**
+       * Fetches the ticket that's out from Jira again; votes and the round stay. `answered` runs
+       * when the server answers, yes or no (the button's "Refreshing…" ends), before any toast.
+       */
+      refresh: (answered?: () => void): void => {
+        wait.refresh().finally(answered).catch(report);
+      },
+      kick: told(wait.kick),
+      /** The same actions for a caller that waits: they reject with the server's reason and show nothing. */
+      wait,
     },
   };
 }
