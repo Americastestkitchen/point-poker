@@ -17,7 +17,7 @@ interface Led {
 const at = (o: THREE.Object3D, p: Vec3) => o.position.set(p.x, p.y, p.z);
 
 const basement: Environment = {
-  async build({ layout, audio, picking }) {
+  async build({ layout, audio }) {
     const { anchors } = layout;
     const root = new THREE.Group();
     root.add(new THREE.HemisphereLight("#6a5a8a", "#1a100c", 2.0));
@@ -28,7 +28,6 @@ const basement: Environment = {
     const sign = neonSign(anchors.sign);
     const statusScreen = telly(anchors.statusScreen);
     const squeaky = rubberDuck(anchors.squeaky, audio.squeak);
-    picking.register(squeaky.object, () => squeaky.squeak());
     const dust = dustMotes();
     root.add(lamp.object, sign.object, statusScreen.object, squeaky.object, dust.object);
 

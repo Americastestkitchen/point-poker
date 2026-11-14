@@ -7,6 +7,8 @@ import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
+import { PLACE_PAT } from "../../avatar/animator.ts";
+import type { Avatar } from "../../avatar/avatar.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
@@ -18,6 +20,8 @@ import { createSeat, type Seat } from "./seat.ts";
 import type { TicketPaper } from "./ticket.ts";
 
 export interface TableView {
+  /** Your bean, while you're at the table. It's hidden on your screen; your first-person body copies it. */
+  mine(): Avatar | null;
   update(dt: number, t: number): void;
 }
 
@@ -114,10 +118,10 @@ export function mountTableView(
               card.nudge(0.5);
               audio.slide();
             } else {
-              // they lean in, set it down from their hand, then square it up
+              // they lean in, set it down from their hand and pat it
               avatar.play("placeCard");
               card.show(value, () => avatar.handWorldPos(), { delay: 0.3, gentle: true });
-              card.nudge(0.75);
+              card.nudge(PLACE_PAT);
               stage.after(0.3, audio.slide);
             }
           } else card.show(value);
@@ -199,6 +203,8 @@ export function mountTableView(
     const color = chipColors[Math.floor(Math.random() * chipColors.length)];
     if (color === undefined) throw new Error("Missing flick chip color");
     const chip = makeChip(color);
+    // your arm flicks it (others see the chip leave your head, as before)
+    if (from === meId()) seats.get(from)?.avatar.play("flick");
     const start = from === meId() ? camera.localToWorld(new THREE.Vector3(0.15, -0.2, -0.3)) : headOf(from);
     chip.position.copy(start);
     scene.add(chip);
@@ -213,7 +219,7 @@ export function mountTableView(
       done: () => {
         audio.bonk();
         if (to === meId()) store.events.emit({ t: "bonked" });
-        else seats.get(to)?.avatar.play("bonked");
+        seats.get(to)?.avatar.play("bonked");
         // the chip bounces off and rolls away
         const bounce = chip.position.clone();
         const away = bounce
@@ -252,7 +258,7 @@ export function mountTableView(
         flick(from, fx.to);
         return;
       case "adjust":
-        // someone swapped their card: they reach in and fiddle with it
+        // someone swapped their card: they reach in and square it up (you see your own on "played")
         if (seat && seat.card.group.visible) {
           seat.avatar.play("adjustCard");
           seat.card.nudge(0.2);
@@ -270,14 +276,21 @@ export function mountTableView(
         play(e.from, e.fx);
         return;
       case "played": {
-        // your card flies from your hand to the felt
         const seat = seats.get(meId());
-        const deck = cardValues(store.getState().room?.settings.deck ?? []);
         if (seat) {
-          const i = deck.indexOf(e.value);
-          const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
-          if (e.changed) seat.card.hide();
-          seat.card.show(e.value, from);
+          if (e.changed && seat.card.group.visible) {
+            // swapping it: the card stays on the felt and both hands square it up, as everyone sees
+            seat.card.show(e.value);
+            seat.avatar.play("adjustCard");
+            seat.card.nudge(0.2);
+          } else {
+            // your card flies from your hand to the felt, and your arm puts it down and pats it
+            const deck = cardValues(store.getState().room?.settings.deck ?? []);
+            const i = deck.indexOf(e.value);
+            const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
+            seat.card.show(e.value, from);
+            seat.avatar.play("placeCard");
+          }
           seat.card.turnDown();
         }
         audio.slide();
@@ -292,9 +305,9 @@ export function mountTableView(
   if (store.getState().room) redraw([{ t: "synced" }]);
 
   return {
+    mine: () => seats.get(meId())?.avatar ?? null,
     update(dt, t) {
-      const voting = store.getState().room?.phase === "voting";
-      for (const s of seats.values()) s.update(dt, t, voting);
+      for (const s of seats.values()) s.update(dt, t);
     },
   };
 }

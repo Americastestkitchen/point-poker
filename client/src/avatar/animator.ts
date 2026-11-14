@@ -1,11 +1,14 @@
 // Everything a bean does, as numbers: breathing, emotes, getting bonked,
-// celebrating, putting a card down, talking and looking around. It has three
-// layers (body, arms, face) and produces a Pose; the rig turns that into
-// meshes. No three.js here, so the same animator can drive the bean and the
-// first-person arms (#6), and tests can run it.
+// celebrating, putting a card down, flicking a chip, poking the duck, talking
+// and looking around. It has three layers (body, arms, face) and produces a
+// Pose; the rig turns that into meshes. No three.js here, so the same animator
+// drives the bean and your first-person body, and tests can run it.
 import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
 
-export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard";
+export type ClipId = EmoteId | "bonked" | "celebrate" | "placeCard" | "adjustCard" | Gesture;
+
+/** A quick move of the right arm that wins over everything else for a moment. */
+type Gesture = "flick" | "poke";
 
 /** How the hands hold the cards (#7 animates these). */
 export type HandPose = { kind: "none" } | { kind: "deciding" } | { kind: "committed"; variant: number };
@@ -35,6 +38,12 @@ export interface Pose {
 }
 
 const REST_ARM_X = -1.15;
+/** How long putting a card down takes, and when the hand pats it (seconds). */
+const PLACE = 1.05;
+export const PLACE_PAT = 0.65;
+/** How long a flick and a poke take (seconds). */
+const FLICK = 0.5,
+  POKE = 0.6;
 const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
@@ -67,6 +76,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
   let emote: { id: EmoteId; t: number } | null = null;
   /** What the hands are doing with the card, and how many seconds in. */
   let hands: { kind: "idle" } | { kind: "placing"; t: number } | { kind: "adjusting"; t: number } = { kind: "idle" };
+  /** A flick or poke going on, and how many seconds in. */
+  let gesture: { kind: Gesture; t: number } | null = null;
   let talkTarget = 0,
     talkAt = 0,
     talk = 0;
@@ -98,6 +109,10 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         case "adjustCard":
           // squaring it up waits until it's been put down
           if (hands.kind !== "placing") hands = { kind: "adjusting", t: 0 };
+          return;
+        case "flick":
+        case "poke":
+          gesture = { kind: clip, t: 0 };
           return;
         default:
           if (isEmote(clip)) emote = { id: clip, t: 0 };
@@ -189,20 +204,42 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         hands.t += dt;
         const e = hands.t;
         armSpeed = 22;
-        if (e < 0.55) {
-          // reach: right arm swings forward and stretches out to the felt
-          const k = ease(e / 0.32) * (1 - ease((e - 0.4) / 0.15) * 0.5);
-          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * k;
+        if (e < PLACE) {
+          // one move: the right arm swings forward and stretches out to the felt, pats the card
+          // down once it's landed, and comes back
+          const k = ease(e / 0.32) * (1 - ease((e - (PLACE - 0.3)) / 0.3));
+          const pat = Math.sin(Math.min(1, Math.max(0, (e - 0.55) / 0.2)) * Math.PI);
+          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * k + 0.12 * pat;
           stretchR = 1 + 1.5 * k;
           zR = 0.25 - 0.2 * k;
           lean = 0.18 * k;
-        } else if (e < 1.45) fiddle(e - 0.55, 0.9);
-        else hands = { kind: "idle" };
+        } else hands = { kind: "idle" };
       } else if (hands.kind === "adjusting") {
         hands.t += dt;
         armSpeed = 22;
         if (hands.t < 0.8) fiddle(hands.t, 0.8);
         else hands = { kind: "idle" };
+      }
+      // ---- gestures: the right arm flicks a chip off its thumb, or jabs at something on the felt
+      if (gesture) {
+        gesture.t += dt;
+        const e = gesture.t;
+        armSpeed = 30;
+        if (gesture.kind === "flick" && e < FLICK) {
+          // cock it up and in, then snap it out towards the table
+          const up = ease(e / 0.12) * (1 - ease((e - 0.12) / 0.1));
+          const out = ease((e - 0.12) / 0.08) * (1 - ease((e - 0.3) / 0.15));
+          armR = REST_ARM_X + (-2.05 - REST_ARM_X) * up + (-1.5 - REST_ARM_X) * out;
+          zR = 0.25 - 0.3 * up - 0.15 * out;
+          stretchR = 1 + 0.6 * out;
+        } else if (gesture.kind === "poke" && e < POKE) {
+          // reach out to the felt, squeeze twice, come back
+          const k = ease(e / 0.15) * (1 - ease((e - (POKE - 0.18)) / 0.18));
+          armR = REST_ARM_X + (-1.55 - REST_ARM_X) * k;
+          zR = 0.25 - 0.2 * k;
+          stretchR = 1 + (1.6 + Math.sin(e * 30) * 0.15) * k;
+          lean = Math.max(lean, 0.1 * k);
+        } else gesture = null;
       }
       const a = Math.min(1, dt * armSpeed);
       const [L, R] = arms;

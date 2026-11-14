@@ -5,13 +5,14 @@ import * as THREE from "three";
 import { COSMETIC, fills } from "../../../shared/catalog/cosmetics.ts";
 import { EMOTE, isEmote } from "../../../shared/catalog/emotes.ts";
 import type { Look } from "../../../shared/look.ts";
-import { mesh, toon } from "../scene/art/materials.ts";
-import { createAnimator, type ClipId, type HandPose } from "./animator.ts";
+import { toon } from "../scene/art/materials.ts";
+import { createAnimator, type ClipId, type HandPose, type Pose } from "./animator.ts";
 import { anchorsFor, type AnchorId, type Anchors, type Spot } from "./bodies/anchors.ts";
 import { BODY_SHAPES } from "./bodies/index.ts";
 import { BUILDERS, DEALER_GEAR, SLOT_ANCHOR } from "./cosmetics/index.ts";
 import { talkers } from "./cosmetics/talk.ts";
 import { buildArms, type Arms } from "./parts/arms.ts";
+import { buildBelly } from "./parts/belly.ts";
 import { buildChair } from "./parts/chair.ts";
 import { buildFace, type Face } from "./parts/face.ts";
 import { createLabels } from "./parts/labels.ts";
@@ -20,8 +21,10 @@ export interface Avatar {
   readonly group: THREE.Group;
   /** An invisible cylinder that's easy to click. */
   readonly hitbox: THREE.Mesh;
-  /** Placing or squaring up a card right now. */
-  readonly busyWithCard: boolean;
+  /** What they look like now. */
+  readonly look: Look;
+  /** The pose from the last update(), for your first-person body to copy. */
+  readonly pose: Pose;
   /** Colour, shape and what they're wearing. A new shape is swapped in place; callers never rebuild. */
   setLook(look: Look): void;
   play(clip: ClipId): void;
@@ -53,6 +56,7 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   let look = initial;
   const dealer = !!opts.dealer;
   const animator = createAnimator();
+  let pose = animator.update(0, 0);
   const material = toon(look.color);
   const group = new THREE.Group();
   const body = new THREE.Group();
@@ -83,16 +87,8 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     torso.material = material;
     torso.castShadow = true;
     body.add(torso);
-    if (shape.belly) {
-      const belly = mesh(
-        new THREE.SphereGeometry(0.2, 16, 12),
-        toon("#ffffff", { transparent: true, opacity: 0.25 }),
-        false,
-      );
-      belly.scale.set(shape.belly.sx, shape.belly.sy, 0.5);
-      belly.position.set(0, shape.belly.y, shape.belly.z);
-      body.add(belly);
-    }
+    const belly = buildBelly(shape);
+    if (belly) body.add(belly);
     const face = buildFace(shape, body);
     const arms = buildArms(shape, material, body);
     // empty markers where things can be attached; the head is where hats stand
@@ -149,8 +145,11 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
   return {
     group,
     hitbox,
-    get busyWithCard() {
-      return animator.busyWithCard;
+    get look() {
+      return look;
+    },
+    get pose() {
+      return pose;
     },
 
     setLook(next) {
@@ -185,7 +184,7 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     handWorldPos: (out = new THREE.Vector3()) => parts.anchors.handR.getWorldPosition(out),
 
     update(dt, t) {
-      const pose = animator.update(dt, t);
+      pose = animator.update(dt, t);
       const b = pose.body;
       body.scale.set(b.sx, b.sy, b.sx);
       body.position.y = b.y;
