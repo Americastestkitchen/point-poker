@@ -1,5 +1,6 @@
 // Fetching a ticket for the table: the dock's "Next ticket", the dealer panel's "Skip" and the
 // picker all share it. The picker shows the spinner and any failure; the latest load wins.
+import { createValue } from "../../../shared/value.ts";
 
 export type TicketLoadState =
   | { status: "idle" }
@@ -18,35 +19,27 @@ export interface TicketLoadDeps {
 const idle: TicketLoadState = { status: "idle" };
 
 export function createTicketLoad({ openPicker, bonk }: TicketLoadDeps) {
-  let state: TicketLoadState = idle;
+  const state = createValue<TicketLoadState>(idle);
   let latest = 0;
-  const listeners = new Set<() => void>();
-  const set = (next: TicketLoadState) => {
-    state = next;
-    for (const l of [...listeners]) l();
-  };
 
   return {
     /** For useSyncExternalStore. */
-    get: (): TicketLoadState => state,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
+    get: state.get,
+    subscribe: state.subscribe,
     /**
      * Shows `text` while `work` runs. A failure opens the picker with the reason and bonks.
      * Only the latest run counts: an older one finishing later changes nothing.
      */
     run(work: Promise<void>, text: string): void {
       const mine = ++latest;
-      set({ status: "loading", text });
+      state.set({ status: "loading", text });
       work.then(
         () => {
-          if (mine === latest) set(idle);
+          if (mine === latest) state.set(idle);
         },
         (e: unknown) => {
           if (mine !== latest) return;
-          set({ status: "failed", reason: e instanceof Error ? e.message : String(e) });
+          state.set({ status: "failed", reason: e instanceof Error ? e.message : String(e) });
           openPicker();
           bonk();
         },
@@ -54,7 +47,7 @@ export function createTicketLoad({ openPicker, bonk }: TicketLoadDeps) {
     },
     /** Forget a failure (the dealer is typing again). A load in flight keeps going. */
     clear() {
-      if (state.status === "failed") set(idle);
+      if (state.get().status === "failed") state.set(idle);
     },
   };
 }

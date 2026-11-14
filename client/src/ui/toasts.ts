@@ -1,4 +1,5 @@
 // The toast queue behind <Toaster>: a tiny store that React reads with useSyncExternalStore.
+import { createValue } from "../../../shared/value.ts";
 
 export type ToastTone = "info" | "success" | "error";
 
@@ -24,29 +25,22 @@ const browserScheduler: Scheduler = { after: (ms, fn) => void setTimeout(fn, ms)
 export const MAX_TOASTS = 4;
 
 export function createToasts(scheduler: Scheduler = browserScheduler) {
-  let items: readonly ToastItem[] = [];
+  const items = createValue<readonly ToastItem[]>([]);
   let nextId = 1;
-  const listeners = new Set<() => void>();
-  const set = (next: readonly ToastItem[]) => {
-    items = next;
-    for (const l of listeners) l();
-  };
 
   const toasts = {
     show(text: string, { tone = "info", ms = 3200 }: ToastOptions = {}): number {
       const id = nextId++;
-      set([...items, { id, text, tone }].slice(-MAX_TOASTS));
+      items.set([...items.get(), { id, text, tone }].slice(-MAX_TOASTS));
       scheduler.after(ms, () => toasts.dismiss(id));
       return id;
     },
     dismiss(id: number) {
-      if (items.some((t) => t.id === id)) set(items.filter((t) => t.id !== id));
+      const now = items.get();
+      if (now.some((t) => t.id === id)) items.set(now.filter((t) => t.id !== id));
     },
-    get: () => items,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
+    get: items.get,
+    subscribe: items.subscribe,
   };
   return toasts;
 }

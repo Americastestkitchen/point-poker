@@ -6,13 +6,13 @@ import type { TicketSource } from "../tickets/source.ts";
 import { newTableState, TableState } from "./state.ts";
 import { ITEM, type ItemId } from "../../shared/catalog/items.ts";
 import type { Command } from "./commands.ts";
-import { ROLE_ERROR, Table, type JoinRequest, type TableEvent } from "./table.ts";
+import { ROLE_ERROR, Table, type JoinRequest, type TableDeps, type TableEvent } from "./table.ts";
 import { Card, TableView } from "../../shared/protocol.ts";
 import { z } from "zod";
 
 const DEALER_KEY = "dealer-key";
 
-function setup(tickets: TicketSource = noTickets()) {
+function setup(tickets: TicketSource = noTickets(), deps: Partial<TableDeps> = {}) {
   let r = 0;
   let now = 1_700_000_000_000;
   const logs: string[] = [];
@@ -21,6 +21,7 @@ function setup(tickets: TicketSource = noTickets()) {
     now: () => now,
     random: () => (r = (r + 0.137) % 1),
     log: { info: (l: string) => logs.push(l), error: () => {} },
+    ...deps,
   });
   const events: TableEvent[] = [];
   table.on((e) => events.push(e));
@@ -669,4 +670,142 @@ test("tabs opened before tables could change rooms still read every view", () =>
   assert.ok(before.safeParse({ ...view(), environment: "moon-base" }).success);
   // and a newer tab that doesn't know a room yet shows the default one
   assert.equal(TableView.parse({ ...view(), environment: "moon-base" }).environment, "basement");
+});
+
+const changes = (events: TableEvent[]) => events.filter((e) => e.t === "changed").length;
+
+test("everyone gets a fresh view after any command that ran, however it ended", async () => {
+  const { table, deb, ann, events, run, deal } = setup(fakeTickets([]));
+  await deal();
+
+  // a command that changes something doesn't have to say so itself
+  events.length = 0;
+  await run(ann, { t: "setLook", look: { color: "#ffd23f" } });
+  assert.equal(changes(events), 1);
+  events.length = 0;
+  await run(ann, { t: "vote", value: 3 });
+  assert.equal(changes(events), 1);
+
+  // a command that ran and failed may have changed something on the way: it's announced too
+  events.length = 0;
+  assert.deepEqual(await table.run(deb.playerId, { t: "loadTicket", ref: "SD-404" }), {
+    error: "SD-404: Ticket not found (or no access)",
+  });
+  assert.equal(changes(events), 1);
+});
+
+test("a command that ends the round and then fails to load the next ticket still shows where it got to", async () => {
+  let gone = false;
+  const tickets = fakeTickets([ticket("EP-1", { type: "Epic" }), ticket("AB-1"), ticket("AB-2")], {
+    children: { "EP-1": ["AB-1", "AB-2"] },
+    // AB-2 goes missing from Jira after the queue was loaded
+    wait: (key) =>
+      gone && key === "AB-2" ? Promise.reject(new Error("Ticket not found (or no access)")) : Promise.resolve(),
+  });
+  const { table, deb, view, events, run } = setup(tickets);
+  await run(deb, { t: "loadTicket", ref: "EP-1" });
+  gone = true;
+  events.length = 0;
+  assert.deepEqual(await table.run(deb.playerId, { t: "skip" }), { error: "AB-2: Ticket not found (or no access)" });
+  assert.equal(view().phase, "waiting");
+  assert.equal(events.at(-1)?.t, "changed", "the last word is a fresh view, after the load failed");
+});
+
+test("a command that throws halfway still sends everyone a fresh view", async () => {
+  let failLogs = false;
+  const errors: unknown[] = [];
+  const { table, deb, ann, events, run, deal, view } = setup(noTickets(), {
+    log: {
+      info: () => {
+        if (failLogs) throw new Error("the log is full");
+      },
+      error: (...args: unknown[]) => errors.push(args),
+    },
+  });
+  await deal();
+  await run(ann, { t: "vote", value: 3 });
+  await run(deb, { t: "reveal" });
+  failLogs = true;
+  events.length = 0;
+  assert.deepEqual(await table.run(deb.playerId, { t: "settle", finalPoints: 3 }), { error: "Something went wrong" });
+  assert.equal(errors.length, 1);
+  assert.equal(view().phase, "settled", "the round was settled before the log line threw");
+  assert.equal(changes(events), 1);
+});
+
+test("a command refused before it runs changes nothing, so nobody gets a new view", async () => {
+  const { table, deb, ann, events } = setup();
+  events.length = 0;
+  const refused = [
+    await table.run("nobody", { t: "vote", value: 3 }),
+    await table.run(ann.playerId, { t: "nope" }),
+    await table.run(ann.playerId, { t: "vote", value: "3" }),
+    await table.run(ann.playerId, { t: "reveal" }),
+    await table.run(deb.playerId, { t: "reveal" }),
+  ];
+  assert.deepEqual(refused, [
+    { error: "You're not at this table" },
+    { error: "Unknown command" },
+    { error: "That command didn't make sense" },
+    { error: ROLE_ERROR },
+    { error: "There's no vote to reveal" },
+  ]);
+  assert.deepEqual(events, []);
+});
+
+test("the round ends for everyone before the next ticket comes back from Jira", async () => {
+  let release!: () => void;
+  let holding = false;
+  const tickets = fakeTickets([ticket("EP-1", { type: "Epic" }), ticket("AB-1"), ticket("AB-2")], {
+    children: { "EP-1": ["AB-1", "AB-2"] },
+    wait: () => (holding ? new Promise<void>((r) => (release = r)) : Promise.resolve()),
+  });
+  const { table, deb, view, events, run } = setup(tickets);
+  await run(deb, { t: "loadTicket", ref: "EP-1" });
+
+  for (const cmd of [{ t: "skip" }, { t: "nextRound" }] as const) {
+    events.length = 0;
+    holding = true;
+    const done = table.run(deb.playerId, cmd);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(view().phase, "waiting", `${cmd.t}: the round is over`);
+    assert.equal(changes(events), 1, `${cmd.t}: and everyone already sees it`);
+    holding = false;
+    release();
+    assert.deepEqual(await done, {});
+    assert.equal(view().phase, "voting", `${cmd.t}: then the next ticket is dealt`);
+    assert.equal(events.at(-1)?.t, "changed", `${cmd.t}: and everyone sees that too`);
+  }
+});
+
+test("an epic's queue shows up before its first ticket comes back from Jira", async () => {
+  let release!: () => void;
+  const tickets = fakeTickets([ticket("EP-1", { type: "Epic" }), ticket("AB-1")], {
+    children: { "EP-1": ["AB-1"] },
+    wait: (key) => (key === "AB-1" ? new Promise<void>((r) => (release = r)) : Promise.resolve()),
+  });
+  const { table, deb, view, events } = setup(tickets);
+  events.length = 0;
+  const done = table.run(deb.playerId, { t: "loadTicket", ref: "EP-1" });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(view().epic?.key, "EP-1");
+  assert.equal(view().ticket, null);
+  assert.equal(changes(events), 1, "everyone already sees the queue");
+  release();
+  assert.deepEqual(await done, {});
+  assert.equal(view().ticket?.key, "AB-1");
+  assert.equal(changes(events), 2);
+});
+
+test("the fresh view goes out before the command's answer", async () => {
+  // the way transport/ws.ts sends them: the view on the next microtask, the answer when run() resolves
+  const { table, ann, deal } = setup();
+  await deal();
+  const order: string[] = [];
+  const mine = () => table.viewFor(ann.playerId).players.find((p) => p.id === ann.playerId)?.vote;
+  table.on((e) => {
+    if (e.t === "changed") queueMicrotask(() => order.push(`view:${mine()}`));
+  });
+  await table.run(ann.playerId, { t: "vote", value: 3 }).then(() => order.push("result"));
+  assert.deepEqual(order, ["view:3", "result"]);
 });

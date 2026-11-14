@@ -107,16 +107,17 @@ test("a view from before your vote arrived doesn't take your card back", async (
   assert.deepEqual(events.at(-1), { t: "toast", text: "Voting is over", level: "error" });
 });
 
-test("dealer actions resolve when the server says yes and reject with its reason", async () => {
-  const { sent, actions } = setup("deb", (cmd) =>
+test("a dealer action you wait on resolves when the server says yes and rejects with its reason, quietly", async () => {
+  const { sent, events, actions } = setup("deb", (cmd) =>
     cmd.t === "loadTicket" && cmd.ref === "SD-404" ? "SD-404: Ticket not found (or no access)" : undefined,
   );
-  await actions.dealer.load("SD-7");
-  await assert.rejects(actions.dealer.load("SD-404"), { message: "SD-404: Ticket not found (or no access)" });
-  await actions.dealer.reveal();
-  await actions.dealer.settle(5);
-  await actions.dealer.next();
-  await actions.dealer.kick("bob");
+  await actions.dealer.wait.load("SD-7");
+  await assert.rejects(actions.dealer.wait.load("SD-404"), { message: "SD-404: Ticket not found (or no access)" });
+  await actions.dealer.wait.reveal();
+  await actions.dealer.wait.settle(5);
+  await actions.dealer.wait.next();
+  await actions.dealer.wait.kick("bob");
+  assert.deepEqual(events, [], "the caller that waits shows the failure, not a toast");
   assert.deepEqual(sent, [
     { t: "loadTicket", ref: "SD-7" },
     { t: "loadTicket", ref: "SD-404" },
@@ -178,6 +179,26 @@ test("a failed action nobody waits on becomes a toast; an item the server refuse
   actions.setLook({ color: "#ffd23f", body: "pear", cosmetics: [] });
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(events, [{ t: "toast", text: "Nope", level: "error" }]);
+});
+
+test("a dealer action nobody waits on shows its failure as exactly one error toast", async () => {
+  const { sent, events, actions } = setup("deb", (cmd) => (cmd.t === "reveal" ? "Nobody voted yet" : undefined));
+  assert.equal(actions.dealer.reveal(), undefined, "there's nothing to wait on");
+  actions.dealer.kick("bob");
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(sent, [{ t: "reveal" }, { t: "kick", id: "bob" }]);
+  assert.deepEqual(events, [{ t: "toast", text: "Nobody voted yet", level: "error" }]);
+});
+
+test("refreshing the ticket says when the server answered, then toasts a failure once", async () => {
+  const { events, actions } = setup("deb", (cmd) =>
+    cmd.t === "refreshTicket" ? "A ticket typed in by hand isn't in Jira" : undefined,
+  );
+  const seen: string[] = [];
+  actions.dealer.refresh(() => seen.push(`answered with ${events.length} toasts`));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(seen, ["answered with 0 toasts"]);
+  assert.deepEqual(events, [{ t: "toast", text: "A ticket typed in by hand isn't in Jira", level: "error" }]);
 });
 
 test("small talk goes out as effects", () => {

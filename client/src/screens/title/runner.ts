@@ -2,6 +2,7 @@
 // server, sitting down, tidying the address bar) and feeds the answers back in as events.
 // The title screen reads it with useSyncExternalStore; node tests drive it with fake tables.
 import type { OpenResult, Tables } from "../../app/tables.ts";
+import { createValue } from "../../../../shared/value.ts";
 import { start, step, type SignedIn, type Step, type TitleEffect, type TitleEvent, type TitleState } from "./flow.ts";
 
 /** What the title screens need from the page: the invite link, opening tables, sitting down. */
@@ -48,21 +49,17 @@ function answer(request: number, r: OpenResult): TitleEvent {
 
 export function createTitleFlow({ title, saved, error }: TitleFlowDeps) {
   const first = start(title.inviteCode, saved, title.signedIn);
-  let state = first.state;
+  const state = createValue<TitleState>(first.state);
   let started = false;
   /** Answers only count while a screen is showing the flow. */
   let attached = false;
-  const listeners = new Set<() => void>();
 
   function apply({ state: next, effects }: Step) {
-    if (next !== state) {
-      state = next;
-      for (const l of [...listeners]) l();
-    }
+    state.set(next);
     for (const effect of effects) run(effect);
   }
   const dispatch = (e: TitleEvent) => {
-    if (attached) apply(step(state, e));
+    if (attached) apply(step(state.get(), e));
   };
 
   function run(effect: TitleEffect) {
@@ -92,11 +89,8 @@ export function createTitleFlow({ title, saved, error }: TitleFlowDeps) {
   }
 
   return {
-    getState: (): TitleState => state,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => void listeners.delete(listener);
-    },
+    getState: state.get,
+    subscribe: state.subscribe,
     dispatch,
     /** A screen shows the flow: answers count from now, and the first effects run (once ever). */
     attach() {
