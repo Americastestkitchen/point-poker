@@ -7,6 +7,7 @@ import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
+import { PLACE_PAT } from "../../avatar/animator.ts";
 import type { Avatar } from "../../avatar/avatar.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
@@ -117,10 +118,10 @@ export function mountTableView(
               card.nudge(0.5);
               audio.slide();
             } else {
-              // they lean in, set it down from their hand, then square it up
+              // they lean in, set it down from their hand and pat it
               avatar.play("placeCard");
               card.show(value, () => avatar.handWorldPos(), { delay: 0.3, gentle: true });
-              card.nudge(0.75);
+              card.nudge(PLACE_PAT);
               stage.after(0.3, audio.slide);
             }
           } else card.show(value);
@@ -284,7 +285,7 @@ export function mountTableView(
           if (e.changed) seat.card.hide();
           seat.card.show(e.value, from);
           seat.card.turnDown();
-          // your arm puts it down and squares it up
+          // your arm puts it down and pats it
           seat.avatar.play("placeCard");
         }
         audio.slide();

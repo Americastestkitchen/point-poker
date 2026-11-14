@@ -40,13 +40,17 @@ test("a shock widens the eyes", () => {
   assert.equal(run(a, 2, 0.5).at(-1)!.face.eyeScale, 1);
 });
 
-test("putting a card down keeps the hands busy for about a second and a half", () => {
+test("putting a card down is one reach of the right arm, about a second long", () => {
   const a = still();
   a.play("placeCard");
   assert.equal(a.busyWithCard, true);
-  const reach = run(a, 0.3).at(-1)!;
-  assert.ok(reach.arms[1].stretch > 1.5, "the right arm stretches out to the felt");
-  run(a, 1.3, 0.3);
+  const poses = run(a, 1.1);
+  assert.ok(poses[17]!.arms[1].stretch > 1.5, "the right arm stretches out to the felt");
+  assert.ok(
+    poses.every((p) => Math.abs(p.arms[0].x + 1.15) < 1e-9),
+    "the left hand stays put: no squaring up with both hands",
+  );
+  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "back at rest");
   assert.equal(a.busyWithCard, false);
   a.play("adjustCard");
   assert.equal(a.busyWithCard, true);
@@ -55,13 +59,13 @@ test("putting a card down keeps the hands busy for about a second and a half", (
 test("squaring up the card waits until it's been put down", () => {
   const a = still();
   a.play("placeCard");
-  run(a, 1.0);
+  run(a, 0.6);
   a.play("adjustCard"); // ignored: still putting it down
   run(a, 0.5);
-  assert.equal(a.busyWithCard, false, "done at about 1.45s, not restarted by the adjust");
+  assert.equal(a.busyWithCard, false, "done at about 1.05s, not restarted by the adjust");
   a.play("adjustCard");
   a.play("placeCard"); // a new card takes over from the fiddle
-  run(a, 1.0);
+  run(a, 0.9);
   assert.equal(a.busyWithCard, true);
 });
 

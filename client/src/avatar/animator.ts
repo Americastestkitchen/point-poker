@@ -38,6 +38,9 @@ export interface Pose {
 }
 
 const REST_ARM_X = -1.15;
+/** How long putting a card down takes, and when the hand pats it (seconds). */
+const PLACE = 1.05;
+export const PLACE_PAT = 0.65;
 /** How long a flick and a poke take (seconds). */
 const FLICK = 0.5,
   POKE = 0.6;
@@ -201,15 +204,16 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         hands.t += dt;
         const e = hands.t;
         armSpeed = 22;
-        if (e < 0.55) {
-          // reach: right arm swings forward and stretches out to the felt
-          const k = ease(e / 0.32) * (1 - ease((e - 0.4) / 0.15) * 0.5);
-          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * k;
+        if (e < PLACE) {
+          // one move: the right arm swings forward and stretches out to the felt, pats the card
+          // down once it's landed, and comes back
+          const k = ease(e / 0.32) * (1 - ease((e - (PLACE - 0.3)) / 0.3));
+          const pat = Math.sin(Math.min(1, Math.max(0, (e - 0.55) / 0.2)) * Math.PI);
+          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * k + 0.12 * pat;
           stretchR = 1 + 1.5 * k;
           zR = 0.25 - 0.2 * k;
           lean = 0.18 * k;
-        } else if (e < 1.45) fiddle(e - 0.55, 0.9);
-        else hands = { kind: "idle" };
+        } else hands = { kind: "idle" };
       } else if (hands.kind === "adjusting") {
         hands.t += dt;
         armSpeed = 22;
