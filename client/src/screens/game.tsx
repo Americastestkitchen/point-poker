@@ -16,6 +16,11 @@ import type { TicketLoad, TicketLoadState } from "./ticket-load.ts";
 /** The game UI's services. createGameUi() builds one; tests can build their own. */
 export interface Game {
   store: Store;
+  /**
+   * Everything the player can do. A dealer action called plainly (`actions.dealer.reveal()`)
+   * shows its own failure as an error toast; a form or the ticket loader that shows the failure
+   * itself uses the awaitable form (`actions.dealer.wait.load(ref)`), which toasts nothing.
+   */
   actions: Actions;
   storage: Storage;
   /** Sound effects (it's also the kit's `sounds`, so mute covers both). */
@@ -32,12 +37,6 @@ export interface Game {
   leaveTable(): void;
   /** Copies the invite link ("🔗 Invite link copied…"), or shows it to copy by hand. */
   invite(): void;
-  /**
-   * A dealer action nobody waits on: if the server says no, its reason shows once as an error
-   * toast (with the bonk). Don't also show it in a form: a form that awaits the action itself
-   * shows its own error instead of calling this.
-   */
-  dealerDo(work: Promise<void>): void;
 }
 
 const GameContext = createContext<Game | null>(null);

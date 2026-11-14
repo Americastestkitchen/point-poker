@@ -74,11 +74,6 @@ export function createGameUi(deps: GameUiDeps): GameUi {
         done: "🔗 Invite link copied. Paste it in Slack or Teams.",
         title: "Send this link to your team",
       }),
-    // through the event stream, so the root's one adapter shows it (and bonks)
-    dealerDo: (work) =>
-      void work.catch((e: unknown) => {
-        store.events.emit({ t: "toast", text: e instanceof Error ? e.message : String(e), level: "error" });
-      }),
   };
 
   return {

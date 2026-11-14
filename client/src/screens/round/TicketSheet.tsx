@@ -159,7 +159,7 @@ function Sheet({ ticket, canRefresh }: { ticket: Ticket; canRefresh: boolean }) 
 
 /** The dealer fetches the ticket again; the result (or why not) comes back as a toast. */
 function Refresh() {
-  const { actions, dealerDo } = useGame();
+  const { actions } = useGame();
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -169,7 +169,7 @@ function Refresh() {
       disabled={busy}
       onPress={() => {
         setBusy(true);
-        dealerDo(actions.dealer.refresh().finally(() => setBusy(false)));
+        actions.dealer.refresh(() => setBusy(false));
       }}
     >
       {busy ? "Refreshing…" : "↻ Refresh from Jira"}

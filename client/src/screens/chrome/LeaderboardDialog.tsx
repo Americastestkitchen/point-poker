@@ -12,7 +12,7 @@ import { boardRows, jiraExport, roundOutcome, roundsNewestFirst, roundSwitches, 
 import s from "./LeaderboardDialog.module.css";
 
 export function LeaderboardDialog() {
-  const { actions, copy, dealerDo } = useGame();
+  const { actions, copy } = useGame();
   const popup = usePopup("leaderboard");
   const room = useRoom();
   const me = useMe();
@@ -43,7 +43,7 @@ export function LeaderboardDialog() {
     >
       <ol className={s.board} aria-label="Players by coins">
         {rows.map((row) => (
-          <Row key={row.player.id} row={row} onRemove={() => dealerDo(actions.dealer.kick(row.player.id))} />
+          <Row key={row.player.id} row={row} onRemove={() => actions.dealer.kick(row.player.id)} />
         ))}
       </ol>
 

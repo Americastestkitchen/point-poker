@@ -52,11 +52,11 @@ function Said({ words }: { words: Words }) {
 }
 
 function Body({ body }: { body: DockBody }) {
-  const { actions, dealerDo } = useGame();
+  const { actions } = useGame();
   const picker = usePopup("picker");
   const press = (c: HandCard) => {
     if (c.press?.t === "vote") actions.vote(c.press.value);
-    else if (c.press?.t === "settle") dealerDo(actions.dealer.settle(c.press.value));
+    else if (c.press?.t === "settle") actions.dealer.settle(c.press.value);
   };
   switch (body.t) {
     case "addTicket":
@@ -104,7 +104,7 @@ function Body({ body }: { body: DockBody }) {
 }
 
 function Action({ action }: { action: DockAction }) {
-  const { actions, dealerDo, ticketLoad } = useGame();
+  const { actions, ticketLoad } = useGame();
   const picker = usePopup("picker");
   const load = useTicketLoad();
   const room = useRoom();
@@ -117,14 +117,14 @@ function Action({ action }: { action: DockAction }) {
           className={cx(s.big, action.everyone && s.pulse)}
           disabled={action.voted === 0}
           sub={`${action.voted} of ${action.of} in`}
-          onPress={() => dealerDo(actions.dealer.reveal())}
+          onPress={() => actions.dealer.reveal()}
         >
           Reveal cards
         </Button>
       );
     case "restart":
       return (
-        <Button variant="link" size="sm" className={s.link} onPress={() => dealerDo(actions.dealer.deal())}>
+        <Button variant="link" size="sm" className={s.link} onPress={() => actions.dealer.deal()}>
           {action.label}
         </Button>
       );
@@ -138,8 +138,8 @@ function Action({ action }: { action: DockAction }) {
           onPress={() => {
             if (!room) return;
             const plan = skipPlan(room);
-            if (plan.t === "load") ticketLoad.run(actions.dealer.skip(), plan.text);
-            else dealerDo(actions.dealer.skip());
+            if (plan.t === "load") ticketLoad.run(actions.dealer.wait.skip(), plan.text);
+            else actions.dealer.skip();
           }}
         >
           Skip ticket
@@ -154,7 +154,7 @@ function Action({ action }: { action: DockAction }) {
           className={s.big}
           disabled={busy}
           sub={busy ? "Dealing…" : action.key}
-          onPress={() => ticketLoad.run(actions.dealer.next(), "Dealing the next ticket…")}
+          onPress={() => ticketLoad.run(actions.dealer.wait.next(), "Dealing the next ticket…")}
         >
           Next ticket →
         </Button>

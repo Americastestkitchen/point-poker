@@ -41,7 +41,7 @@ type Confirm = { t: "cancel" } | { t: "kick"; id: string };
 
 /** Mounted only while the panel is open, so a half-asked confirm is gone next time. */
 function PanelBody() {
-  const { store, actions, dealerDo, ticketLoad } = useGame();
+  const { store, actions, ticketLoad } = useGame();
   const room = useRoom();
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -58,12 +58,12 @@ function PanelBody() {
   const press = (id: RoundActionId) => {
     switch (id) {
       case "restart":
-        dealerDo(actions.dealer.deal());
+        actions.dealer.deal();
         return done();
       case "skip": {
         const plan = skipPlan(room);
-        if (plan.t === "load") ticketLoad.run(actions.dealer.skip(), plan.text);
-        else dealerDo(actions.dealer.skip());
+        if (plan.t === "load") ticketLoad.run(actions.dealer.wait.skip(), plan.text);
+        else actions.dealer.skip();
         return done();
       }
       case "cancel":
@@ -138,14 +138,14 @@ function PanelBody() {
         label="🧳 The table is in"
         options={ENVIRONMENT_IDS}
         value={room.environment}
-        onChange={(id) => dealerDo(actions.dealer.moveTo(id))}
+        onChange={(id) => actions.dealer.moveTo(id)}
         render={(id) => ENVIRONMENT[id].name}
       />
 
       <Toggle
         label="🃏 I play a card too"
         checked={room.settings.dealerPlays}
-        onChange={(on) => dealerDo(actions.dealer.setPlays(on))}
+        onChange={(on) => actions.dealer.setPlays(on)}
       />
 
       <ConfirmDialog
@@ -156,7 +156,7 @@ function PanelBody() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           setConfirm(null);
-          dealerDo(actions.dealer.cancel());
+          actions.dealer.cancel();
           done();
         }}
       >
@@ -171,7 +171,7 @@ function PanelBody() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           setConfirm(null);
-          if (kicking) dealerDo(actions.dealer.kick(kicking.id));
+          if (kicking) actions.dealer.kick(kicking.id);
         }}
       >
         <p className={s.confirm}>{kick?.body}</p>
