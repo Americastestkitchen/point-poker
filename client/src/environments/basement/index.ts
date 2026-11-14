@@ -1,5 +1,6 @@
 // The Backlog Basement: a dim basement room with a swaying lamp, a neon sign,
 // a telly behind the dealer, a rubber duck and plenty of sticky-note wisdom.
+// Most of it does something when clicked (eggs.ts); so do the lamp and the telly.
 import * as THREE from "three";
 import { NEON } from "../../../../shared/brand.ts";
 import { toon } from "../../scene/art/materials.ts";
@@ -8,22 +9,28 @@ import { flickeringNeonLogo } from "../kit/neon.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
 import type { EnvCtx, Environment, Sign, StatusScreen } from "../types.ts";
-import { buildRoom, dustMotes, hangingLamp, woodTexMat, type Led } from "./room.ts";
+import { wobble } from "../kit/animate.ts";
+import { eggs } from "./eggs.ts";
+import { buildRoom, dustMotes, hangingLamp, woodTexMat } from "./room.ts";
 import { feltTexture } from "./textures.ts";
 
 export default {
-  backdrop({ anchors, sound, onFrame }) {
+  backdrop(ctx) {
+    const { anchors, sound, onFrame, pick } = ctx;
     const object = new THREE.Group();
     object.add(new THREE.HemisphereLight("#6a5a8a", "#1a100c", 2.0));
     object.add(new THREE.AmbientLight("#ffffff", 0.3));
-    const leds: Led[] = [];
-    buildRoom(object, leds);
+    buildRoom(object);
     const lamp = hangingLamp(anchors.lamp);
     const dust = dustMotes();
-    object.add(lamp.object, dust.object);
+    object.add(lamp.object, dust.object, eggs(ctx));
+    // bat the lamp and it swings
+    pick(lamp.object, () => {
+      lamp.nudge();
+      sound.tone(1800, 0.25, "sine", 0.05, 1700);
+    });
     onFrame((dt, t) => {
-      lamp.update(t);
-      for (const l of leds) l.mat.color.set(Math.sin(t * l.rate + l.rate * 10) > 0 ? l.on : "#111");
+      lamp.update(dt, t);
       dust.update(dt, t);
     });
     // the lamp's mains hum, barely there
@@ -60,8 +67,8 @@ function neonSign({ onFrame }: EnvCtx): Sign {
   return { object };
 }
 
-/** A CRT telly on a shelf behind the dealer, with scanlines and a bit of flicker. */
-function telly({ anchors, onFrame }: EnvCtx): StatusScreen {
+/** A CRT telly on a shelf behind the dealer, with scanlines and a bit of flicker. Smack it (click) and the picture rolls. */
+function telly({ anchors, onFrame, pick, sound }: EnvCtx): StatusScreen {
   const object = new THREE.Group();
   const status = statusCanvas(512, 384, paintTelly);
   const box = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.55), toon("#5a5048"));
@@ -80,8 +87,20 @@ function telly({ anchors, onFrame }: EnvCtx): StatusScreen {
   light.position.set(0.52, 0, 0);
   wall.add(shelf, light);
   object.add(box, wall);
-  onFrame(() => {
-    if (Math.random() < 0.02) status.draw(Math.random() * 0.08);
+  const thump = wobble(30, 6);
+  let rolling = 0;
+  pick(box, () => {
+    thump.kick(0.06);
+    rolling = 0.6;
+    sound.noise(0.08, 250, 0.3);
+    sound.noise(0.5, 6000, 0.05, 0.05);
+  });
+  onFrame((dt) => {
+    box.rotation.z = thump.step(dt);
+    if (rolling > 0) {
+      rolling = Math.max(0, rolling - dt);
+      status.draw(rolling > 0 ? 0.2 + Math.random() * 0.5 : 0);
+    } else if (Math.random() < 0.02) status.draw(Math.random() * 0.08);
   });
   return status.screen(object);
 }
