@@ -193,3 +193,16 @@ test("someone else's squeak plays in whichever room is up", async () => {
   room.squeak();
   assert.deepEqual(log, ["boat squeaks"], "and it doesn't tell everyone again");
 });
+
+test("a move asked for while the first room is still loading wins, without a curtain", async () => {
+  const { room, log, arrive, alive } = setup();
+  const first = room.show("attic"); // the title screens' room, still downloading
+  void room.show("boat"); // you sat down at a table on the boat meanwhile
+  await arrive("attic");
+  await first; // the first show gives up quietly, so the scene carries on mounting
+  await arrive("boat");
+  assert.ok(!log.includes("add attic backdrop"), "the room you left never goes up");
+  assert.ok(log.includes("add boat backdrop"));
+  assert.ok(!log.includes("curtain 1"), "nothing to hide yet");
+  assert.deepEqual(alive(), ONE_ROOM);
+});

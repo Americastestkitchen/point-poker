@@ -68,14 +68,16 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
     },
   });
   // The title screens are in the default room; at a table, you're wherever the table is.
+  // Follow the table before the first room has loaded: the UI is already up, and someone who
+  // sits down meanwhile must end up in the table's room, not this one (the latest move wins).
   const roomOf = (s: ReturnType<Store["getState"]>) => s.room?.environment ?? DEFAULT_ENVIRONMENT;
-  await room.show(roomOf(store.getState()));
   store.subscribe((s, prev) => {
     if (s.room?.environment !== prev.room?.environment) void room.show(roomOf(s));
   });
   store.events.on((e) => {
     if (e.t === "fx" && e.fx.kind === "squeak") room.squeak();
   });
+  await room.show(roomOf(store.getState()));
 
   const ticket = createTicketPaper(layout);
   stage.picking.register(ticket.mesh, actions.openTicket);
