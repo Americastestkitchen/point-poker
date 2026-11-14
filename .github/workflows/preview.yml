@@ -1,6 +1,7 @@
 # Every pull request gets its own throwaway site: https://point-poker-pr-<number>.fly.dev
 # It's created when the PR opens, redeployed on every push, and deleted when the PR closes.
-# Previews have no Jira connection (type tickets in by hand).
+# Dealers sign in with Jira through the dev site's callback, so the Atlassian app needs nothing
+# per preview. Without the Atlassian secrets, previews ask for HOST_PASSCODE and tickets are typed in.
 name: PR preview
 
 on:
@@ -48,15 +49,11 @@ jobs:
       - name: Set the host passcode, or Jira sign-in through the dev site
         if: env.OPEN == 'true'
         run: |
-          # PREVIEW_SIGN_IN=own: the preview's own callback (add it to the Atlassian app), for
-          # testing sign-in before the dev site relays it. Otherwise through the dev site.
-          if [ "$PREVIEW_SIGN_IN" = own ]; then CALLBACK="https://$APP.fly.dev/auth/jira/callback"
-          else CALLBACK="https://point-poker-dev.fly.dev/auth/jira/callback"; fi
           if [ -n "$ATLASSIAN_CLIENT_ID" ]; then
             flyctl secrets set -a "$APP" --stage \
               ATLASSIAN_CLIENT_ID="$ATLASSIAN_CLIENT_ID" \
               ATLASSIAN_CLIENT_SECRET="$ATLASSIAN_CLIENT_SECRET" \
-              ATLASSIAN_CALLBACK_URL="$CALLBACK" \
+              ATLASSIAN_CALLBACK_URL="https://point-poker-dev.fly.dev/auth/jira/callback" \
               JIRA_SITES="$JIRA_SITES"
           else
             flyctl secrets set HOST_PASSCODE="$HOST_PASSCODE" -a "$APP" --stage
@@ -66,22 +63,24 @@ jobs:
           ATLASSIAN_CLIENT_ID: ${{ secrets.ATLASSIAN_CLIENT_ID }}
           ATLASSIAN_CLIENT_SECRET: ${{ secrets.ATLASSIAN_CLIENT_SECRET }}
           JIRA_SITES: ${{ secrets.JIRA_SITES }}
-          PREVIEW_SIGN_IN: ${{ vars.PREVIEW_SIGN_IN }}
       - name: Deploy
         if: env.OPEN == 'true'
         run: flyctl deploy --remote-only --ha=false --config fly.dev.toml -a "$APP"
       - name: Comment the link on the PR
         if: env.OPEN == 'true'
         run: |
+          if [ "$SIGN_IN" = true ]; then jira="Dealers sign in with Jira, like on the dev site."
+          else jira="No Jira here, so type tickets in by hand."; fi
           body="$MARKER
           🃏 **Preview:** https://$APP.fly.dev
-          Updated for \`${HEAD_SHA::7}\`. It sleeps when idle and is deleted when this PR closes. No Jira here, so type tickets in by hand."
+          Updated for \`${HEAD_SHA::7}\`. It sleeps when idle and is deleted when this PR closes. $jira"
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/${{ github.event.number }}/comments" --paginate -q ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
           if [ -n "$id" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" >/dev/null
           else gh pr comment ${{ github.event.number }} --body "$body"; fi
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SIGN_IN: ${{ secrets.ATLASSIAN_CLIENT_ID != '' }}
 
       # PR closed: delete the app and note it on the PR.
       - name: Delete the preview app
