@@ -25,6 +25,11 @@ interface Rule {
 const WORLD = ["client/src/scene/", "client/src/avatar/", "client/src/environments/"];
 // UI paths: app-aware game screens (title screens and HUD) and the independent ui/ kit.
 const UI = ["client/src/screens/", "client/src/ui/"];
+// Each room is a folder in environments/; kit/ is what they share.
+const ENVIRONMENTS = "client/src/environments/";
+const ROOMS = readdirSync(join(ROOT, ENVIRONMENTS), { withFileTypes: true })
+  .filter((e) => e.isDirectory() && e.name !== "kit")
+  .map((e) => `${ENVIRONMENTS}${e.name}/`);
 
 const RULES: Rule[] = [
   {
@@ -120,6 +125,21 @@ const RULES: Rule[] = [
     forbid: ["client/src/scene/layout/layout.ts"],
     types: true,
     why: "only scene/index.ts imports the `layout` value; take it as an argument (like buildTable and createTicketPaper) and use `import type { Layout }`.",
+  },
+  ...ROOMS.map((room): Rule => ({
+    name: "a room builds from the kit",
+    files: [room],
+    forbid: ["client/src/"],
+    allow: [room, `${ENVIRONMENTS}kit/`, `${ENVIRONMENTS}types.ts`, "client/src/scene/art/"],
+    types: true,
+    why: "a room is handed what it needs (EnvCtx in environments/types.ts) and builds with environments/kit/ and scene/art/; to share something with another room, move it into kit/.",
+  })),
+  {
+    name: "rooms load only when needed",
+    files: ["client/src/"],
+    except: [`${ENVIRONMENTS}index.ts`, ...ROOMS],
+    forbid: ROOMS,
+    why: "only environments/index.ts loads a room, with import(), so a phone downloads just the room its table is in.",
   },
   {
     name: "no three.js where the header says so",

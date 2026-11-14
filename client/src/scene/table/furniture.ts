@@ -1,10 +1,10 @@
 // The poker table itself. Its shape and place come from `layout`; what it's
 // made of comes from the environment.
 import * as THREE from "three";
-import type { BuiltEnvironment } from "../../environments/types.ts";
+import type { TableMaterials } from "../../environments/types.ts";
 import type { Layout } from "../layout/layout.ts";
 
-export function buildTable(layout: Layout, mats: BuiltEnvironment["tableMaterials"]): THREE.Group {
+export function buildTable(layout: Layout, mats: TableMaterials): THREE.Group {
   const { y, rx, rz } = layout.table;
   const g = new THREE.Group();
   const top = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.06, 64), [mats.wood, mats.felt, mats.wood]);
