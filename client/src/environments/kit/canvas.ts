@@ -3,16 +3,11 @@ import * as THREE from "three";
 import { context2d } from "../../scene/art/textures.ts";
 
 /** Scatters `count` little squares over the canvas: fuzz, grime, rust, sand. `color` is asked once per speck. */
-export function speckle(
-  g: CanvasRenderingContext2D,
-  count: number,
-  size: number,
-  color: () => string,
-  area = { width: g.canvas.width, height: g.canvas.height },
-) {
+export function speckle(g: CanvasRenderingContext2D, count: number, size: number, color: () => string) {
+  const { width, height } = g.canvas;
   for (let i = 0; i < count; i++) {
     g.fillStyle = color();
-    g.fillRect(Math.random() * area.width, Math.random() * area.height, size, size);
+    g.fillRect(Math.random() * width, Math.random() * height, size, size);
   }
 }
 
