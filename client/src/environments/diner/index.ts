@@ -5,7 +5,9 @@ import * as THREE from "three";
 import { NEON } from "../../../../shared/brand.ts";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, wrapText } from "../../scene/art/textures.ts";
-import { flickeringNeonLogo } from "../kit/neon.ts";
+import { oneShot } from "../kit/animate.ts";
+import { textLines } from "../kit/canvas.ts";
+import { flickeringNeonLogo, neonText, neonTubes } from "../kit/neon.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
 import type { EnvCtx, Environment, Sign, StatusScreen } from "../types.ts";
 import { hotfixSign, jukebox, orderBell, pieCase, specialsBoard } from "./eggs.ts";
@@ -77,15 +79,15 @@ function dinerSign({ onFrame }: EnvCtx): Sign {
   const edge = new THREE.Mesh(new THREE.BoxGeometry(2.3, 2.05, 0.04), chrome());
   edge.position.set(0, 0.05, -0.07);
   // OPEN 24/7 in a rounded red tube, under the logo
-  const frame = neonPlane(1.9, 0.42, (g, W, H, tube) =>
+  const frame = neonTubes(1.9, 0.42, (g, W, H, tube) =>
     tube(() => {
       g.beginPath();
       g.roundRect(14, 14, W - 28, H - 28, (H - 28) / 2);
       g.stroke();
     }),
   );
-  const open = neonPlane(0.95, 0.42, (g, W, H, tube) => tube(() => g.strokeText("OPEN", W / 2, H / 2 + 4)));
-  const hours = neonPlane(0.75, 0.42, (g, W, H, tube) => tube(() => g.strokeText("24/7", W / 2, H / 2 + 4)));
+  const open = neonText("OPEN", 0.95, 0.42);
+  const hours = neonText("24/7", 0.75, 0.42);
   frame.mesh.position.set(0, -0.62, 0.001);
   open.mesh.position.set(-0.4, -0.62, 0.002);
   hours.mesh.position.set(0.46, -0.62, 0.003);
@@ -105,50 +107,6 @@ function dinerSign({ onFrame }: EnvCtx): Sign {
     light.intensity = lit ? 3 : 2.4;
   });
   return { object };
-}
-
-type Tube = (draw: () => void) => void;
-
-/** A glowing plane of red neon, `width` by `height` metres. `draw` strokes paths and text with `tube`. */
-function neonPlane(
-  width: number,
-  height: number,
-  draw: (g: CanvasRenderingContext2D, W: number, H: number, tube: Tube) => void,
-) {
-  const W = 512,
-    H = Math.round((W * height) / width);
-  const color = "#ff4d4d",
-    core = "#ffe0dc";
-  const map = canvasTex(W, H, (g) => {
-    g.font = `bold ${Math.round(H * 0.56)}px ${FONT}`;
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    g.lineJoin = "round";
-    g.lineCap = "round";
-    const tube: Tube = (path) => {
-      for (const [stroke, lineWidth, blur] of [
-        [color, 14, 24],
-        [color, 7, 0],
-        [core, 2.5, 0],
-      ] as const) {
-        g.save();
-        g.strokeStyle = stroke;
-        g.lineWidth = lineWidth;
-        g.shadowColor = color;
-        g.shadowBlur = blur;
-        path();
-        g.restore();
-      }
-    };
-    draw(g, W, H, tube);
-  });
-  const mat = new THREE.MeshBasicMaterial({
-    map,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  return { mesh: new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat), mat };
 }
 
 /** The kitchen's order rail, with the ticket clipped up as an order slip and two old orders beside it. */
@@ -192,17 +150,16 @@ function orderRail({ anchors, onFrame }: EnvCtx): StatusScreen {
     wall.add(old);
   }
   object.add(wall);
-  let flutter = 0;
+  const flutter = oneShot(1.25);
   onFrame((dt, t) => {
-    flutter = Math.max(0, flutter - dt * 0.8);
-    pivot.rotation.x = Math.sin(t * 1.3) * 0.025 + Math.sin(t * 9) * flutter * 0.12;
+    pivot.rotation.x = Math.sin(t * 1.3) * 0.025 + Math.sin(t * 9) * (flutter.step(dt) ?? 0) * 0.12;
   });
   const screen = status.screen(object);
   return {
     object,
     show(title, subtitle, line) {
       screen.show(title, subtitle, line);
-      flutter = 1;
+      flutter.kick();
     },
   };
 }
@@ -230,7 +187,7 @@ const paintSlip: PaintStatus = (g, lines) => {
   g.fillText(lines.title, W / 2, 120, W - 30);
   g.fillStyle = "#2a2a2a";
   g.font = `30px "Comic Sans MS", ${FONT}`;
-  wrapText(g, lines.subtitle, W - 50, 6).forEach((l, i) => g.fillText(l, W / 2, 178 + i * 34));
+  textLines(g, wrapText(g, lines.subtitle, W - 50, 6), W / 2, 178, 34);
   // tear line
   g.strokeStyle = "#bbb";
   g.setLineDash([10, 8]);
@@ -256,7 +213,7 @@ function oldOrderTexture() {
     g.fillText("ORDER #141", 96, 40);
     g.fillStyle = "#555";
     g.font = `20px "Comic Sans MS", ${FONT}`;
-    ["2x hotfix", "side of logs", "no rollback", "ASAP!!"].forEach((l, i) => g.fillText(l, 96, 84 + i * 34));
+    textLines(g, ["2x hotfix", "side of logs", "no rollback", "ASAP!!"], 96, 84, 34);
     g.strokeStyle = "rgba(200,50,60,0.6)";
     g.lineWidth = 5;
     g.beginPath();

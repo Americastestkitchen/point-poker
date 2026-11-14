@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import type { EnvCtx, Squeaky } from "../types.ts";
+import { arc, oneShot } from "../kit/animate.ts";
 
 /** A little over life size, so it reads from across the table. */
 const SIZE = 1.15;
@@ -55,16 +56,16 @@ export function ketchupBottle({ sound, onFrame }: EnvCtx): Squeaky {
   object.scale.setScalar(SIZE);
 
   const LAND = new THREE.Vector3(0.11, 0.004, 0.05);
-  let squash = 0;
+  const squash = oneShot(1 / 3);
   let flight = -1; // seconds since the splort, or -1 when there's no blob about
   onFrame((dt) => {
-    if (squash > 0) {
-      squash = Math.max(0, squash - dt * 3);
-      const k = Math.sin(squash * Math.PI);
+    const left = squash.step(dt);
+    if (left !== null) {
+      const k = arc(left);
       // squeezed flat, then a springy hop
-      const sq = squash > 0.5 ? k * 0.3 : -k * 0.12;
+      const sq = left > 0.5 ? k * 0.3 : -k * 0.12;
       bottle.scale.set(1 + sq * 0.6, 1 - sq, 1 + sq * 0.6);
-      bottle.position.y = squash < 0.5 ? k * 0.05 : 0;
+      bottle.position.y = left < 0.5 ? k * 0.05 : 0;
     }
     if (flight < 0) return;
     flight += dt;
@@ -92,7 +93,7 @@ export function ketchupBottle({ sound, onFrame }: EnvCtx): Squeaky {
       sound.noise(0.16, 380, 0.35);
       sound.tone(240, 0.18, "square", 0.05, 70);
       sound.noise(0.06, 1400, 0.12, 0.42);
-      squash = 1;
+      squash.kick();
       flight = 0;
       blobMat.opacity = 1;
       blob.visible = true;

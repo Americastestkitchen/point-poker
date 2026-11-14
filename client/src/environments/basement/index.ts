@@ -5,11 +5,12 @@ import * as THREE from "three";
 import { NEON } from "../../../../shared/brand.ts";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, wrapText } from "../../scene/art/textures.ts";
+import { textLines } from "../kit/canvas.ts";
 import { flickeringNeonLogo } from "../kit/neon.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
 import type { EnvCtx, Environment, Sign, StatusScreen } from "../types.ts";
-import { wobble } from "../kit/animate.ts";
+import { oneShot, wobble } from "../kit/animate.ts";
 import { eggs } from "./eggs.ts";
 import { buildRoom, dustMotes, hangingLamp, woodTexMat } from "./room.ts";
 import { feltTexture } from "./textures.ts";
@@ -88,19 +89,18 @@ function telly({ anchors, onFrame, pick, sound }: EnvCtx): StatusScreen {
   wall.add(shelf, light);
   object.add(box, wall);
   const thump = wobble(30, 6);
-  let rolling = 0;
+  const rolling = oneShot(0.6);
   pick(box, () => {
     thump.kick(0.06);
-    rolling = 0.6;
+    rolling.kick();
     sound.noise(0.08, 250, 0.3);
     sound.noise(0.5, 6000, 0.05, 0.05);
   });
   onFrame((dt) => {
     box.rotation.z = thump.step(dt);
-    if (rolling > 0) {
-      rolling = Math.max(0, rolling - dt);
-      status.draw(rolling > 0 ? 0.2 + Math.random() * 0.5 : 0);
-    } else if (Math.random() < 0.02) status.draw(Math.random() * 0.08);
+    const roll = rolling.step(dt);
+    if (roll !== null) status.draw(roll > 0 ? 0.2 + Math.random() * 0.5 : 0);
+    else if (Math.random() < 0.02) status.draw(Math.random() * 0.08);
   });
   return status.screen(object);
 }
@@ -113,7 +113,7 @@ const paintTelly: PaintStatus = (ctx, lines, noise) => {
   ctx.font = `bold 64px ${FONT}`;
   ctx.fillText(lines.title, 256, 130, 470);
   ctx.font = `34px ${FONT}`;
-  wrapText(ctx, lines.subtitle, 460, 3).forEach((l, i) => ctx.fillText(l, 256, 200 + i * 42));
+  textLines(ctx, wrapText(ctx, lines.subtitle, 460, 3), 256, 200, 42);
   ctx.fillStyle = "#ffd23f";
   ctx.font = `bold 40px ${FONT}`;
   ctx.fillText(lines.status, 256, 350, 470);

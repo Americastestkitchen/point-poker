@@ -2,32 +2,33 @@
 // and it eeks twice, hops, wiggles its tail and its cap pops off its head.
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
+import { arc, oneShot } from "../kit/animate.ts";
 import type { EnvCtx, Squeaky } from "../types.ts";
 
 export function rubberRat({ sound, onFrame }: EnvCtx): Squeaky {
   const object = new THREE.Group();
   const { rat, cap, tail } = ratModel();
   object.add(rat);
-  let hop = 0;
+  const hop = oneShot(1 / 1.8);
   onFrame((dt, t) => {
-    tail.rotation.y = Math.sin(t * 2.1) * 0.15 + (hop > 0 ? Math.sin(hop * 30) * 0.5 : 0);
-    if (hop <= 0) return;
-    hop = Math.max(0, hop - dt * 1.8);
-    const up = Math.sin(hop * Math.PI);
+    tail.rotation.y = Math.sin(t * 2.1) * 0.15 + (hop.left > 0 ? Math.sin(hop.left * 30) * 0.5 : 0);
+    const left = hop.step(dt);
+    if (left === null) return;
+    const up = arc(left);
     rat.position.y = up * 0.1;
-    rat.rotation.z = Math.sin(hop * 25) * 0.2 * up;
+    rat.rotation.z = Math.sin(left * 25) * 0.2 * up;
     rat.scale.set(1 - up * 0.1, 1 + up * 0.2, 1 - up * 0.1);
     // the cap goes up further and comes down a beat later
-    const lag = Math.max(0, Math.sin(Math.min(1, hop * 1.2) * Math.PI));
+    const lag = Math.max(0, arc(Math.min(1, left * 1.2)));
     cap.position.y = 0.128 + lag * 0.08;
-    cap.rotation.y = (1 - hop) * Math.PI * 2;
+    cap.rotation.y = (1 - left) * Math.PI * 2;
   });
   return {
     object,
     squeak() {
       sound.tone(2300, 0.07, "square", 0.05, 3300);
       sound.tone(2700, 0.1, "square", 0.05, 3800, 0.11);
-      hop = 1;
+      hop.kick();
     },
   };
 }

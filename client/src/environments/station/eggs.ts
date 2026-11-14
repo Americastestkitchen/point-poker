@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
+import { oneShot } from "../kit/animate.ts";
 import { liveCanvas } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
 import { ROOM, plaque } from "./room.ts";
@@ -118,7 +119,7 @@ export function paSpeaker(ctx: EnvCtx, ticker: Ticker) {
   const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.4, 0.03), toon("#333"));
   bracket.position.set(0.2, 0.25, 0);
   object.add(horn, driver, bracket);
-  let wobble = 0;
+  const wobble = oneShot(3.5);
   let next = 60 + Math.random() * 60;
   ctx.onFrame((dt) => {
     next -= dt;
@@ -126,13 +127,13 @@ export function paSpeaker(ctx: EnvCtx, ticker: Ticker) {
       next = 120 + Math.random() * 120;
       announce(ctx, 9, 0.012); // somewhere down the platform, nobody's listening
     }
-    if (wobble <= 0) return;
-    wobble = Math.max(0, wobble - dt / 3.5);
-    horn.scale.setScalar(1 + Math.sin(wobble * 60) * 0.08 * Math.min(1, wobble * 4));
+    const left = wobble.step(dt);
+    if (left === null) return;
+    horn.scale.setScalar(1 + Math.sin(left * 60) * 0.08 * Math.min(1, left * 4));
   });
   ctx.pick(object, () => {
     announce(ctx, 13, 0.03);
-    wobble = 1;
+    wobble.kick();
     ticker.say("THE 9:30 STANDUP IS RUNNING FIFTEEN MINUTES OVER. WE APOLOGISE FOR ANY ESTIMATES.");
   });
   return object;
@@ -438,11 +439,11 @@ export function lineMap(ctx: EnvCtx, ticker: Ticker) {
   face.position.z = 0.021;
   object.add(frame, face);
 
-  let work = 0;
+  const works = oneShot(2.2);
   let tick = 0;
   ctx.onFrame((dt) => {
-    if (work <= 0) return;
-    work = Math.max(0, work - dt / 2.2);
+    const work = works.step(dt);
+    if (work === null) return;
     tick -= dt;
     if (work > 0.15 && tick <= 0) {
       tick = 0.06;
@@ -452,8 +453,8 @@ export function lineMap(ctx: EnvCtx, ticker: Ticker) {
     if (work === 0) draw(0);
   });
   ctx.pick(object, () => {
-    if (work > 0) return;
-    work = 1;
+    if (works.left > 0) return;
+    works.kick();
     // ... and then the money runs out
     const sad = [392, 370, 349, 330] as const;
     sad.forEach((f, i) =>
@@ -562,7 +563,7 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
     });
   };
 
-  let play = 0;
+  const plays = oneShot(1.6);
   let next = 45 + Math.random() * 60;
   const hop = coins[2];
   ctx.onFrame((dt) => {
@@ -571,8 +572,8 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
       next = 90 + Math.random() * 90;
       busk(0.01);
     }
-    if (play <= 0) return;
-    play = Math.max(0, play - dt / 1.6);
+    const play = plays.step(dt);
+    if (play === null) return;
     const up = 1 - play;
     note.visible = play > 0;
     note.position.set(-0.2 + Math.sin(up * 9) * 0.05, 0.25 + up * 0.7, 0);
@@ -586,7 +587,7 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
   ctx.pick(object, () => {
     for (const [i, f] of [2600, 3150, 2900].entries()) ctx.sound.tone(f, 0.12, "triangle", 0.03, undefined, i * 0.07);
     busk(0.035);
-    play = 1;
+    plays.kick();
     ticker.say("THE BUSKER WILL POINT ANY TICKET FOR 4 COINS. NO REFUNDS IF IT'S AN 8.");
   });
   return object;
@@ -597,15 +598,15 @@ export function buskerCase(ctx: EnvCtx, ticker: Ticker) {
 /** Click the yellow line and it reminds you, loudly, about the gap between the estimate and the actual. */
 export function mindTheGap(ctx: EnvCtx, line: THREE.Mesh, ticker: Ticker) {
   const mats = [line.material].flat();
-  let flash = 0;
+  const flashes = oneShot(1.6);
   ctx.onFrame((dt) => {
-    if (flash <= 0) return;
-    flash = Math.max(0, flash - dt / 1.6);
+    const flash = flashes.step(dt);
+    if (flash === null) return;
     const on = Math.sin(flash * 30) > 0 ? 0.6 * flash : 0;
     for (const m of mats) if (m instanceof THREE.MeshToonMaterial) m.emissiveIntensity = on;
   });
   ctx.pick(line, () => {
-    flash = 1;
+    flashes.kick();
     for (const [i, f] of [784, 659, 523].entries()) ctx.sound.tone(f, 0.4, "sine", 0.035, undefined, i * 0.28);
     ticker.say("MIND THE GAP. ESTIMATE: 3 POINTS. ACTUAL: 13 POINTS. MIND IT.");
   });

@@ -1,7 +1,7 @@
-// The Point Poker logo as neon tubes on a glowing plane, for any room's sign.
+// Neon for any room's sign: the Point Poker logo, or tubes and words of your own.
 import * as THREE from "three";
 import { GLASS, GLOW_BLUR, LAYERS, LOGO, NEON, type Tube } from "../../../../shared/brand.ts";
-import { canvasTex } from "../../scene/art/textures.ts";
+import { FONT, canvasTex } from "../../scene/art/textures.ts";
 
 const PIXELS = 1024; // canvas width
 
@@ -77,3 +77,55 @@ export function flickeringNeonLogo(width: number) {
     },
   };
 }
+
+/** Strokes whatever `draw` paths or writes as a lit tube: a glow, the tube and its hot core. */
+export type Stroke = (draw: () => void) => void;
+
+/**
+ * A glowing plane of neon (red unless told otherwise), `width` by `height` metres,
+ * facing +z. `draw` strokes paths and text with `tube`; the font is set to fill the
+ * plane's height, centred.
+ */
+export function neonTubes(
+  width: number,
+  height: number,
+  draw: (g: CanvasRenderingContext2D, W: number, H: number, tube: Stroke) => void,
+  { color = "#ff4d4d", core = "#ffe0dc" } = {},
+) {
+  const W = 512,
+    H = Math.round((W * height) / width);
+  const map = canvasTex(W, H, (g) => {
+    g.font = `bold ${Math.round(H * 0.56)}px ${FONT}`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    const tube: Stroke = (path) => {
+      for (const [stroke, lineWidth, blur] of [
+        [color, 14, 24],
+        [color, 7, 0],
+        [core, 2.5, 0],
+      ] as const) {
+        g.save();
+        g.strokeStyle = stroke;
+        g.lineWidth = lineWidth;
+        g.shadowColor = color;
+        g.shadowBlur = blur;
+        path();
+        g.restore();
+      }
+    };
+    draw(g, W, H, tube);
+  });
+  const mat = new THREE.MeshBasicMaterial({
+    map,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  return { mesh: new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat), mat };
+}
+
+/** A word or two in neon, `width` by `height` metres, like "OPEN". */
+export const neonText = (text: string, width: number, height: number, colors?: { color?: string; core?: string }) =>
+  neonTubes(width, height, (g, W, H, tube) => tube(() => g.strokeText(text, W / 2, H / 2 + 4)), colors);

@@ -2,7 +2,7 @@
 // edge line, and the seat-fabric moquette the table is covered in.
 import * as THREE from "three";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
-import { speckle } from "../kit/canvas.ts";
+import { speckle, textLines } from "../kit/canvas.ts";
 
 /** How many metres one copy of a repeating texture covers. Set on the geometry with `tileUv`. */
 export const TILE_METRES = 0.6;
@@ -168,10 +168,10 @@ export function posterTexture(header: string, color: string, lines: string[]): T
     g.fillStyle = "#fff";
     g.font = `900 46px ${FONT}`;
     g.textAlign = "center";
-    header.split("\n").forEach((l, i) => g.fillText(l, 192, 70 + i * 52));
+    textLines(g, header.split("\n"), 192, 70, 52);
     g.fillStyle = "#2b2622";
     g.font = `600 30px ${FONT}`;
-    lines.forEach((l, i) => g.fillText(l, 192, 220 + i * 44));
+    textLines(g, lines, 192, 220, 44);
     speckle(g, 500, 3, () => `rgba(80,60,30,${Math.random() * 0.1})`);
     g.strokeStyle = "#2b2622";
     g.lineWidth = 10;

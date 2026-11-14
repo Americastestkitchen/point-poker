@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
 import type { EnvCtx } from "../types.ts";
+import { blinker } from "../kit/animate.ts";
 import { concreteTexture, edgeLineTexture, posterTexture, tileTexture, tileUv } from "./textures.ts";
 
 /** The room's shape, in metres. The table is at the origin; the tracks run along z past its far end. */
@@ -268,29 +269,17 @@ export function stripLight(anchor: EnvCtx["anchors"]["lamp"], { sound }: EnvCtx)
   glow.position.set(x, y - 0.2, z);
   group.add(spot, target, glow);
 
-  let flicker = 0;
-  let next = 8 + Math.random() * 20;
-  let lit = true;
-  let step = 0;
+  const blink = blinker({
+    first: [8, 28],
+    every: [15, 45],
+    length: [0.5, 1.2],
+    onBurst: () => sound.tone(120, 0.4, "sawtooth", 0.008),
+    onRelight: () => sound.noise(0.02, 5000, 0.012),
+  });
   return {
     object: group,
     update(dt: number) {
-      next -= dt;
-      if (next <= 0) {
-        flicker = 0.5 + Math.random() * 0.7;
-        next = 15 + Math.random() * 30;
-        sound.tone(120, 0.4, "sawtooth", 0.008);
-      }
-      if (flicker > 0) {
-        flicker -= dt;
-        step -= dt;
-        if (step <= 0) {
-          step = 0.04 + Math.random() * 0.06;
-          const now = flicker <= 0 || Math.random() < 0.55;
-          if (now && !lit) sound.noise(0.02, 5000, 0.012);
-          lit = now;
-        }
-      } else lit = true;
+      const lit = blink.step(dt);
       tubeMat.color.set(lit ? "#effffb" : "#7b8a86");
       spot.intensity = lit ? 11 : 4;
       glow.intensity = lit ? 1.2 : 0.2;
