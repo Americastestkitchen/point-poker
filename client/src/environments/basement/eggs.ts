@@ -5,9 +5,9 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, woodTexture } from "../../scene/art/textures.ts";
-import { wobble } from "../kit/animate.ts";
+import { blinker, wobble } from "../kit/animate.ts";
 import { bubble } from "../kit/bubble.ts";
-import { liveCanvas, speckle } from "../kit/canvas.ts";
+import { liveCanvas, speckle, textLines } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
 
 export function eggs(ctx: EnvCtx): THREE.Group {
@@ -56,7 +56,7 @@ function noteTexture(text: string, color: string): THREE.CanvasTexture {
     g.fillStyle = "#2a1d17";
     g.font = `bold 24px ${SCRAWL}`;
     g.textAlign = "center";
-    text.split("\n").forEach((l, k) => g.fillText(l, 84, 74 + k * 30));
+    textLines(g, text.split("\n"), 84, 74, 30);
   });
 }
 
@@ -184,9 +184,7 @@ function whiteboard({ pick, onFrame, sound }: EnvCtx): THREE.Group {
     c.fillText("SPRINT GOALS", 50, 90);
     c.font = `36px ${SCRAWL}`;
     c.fillStyle = "#222";
-    ["1. ship it", '2. don\'t say "should be quick"', "3. stop pointing in hours"].forEach((l, i) =>
-      c.fillText(l, 60, 170 + i * 66),
-    );
+    textLines(c, ["1. ship it", '2. don\'t say "should be quick"', "3. stop pointing in hours"], 60, 170, 66);
     c.fillStyle = goal ? "#1f7a43" : "#222";
     c.fillText(FOURTH_GOALS[goal] ?? "4. ???", 60, 170 + 3 * 66);
     c.strokeStyle = "#c0392b";
@@ -354,11 +352,11 @@ function lockedDoor({ pick, onFrame, sound }: EnvCtx): THREE.Group {
   const rattle = wobble(45, 5);
   const LINES = ["it's locked", "there is no exit", "only more backlog"];
   let tries = 0;
-  let flicker = 0;
+  const sign = blinker({ length: [0.8, 0.8], lit: 0.5 });
   pick(g, () => {
     rattle.kick(0.012);
     say.say(LINES[tries++ % LINES.length] ?? "", "#1f7a43");
-    flicker = 0.8;
+    sign.burst();
     // knock knock, then the handle won't turn
     sound.noise(0.06, 400, 0.25);
     sound.noise(0.06, 400, 0.25, 0.18);
@@ -370,8 +368,7 @@ function lockedDoor({ pick, onFrame, sound }: EnvCtx): THREE.Group {
     door.position.x = r;
     knob.position.x = 0.38 + r;
     knob.rotation.z = r * 20;
-    flicker = Math.max(0, flicker - dt);
-    const on = flicker === 0 || Math.random() < 0.5;
+    const on = sign.step(dt);
     signMat.color.set(on ? "#ffffff" : "#333333");
     light.intensity = on ? 0.6 : 0.1;
   });

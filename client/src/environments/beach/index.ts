@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex, woodTexture, wrapText } from "../../scene/art/textures.ts";
-import { speckle } from "../kit/canvas.ts";
+import { speckle, textLines } from "../kit/canvas.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
 import type { Environment, Sign, StatusScreen } from "../types.ts";
@@ -75,7 +75,7 @@ const paintChalk: PaintStatus = (g, lines) => {
   g.fillText(lines.title, 256, 92, 470);
   g.font = `30px ${FONT}`;
   g.fillStyle = "#e9f2ea";
-  wrapText(g, lines.subtitle, 450, 4).forEach((l, i) => g.fillText(l, 256, 150 + i * 38));
+  textLines(g, wrapText(g, lines.subtitle, 450, 4), 256, 150, 38);
   g.fillStyle = "#ffb3c7";
   g.font = `bold 40px ${FONT}`;
   g.fillText(lines.status, 256, 344, 470);

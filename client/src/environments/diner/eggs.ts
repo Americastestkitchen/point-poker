@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
-import { wobble } from "../kit/animate.ts";
+import { oneShot, wobble } from "../kit/animate.ts";
 import { bubble } from "../kit/bubble.ts";
 import { liveCanvas } from "../kit/canvas.ts";
 import type { EnvCtx } from "../types.ts";
@@ -179,9 +179,9 @@ export function orderBell(s: THREE.Group, { pick, onFrame, sound, anchors }: Env
   g.add(base, dome, press);
   const say = bubble(g, 0.8, 0.35);
   const ring = wobble(40, 5);
-  let pressed = 0;
+  const pressed = oneShot(1 / 6);
   pick(g, () => {
-    pressed = 1;
+    pressed.kick();
     ring.kick(0.12);
     say.say("ORDER UP!", RED);
     sound.tone(2350, 1.4, "sine", 0.1);
@@ -189,8 +189,7 @@ export function orderBell(s: THREE.Group, { pick, onFrame, sound, anchors }: Env
     sound.tone(3530, 0.9, "sine", 0.025);
   });
   onFrame((dt) => {
-    pressed = Math.max(0, pressed - dt * 6);
-    press.position.y = -pressed * 0.02;
+    press.position.y = -(pressed.step(dt) ?? 0) * 0.02;
     dome.rotation.z = ring.step(dt);
     say.update(dt);
   });
