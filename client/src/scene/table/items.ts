@@ -6,16 +6,21 @@ import type { ItemId } from "../../../../shared/catalog/items.ts";
 import type { Events } from "../../app/events.ts";
 import type { Audio } from "../../audio/sfx.ts";
 import { BLOW_RELEASE, BONK_HIT, FLICK_RELEASE, THROW_RELEASE } from "../../avatar/animator.ts";
-import { makeCoin, makePlane, makeSpitball } from "../../avatar/parts/props.ts";
+import { makePlane, makeSpitball } from "../../avatar/parts/props.ts";
 import type { Stage } from "../engine/stage.ts";
 import type { Layout } from "../layout/layout.ts";
 import type { Flights } from "./flights.ts";
+import { makeChip } from "./chips.ts";
 import type { Seat } from "./seat.ts";
 
 export interface ItemPlays {
   /** `from` used `item` on `to`. */
   play(from: string, item: ItemId, to: string): void;
 }
+
+/** The colours a flicked chip comes in: one at random each flick. */
+const FLICK_COLORS = ["#c0392b", "#2d6cdf", "#151515", "#e6be5a"] as const;
+const flickColor = () => FLICK_COLORS[Math.floor(Math.random() * FLICK_COLORS.length)] ?? FLICK_COLORS[0];
 
 /** How long a landed paper plane lies on the felt, and a spitball stays stuck (seconds). */
 const PLANE_RESTS = 6,
@@ -83,16 +88,16 @@ export function createItemPlays(
       });
     },
 
-    /** A coin off the thumb: it flies at their head, bonks, and rolls away. */
-    coin(from, to) {
+    /** A chip off the thumb, a different colour each time: it flies at their head, bonks, and rolls away. */
+    chip(from, to) {
       avatarOf(from)?.aim("flick", () => headOf(to));
       stage.after(FLICK_RELEASE, () => {
-        const coin = makeCoin();
+        const chip = makeChip(flickColor());
         const start = handOf(from, inView(0.15, -0.2, -0.3));
-        coin.position.copy(start);
-        scene.add(coin);
+        chip.position.copy(start);
+        scene.add(chip);
         flights.add({
-          obj: coin,
+          obj: chip,
           from: start,
           to: () => headOf(to),
           t: 0,
@@ -102,21 +107,21 @@ export function createItemPlays(
           done: () => {
             audio.bonk();
             avatarOf(to)?.play("bonked");
-            hit(to, "coin");
-            const bounce = coin.position.clone();
+            hit(to, "chip");
+            const bounce = chip.position.clone();
             const away = bounce
               .clone()
               .add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8))
               .setY(layout.table.y + 0.01);
             flights.add({
-              obj: coin,
+              obj: chip,
               from: bounce,
               to: away,
               t: 0,
               dur: 0.5,
               arc: 0.25,
               spin: 12,
-              done: () => stage.after(1.5, () => scene.remove(coin)),
+              done: () => stage.after(1.5, () => scene.remove(chip)),
             });
           },
         });

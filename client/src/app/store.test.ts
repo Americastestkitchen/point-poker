@@ -51,7 +51,7 @@ test("popups leave the rest of the UI state alone", () => {
     votesInFlight: 0,
     lookOpen: true,
     popup: "leaderboard",
-    item: "coin",
+    item: "chip",
     itemsUsed: {},
   });
 });

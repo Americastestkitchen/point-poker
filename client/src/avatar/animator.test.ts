@@ -199,9 +199,9 @@ test("each item is in the hand until it's let go, and the straw stays in the mou
     return run(a, seconds).map((p) => p.prop);
   };
   const frame = (sec: number) => Math.round(sec * 60);
-  const coin = held("flick", 0.5);
-  assert.equal(coin[frame(FLICK_RELEASE) - 2], "coin");
-  assert.equal(coin[frame(FLICK_RELEASE) + 1], null, "the coin is off the thumb");
+  const chip = held("flick", 0.5);
+  assert.equal(chip[frame(FLICK_RELEASE) - 2], "chip");
+  assert.equal(chip[frame(FLICK_RELEASE) + 1], null, "the chip is off the thumb");
   const plane = held("throw", 0.7);
   assert.equal(plane[frame(THROW_RELEASE) - 2], "plane");
   assert.equal(plane[frame(THROW_RELEASE) + 1], null, "the plane is in the air");
@@ -228,7 +228,7 @@ test("a hammer blow flattens the bean, which springs back up seeing stars", () =
   assert.ok(Math.abs(poses.at(-1)!.body.sy - 1) < 0.03, "back in shape");
 });
 
-test("a paper plane bops softer than a coin bonks", () => {
+test("a paper plane bops softer than a chip bonks", () => {
   const dip = (clip: "bonked" | "bopped") => {
     const a = still();
     a.play(clip);

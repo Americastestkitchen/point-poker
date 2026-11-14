@@ -21,6 +21,10 @@
   pointer-events: auto;
 }
 
+.cell {
+  position: relative;
+  display: flex;
+}
 .slot.slot {
   position: relative;
   width: 44px;
@@ -37,19 +41,39 @@
 .emoji {
   line-height: 1;
 }
-/* which key picks it, in the corner (no keys on a touch screen) */
+/* a poker chip: red, with the cream blocks round its edge and a ring inside */
+.chip {
+  display: block;
+  width: 24px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--pp-color-danger) 0 48%, var(--pp-color-ink) 50% 60%, transparent 62%),
+    repeating-conic-gradient(var(--pp-color-ink) 0 30deg, var(--pp-color-danger) 30deg 60deg);
+}
+/* which key picks it: a little badge on the slot's rim (no keys on a touch screen) */
 .key {
   position: absolute;
-  right: 5px;
-  bottom: 3px;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
   font-family: var(--pp-font-body);
   font-size: 10px;
   font-weight: var(--pp-weight-strong);
   line-height: 1;
   color: var(--pp-color-dim);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-pill);
+  pointer-events: none;
 }
-.picked .key {
-  color: var(--pp-color-gold-ink);
+.keyPicked {
+  color: var(--pp-color-gold-hi);
+  border-color: var(--pp-color-gold);
 }
 @media (hover: none) and (pointer: coarse) {
   .key {

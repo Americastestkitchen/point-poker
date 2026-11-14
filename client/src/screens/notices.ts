@@ -1,4 +1,5 @@
 // The toasts the screen root shows by itself for what happened. Pure, so they're tested here.
+import type { PublicPlayer } from "../../../shared/protocol.ts";
 import type { Connection } from "../app/connection.ts";
 import type { GameEvent, ViewChange } from "../app/events.ts";
 import type { ToastTone } from "../ui/index.ts";
@@ -22,6 +23,16 @@ export function viewNotice(c: ViewChange, meId: string | undefined): Notice | nu
 export function eventNotice(e: GameEvent): Notice | null {
   if (e.t !== "toast") return null;
   return { text: e.text, tone: e.level ?? "info", bonk: e.level === "error" };
+}
+
+/** A toast when something is aimed at you that you'd otherwise miss: someone is pointing at you. */
+export function forYouNotice(e: GameEvent, players: readonly PublicPlayer[], meId: string | undefined): Notice | null {
+  if (e.t !== "fx" || meId === undefined || e.from === meId) return null;
+  const from = players.find((p) => p.id === e.from);
+  if (!from) return null;
+  if (e.fx.kind === "use" && e.fx.item === "point" && e.fx.to === meId)
+    return { text: `👉 ${from.name} is pointing at you`, tone: "info", bonk: false };
+  return null;
 }
 
 /** The server's close reason when the dealer kicks you (server/table/commands.ts). */

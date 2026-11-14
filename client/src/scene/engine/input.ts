@@ -66,7 +66,6 @@ export function bindInput(stage: Stage, deps: InputDeps) {
     canvas.classList.remove("dragging");
     pointer = { state: "idle" };
   });
-  canvas.addEventListener("dblclick", () => rig.recenter());
 
   // the scroll wheel over the room walks the hotbar
   let scrolled = 0,

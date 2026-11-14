@@ -17,7 +17,7 @@ export interface HitLook {
 export const HIT_LOOK: Record<ItemId, HitLook | null> = {
   point: null,
   hammer: { word: "BONK!", soft: false, shake: true, splat: false },
-  coin: { word: "PLINK!", soft: false, shake: true, splat: false },
+  chip: { word: "PLINK!", soft: false, shake: true, splat: false },
   plane: { word: "bop", soft: true, shake: false, splat: false },
   spitball: { word: "SPLAT!", soft: true, shake: false, splat: true },
 };

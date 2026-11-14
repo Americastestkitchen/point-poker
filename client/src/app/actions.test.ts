@@ -127,14 +127,14 @@ test("dealer actions resolve when the server says yes and reject with its reason
   ]);
 });
 
-test("clicking someone uses the item you've picked, and the coin is what you start with", () => {
+test("clicking someone uses the item you've picked, and the chip is what you start with", () => {
   const { sent, store, actions } = setup();
   actions.items.use("bob");
   actions.items.pick("hammer");
   assert.equal(store.getState().ui.item, "hammer");
   actions.items.use("bob");
   assert.deepEqual(sent, [
-    { t: "use", item: "coin", target: "bob" },
+    { t: "use", item: "chip", target: "bob" },
     { t: "use", item: "hammer", target: "bob" },
   ]);
 });
@@ -148,7 +148,7 @@ test("the scroll wheel walks the hotbar, round and round", () => {
   actions.items.cycle(1);
   assert.equal(item(), "point");
   actions.items.cycle(2);
-  assert.equal(item(), "coin");
+  assert.equal(item(), "chip");
 });
 
 test("an item that's cooling down isn't sent, and each item cools on its own", () => {

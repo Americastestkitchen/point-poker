@@ -1,5 +1,5 @@
 // The things a hand item puts in a bean's hand (or mouth) for a moment, and the ones that fly:
-// a squeaky hammer, a coin, a paper plane, a straw and the spitball it shoots. Every bean shares
+// a squeaky hammer, a chip, a paper plane, a straw and the spitball it shoots. Every bean shares
 // the same geometry and materials, so making one costs nothing and nobody disposes them.
 import * as THREE from "three";
 import { toon } from "../../scene/art/materials.ts";
@@ -57,14 +57,11 @@ export function makeFinger(): THREE.Group {
   ]);
 }
 
-/** A gold coin, lying flat. */
-export function makeCoin(): THREE.Group {
-  return build("coin", () => [
-    {
-      geo: new THREE.CylinderGeometry(0.055, 0.055, 0.014, 20),
-      // it glows a little, so it still reads as gold flying through a dim room
-      mat: new THREE.MeshStandardMaterial({ color: "#e6be5a", emissive: "#6b4e10", roughness: 0.3, metalness: 0.5 }),
-    },
+/** The poker chip balanced on a thumb before it's flicked (the one that flies is scene/table/chips.ts's). */
+function heldChip(): THREE.Group {
+  return build("chip", () => [
+    { geo: new THREE.CylinderGeometry(0.042, 0.042, 0.012, 20), mat: toon("#c0392b") },
+    { geo: new THREE.CylinderGeometry(0.026, 0.026, 0.014, 20), mat: toon("#f3e7cf") },
   ]);
 }
 
@@ -117,7 +114,7 @@ function inHand(made: THREE.Group, y: number, turnX = 0): THREE.Group {
 const HELD: Record<Prop, () => THREE.Group> = {
   finger: makeFinger,
   // balanced on the thumb
-  coin: () => inHand(makeCoin(), -0.075),
+  chip: () => inHand(heldChip(), -0.075),
   hammer: makeHammer,
   // pinched like a dart, nose along the arm
   plane: () => inHand(makePlane(), -0.1, Math.PI / 2),

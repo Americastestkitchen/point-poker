@@ -600,24 +600,24 @@ test("items work in every phase, and never touch the round", async () => {
   assert.deepEqual(table.snapshot(), before);
 });
 
-test("tabs opened before hand items still flick chips and see coins fly", async () => {
+test("tabs opened before hand items still flick chips and see them fly", async () => {
   const { table, ann, bob, events, tick } = setup();
   const fx = () => events.flatMap((e) => (e.t === "fx" ? [e.fx] : []));
-  // an old tab's flick is a coin, for old and new tabs alike
+  // an old tab's flick is the chip, for old and new tabs alike
   assert.deepEqual(await table.run(ann.playerId, { t: "flick", target: bob.playerId }), {});
   const coin = [
-    { kind: "use", item: "coin", to: bob.playerId },
+    { kind: "use", item: "chip", to: bob.playerId },
     { kind: "flick", to: bob.playerId },
   ];
   assert.deepEqual(fx(), coin);
   assert.deepEqual(
-    await table.run(ann.playerId, { t: "use", item: "coin", target: bob.playerId }),
+    await table.run(ann.playerId, { t: "use", item: "chip", target: bob.playerId }),
     { error: "Not so fast" },
     "and shares the coin's cooldown",
   );
-  tick(ITEM.coin.cooldownMs);
+  tick(ITEM.chip.cooldownMs);
   // a new tab's coin reaches old tabs as the chip they know
-  assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "coin", target: bob.playerId }), {});
+  assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "chip", target: bob.playerId }), {});
   assert.deepEqual(fx(), [...coin, ...coin]);
   // nothing else does: an old tab doesn't know hammers
   assert.deepEqual(await table.run(ann.playerId, { t: "use", item: "hammer", target: bob.playerId }), {});

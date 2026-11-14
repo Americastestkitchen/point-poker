@@ -80,8 +80,8 @@ function playItem({ s, fx, ready }: PlayerCtx, me: PlayerState, item: ItemId, ta
   if (!s.players.some((p) => p.id === target)) return "There's nobody in that seat";
   if (!ready(me.id, `use:${item}`, ITEM[item].cooldownMs)) return "Not so fast";
   fx(me.id, { kind: "use", item, to: target });
-  // tabs opened before hand items only know a flicked chip: they still see coins fly
-  if (item === "coin") fx(me.id, { kind: "flick", to: target });
+  // tabs opened before hand items only know a flicked chip: they still see them fly
+  if (item === "chip") fx(me.id, { kind: "flick", to: target });
 }
 
 export const COMMANDS = [
@@ -123,13 +123,13 @@ export const COMMANDS = [
     input: { item: z.enum(ITEM_IDS), target: z.string() },
     run: (ctx, me, { item, target }) => playItem(ctx, me, item, target),
   }),
-  /** Flick a chip at someone: what a tab opened before hand items sends. It's the coin. */
+  /** Flick a chip at someone: what a tab opened before hand items sends. It's the chip item. */
   defineCommand({
     t: "flick",
     role: "player",
     move: "anytime",
     input: { target: z.string() },
-    run: (ctx, me, { target }) => playItem(ctx, me, "coin", target),
+    run: (ctx, me, { target }) => playItem(ctx, me, "chip", target),
   }),
   defineCommand({
     t: "setLook",

@@ -7,7 +7,7 @@ test("everything but pointing shows when it lands on you, and only the hard ones
   assert.equal(HIT_LOOK.point, null);
   assert.deepEqual(
     ITEM_IDS.filter((id) => HIT_LOOK[id]?.shake),
-    ["hammer", "coin"],
+    ["hammer", "chip"],
   );
   assert.deepEqual(
     ITEM_IDS.filter((id) => HIT_LOOK[id]?.splat),

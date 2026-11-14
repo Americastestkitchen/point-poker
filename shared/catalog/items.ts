@@ -17,7 +17,7 @@ export interface Item {
 export const ITEMS = [
   { id: "point", key: "1", emoji: "👉", name: "Empty hand", does: "Point at someone", cooldownMs: 1000 },
   { id: "hammer", key: "2", emoji: "🔨", name: "Squeaky hammer", does: "Bonk someone", cooldownMs: 2500 },
-  { id: "coin", key: "3", emoji: "🪙", name: "Coin", does: "Flick it at someone", cooldownMs: 600 },
+  { id: "chip", key: "3", emoji: "🔴", name: "Chip", does: "Flick it at someone", cooldownMs: 600 },
   { id: "plane", key: "4", emoji: "✈️", name: "Paper plane", does: "Throw it at someone", cooldownMs: 2000 },
   { id: "spitball", key: "5", emoji: "💦", name: "Spitball", does: "Stick it on someone", cooldownMs: 4000 },
 ] as const satisfies readonly Item[];
@@ -25,8 +25,8 @@ export type ItemId = (typeof ITEMS)[number]["id"];
 export const ITEM_IDS = idsOf(ITEMS);
 export const ITEM = byId(ITEMS);
 
-/** What a click does until you pick something else: the coin, as clicking someone always flicked one. */
-export const DEFAULT_ITEM: ItemId = "coin";
+/** What a click does until you pick something else: the chip, as clicking someone always flicked one. */
+export const DEFAULT_ITEM: ItemId = "chip";
 
 /** The item `steps` along the hotbar from `from`, going round at the ends. */
 export function itemAfter(from: ItemId, steps: number): ItemId {

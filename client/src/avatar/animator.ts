@@ -1,6 +1,6 @@
 // Everything a bean does, as numbers: breathing, emotes, getting bonked,
 // celebrating, putting a card down, swapping it after the reveal, using a hand item on someone
-// (pointing, a hammer, a coin, a paper plane, a spitball) and taking one, poking the duck, talking
+// (pointing, a hammer, a chip, a paper plane, a spitball) and taking one, poking the duck, talking
 // and looking around. It has three layers (body, arms, face) and produces a
 // Pose; the rig turns that into meshes. No three.js here, so the same animator
 // drives the bean and your first-person body, and tests can run it.
@@ -9,20 +9,20 @@ import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
 export type ClipId = EmoteId | Reaction | "celebrate" | "placeCard" | "adjustCard" | "swapCard" | Gesture;
 
 /**
- * Taking a hit: `bonked` by a coin, `bopped` (softly) by a paper plane, `squashed` flat by the
+ * Taking a hit: `bonked` by a chip, `bopped` (softly) by a paper plane, `squashed` flat by the
  * hammer and left seeing stars, `splatted` by a spitball, or `noticed` that someone's pointing.
  */
 type Reaction = "bonked" | "bopped" | "squashed" | "splatted" | "noticed";
 
 /**
  * A quick move of the right arm that wins over everything else for a moment. All but the poke
- * are aimed at someone (see `setAim`): pointing, swinging the hammer, flicking a coin, throwing
+ * are aimed at someone (see `setAim`): pointing, swinging the hammer, flicking a chip, throwing
  * a paper plane, and blowing a spitball through a straw.
  */
 export type Gesture = "flick" | "poke" | "point" | "bonk" | "throw" | "blow";
 
 /** What a gesture puts in the hand for a moment (the straw goes in the mouth; the finger is the hand's own). */
-export type Prop = "finger" | "coin" | "hammer" | "plane" | "straw";
+export type Prop = "finger" | "chip" | "hammer" | "plane" | "straw";
 
 /** Where the right arm aims: the shoulder angles that point it at someone, and the stretch that reaches them. */
 export interface Aim {
@@ -76,7 +76,7 @@ const SWAP = 1.15;
 /** How long a flick and a poke take (seconds). */
 const FLICK = 0.5,
   POKE = 0.6;
-/** When the coin leaves the thumb. */
+/** When the chip leaves the thumb. */
 export const FLICK_RELEASE = 0.16;
 /** How long a bean keeps pointing, and how much of the way over to them the arm goes. */
 export const POINT = 2.6;
@@ -364,7 +364,7 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
           armR = REST_ARM_X + (-2.05 - REST_ARM_X) * up + (-1.5 - REST_ARM_X) * out;
           zR = 0.25 - 0.3 * up - 0.15 * out;
           stretchR = 1 + 0.6 * out;
-          if (e < FLICK_RELEASE) prop = "coin";
+          if (e < FLICK_RELEASE) prop = "chip";
         } else if (gesture.kind === "point" && e < POINT) {
           // out it goes, part of the way over to them, with a couple of jabs; it stays on them, and comes back
           const k = ease(e / 0.18) * (1 - ease((e - (POINT - 0.3)) / 0.3));

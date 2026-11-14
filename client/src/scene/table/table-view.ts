@@ -234,7 +234,7 @@ export function mountTableView(
         items.play(from, fx.item, fx.to);
         return;
       case "flick":
-        return; // for tabs opened before hand items; this one played the coin's "use"
+        return; // for tabs opened before hand items; this one played the chip's "use"
       case "squeak":
         return; // the room's squeaky plays it (scene/index.ts)
       case "adjust":

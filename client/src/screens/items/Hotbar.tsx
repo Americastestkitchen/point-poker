@@ -54,27 +54,37 @@ function Slot({
   const cooling = useCooling(item.id, usedAt);
   const tap = useLetGoAfterTouch(() => actions.items.pick(item.id));
   return (
-    <Button
-      {...roving}
-      {...tap}
-      shape="round"
-      size="md"
-      className={cx(s.slot, picked && s.picked)}
-      aria-pressed={picked}
-      aria-keyshortcuts={item.key}
-      aria-label={`${item.name}: ${item.does.toLowerCase()}`}
-      title={`${item.name}: ${item.does.toLowerCase()}`}
-      onKeyDown={onKeyDown}
-    >
-      <span className={s.emoji} aria-hidden>
-        {item.emoji}
-      </span>
-      <kbd className={s.key} aria-hidden>
+    <span className={s.cell}>
+      <Button
+        {...roving}
+        {...tap}
+        shape="round"
+        size="md"
+        className={cx(s.slot, picked && s.picked)}
+        aria-pressed={picked}
+        aria-keyshortcuts={item.key}
+        aria-label={`${item.name}: ${item.does.toLowerCase()}`}
+        title={`${item.name}: ${item.does.toLowerCase()}`}
+        onKeyDown={onKeyDown}
+      >
+        {/* no emoji is a poker chip, so that one is drawn */}
+        {item.id === "chip" ? (
+          <span className={s.chip} aria-hidden />
+        ) : (
+          <span className={s.emoji} aria-hidden>
+            {item.emoji}
+          </span>
+        )}
+        {/* a new one each use, so the drain starts over */}
+        {cooling && (
+          <span key={usedAt} className={s.cooling} style={{ animationDuration: `${cooldownOf(item.id)}ms` }} />
+        )}
+      </Button>
+      {/* outside the button, so it sits on the rim instead of being cut off by it */}
+      <kbd className={cx(s.key, picked && s.keyPicked)} aria-hidden>
         {item.key}
       </kbd>
-      {/* a new one each use, so the drain starts over */}
-      {cooling && <span key={usedAt} className={s.cooling} style={{ animationDuration: `${cooldownOf(item.id)}ms` }} />}
-    </Button>
+    </span>
   );
 }
 
