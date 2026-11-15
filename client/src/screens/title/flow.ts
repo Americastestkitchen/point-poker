@@ -66,6 +66,8 @@ export type TitleEvent =
   | { t: "checked"; code: string; open: boolean }
   | { t: "pick"; item: "open" | "join" | "character" }
   | { t: "codeEntered"; code: string }
+  /** A pasted link that isn't one of this site's invites, and why. */
+  | { t: "linkRejected"; reason: string }
   | { t: "changeLook" }
   | { t: "joinInvite" }
   /** Character select's Done: your profile is saved. */
@@ -151,6 +153,9 @@ export function step(state: TitleState, e: TitleEvent): Step {
     case "codeEntered":
       if (view.t !== "join" || view.checking || e.code.length !== TABLE_CODE.length) return stay;
       return go({ t: "join", checking: e.code, error: null }, { t: "check", code: e.code });
+    case "linkRejected":
+      if (view.t !== "join" || view.checking) return stay;
+      return go({ t: "join", checking: null, error: e.reason });
     case "changeLook":
       if (view.t !== "invite") return stay;
       return character({ t: "invite", code: view.code }, view);

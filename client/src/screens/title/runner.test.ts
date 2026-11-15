@@ -21,6 +21,7 @@ function setup({ invite = "", saved = true, savedPasscode = "", signedIn = null 
   let forgotten = 0;
   const title: Title = {
     inviteCode: invite,
+    here: "https://pp.example/",
     signedIn,
     signIn: () => void signIns++,
     tables: {

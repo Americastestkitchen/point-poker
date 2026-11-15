@@ -11,6 +11,7 @@ import { CharacterEditor } from "../character/CharacterEditor.tsx";
 import { useShowcase } from "../character/showcase.ts";
 import { useGame } from "../game.tsx";
 import type { OpenAsk, TitleEvent, TitleView } from "./flow.ts";
+import { readInviteLink } from "./link.ts";
 import { createTitleFlow, type Title } from "./runner.ts";
 import logo from "../../../../assets/logo.svg";
 import s from "./TitleScreen.module.css";
@@ -142,6 +143,7 @@ function Body(props: {
           opening={view.t === "opening"}
           onPick={props.onPick}
           onCode={(code) => dispatch({ t: "codeEntered", code })}
+          onBadLink={(reason) => dispatch({ t: "linkRejected", reason })}
           onBack={() => dispatch({ t: "back" })}
         />
       );
@@ -161,6 +163,7 @@ function Menu(props: {
   opening: boolean;
   onPick(id: MenuId): void;
   onCode(code: string): void;
+  onBadLink(reason: string): void;
   onBack(): void;
 }) {
   const { profile, saved, joining, onPick } = props;
@@ -178,7 +181,14 @@ function Menu(props: {
         <JiraAccount title={props.title} />
       </div>
       {joining ? (
-        <JoinPanel checking={joining.checking} error={joining.error} onCode={props.onCode} onBack={props.onBack} />
+        <JoinPanel
+          here={props.title.here}
+          checking={joining.checking}
+          error={joining.error}
+          onCode={props.onCode}
+          onBadLink={props.onBadLink}
+          onBack={props.onBack}
+        />
       ) : (
         <Me profile={profile} saved={saved} />
       )}
@@ -198,23 +208,34 @@ function Me({ profile, saved }: { profile: Profile; saved: boolean }) {
 }
 
 function JoinPanel(props: {
+  here: string;
   checking: string | null;
   error: string | null;
   onCode(code: string): void;
+  onBadLink(reason: string): void;
   onBack(): void;
 }) {
   const [code, setCode] = useState("");
   useBack(props.onBack, true, 1);
   const full = code.length === TABLE_CODE.length;
+  /** A pasted invite link fills in its table code; a link that isn't ours says why, here in the panel. */
+  const readPaste = (text: string) => {
+    const link = readInviteLink(text, props.here);
+    if (!link) return null;
+    if (link.t === "code") return link.code;
+    props.onBadLink(link.reason);
+    return "";
+  };
   return (
     <div className={s.side}>
       <Panel title="Join a table">
-        <p className={s.muted}>Type the code from the dealer's screen or invite link.</p>
+        <p className={s.muted}>Type the code from the dealer's screen, or paste their invite link.</p>
         <CodeSlots
           label="Table code"
           value={code}
           onChange={setCode}
           onComplete={props.onCode}
+          readPaste={readPaste}
           length={TABLE_CODE.length}
           alphabet={TABLE_CODE.letters}
           error={!!props.error}

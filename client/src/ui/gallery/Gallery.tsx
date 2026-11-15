@@ -378,7 +378,10 @@ export function Gallery({ audio }: { audio: Audio }) {
         </div>
       </Section>
 
-      <Section name="CodeSlots" note="Type, paste or tap. A full code that isn't ABCD shakes.">
+      <Section
+        name="CodeSlots"
+        note="Type, paste or tap. A full code that isn't ABCD shakes. Its owner can read a paste itself: try one with code=ABCD in it."
+      >
         <States
           wide
           render={(demo, disabled) => (
@@ -396,6 +399,7 @@ export function Gallery({ audio }: { audio: Audio }) {
             label="Try it"
             value={code}
             error={codeError}
+            readPaste={(text) => /code=(\w+)/i.exec(text)?.[1] ?? null}
             onChange={(c) => {
               setCode(c);
               setCodeError(false);
