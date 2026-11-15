@@ -119,3 +119,9 @@
     padding: 3px var(--pp-space-3);
   }
 }
+
+/* the lobby's house rules, said in the steps' chip */
+.rule {
+  color: var(--pp-color-ink);
+  font-weight: var(--pp-weight-strong);
+}

@@ -25,9 +25,29 @@ export const allIn = (players: readonly { plays: boolean; hasVoted: boolean }[])
   return v.length > 0 && v.every((p) => p.hasVoted);
 };
 
-/** The values you can play from a deck (cards with points). */
+/** The points on a deck's cards: what a round can be settled on. */
 export const cardValues = (cards: readonly Card[]): number[] =>
   cards.flatMap((c) => (c.points === null ? [] : [c.points]));
+
+/**
+ * What playing each card of a deck sends, in deck order: its points, or for a card with none
+ * ("?") minus its place in the deck, so it can never be taken for points.
+ */
+export const playValues = (cards: readonly Card[]): number[] => cards.map((c, i) => c.points ?? -(i + 1));
+
+/** The card a played value stands for, if this deck has it. */
+export function cardOf(cards: readonly Card[], value: number): Card | undefined {
+  if (value >= 0) return cards.find((c) => c.points === value);
+  const card = cards[-value - 1];
+  return card?.points === null ? card : undefined;
+}
+
+/** What a played card says: "5", "M", "?". A value the deck doesn't know says its number. */
+export const cardLabel = (cards: readonly Card[], value: number): string =>
+  cardOf(cards, value)?.label ?? String(value);
+
+/** Whether a played value is worth points: the extra cards ("?", "☕") aren't. */
+export const scores = (value: number) => value >= 0;
 
 /** Who played which card: value → players, in deck order. */
 export function tally<P extends { vote: number | null }>(players: readonly P[]): Map<number, P[]> {

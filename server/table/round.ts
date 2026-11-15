@@ -11,7 +11,8 @@
 // Votes can change while voting and after the reveal, until the dealer settles.
 // Refreshing the ticket that's out (any phase but waiting) changes no phase.
 //
-// A table is waiting exactly when there's no ticket out.
+// A table is waiting exactly when there's no ticket out. Before any of this a new table is in
+// its lobby (`started` is false): the dealer's Start, or the first deal, ends it for good.
 import type { Phase, Ticket } from "../../shared/protocol.ts";
 import { potOf } from "./coins.ts";
 import type { PlayerState, TableState } from "./state.ts";
@@ -49,6 +50,8 @@ const RULES = {
   },
   /** Fetches the ticket that's out again; the round carries on. */
   refresh: { waiting: "There's no ticket to refresh", voting: true, revealed: true, settled: true },
+  /** Changing the cards: between tickets only, so nobody's card vanishes from under them. */
+  cards: { waiting: true, voting: "Finish this round first", revealed: "Finish this round first", settled: true },
 } as const satisfies Record<string, Record<Phase, true | string>>;
 
 export type Move = keyof typeof RULES;
@@ -62,6 +65,8 @@ export function refusal(s: TableState, move: Move): string | undefined {
 /** A new vote on `ticket` (or the one that's out): everyone starts empty-handed. */
 export function startRound(s: TableState, ticket?: Ticket) {
   if (ticket) s.ticket = ticket;
+  // the first deal ends the lobby, whoever's tab asked for it
+  s.started = true;
   s.phase = "voting";
   s.round += 1;
   clearRound(s);

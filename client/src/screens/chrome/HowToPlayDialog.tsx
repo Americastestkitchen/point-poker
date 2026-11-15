@@ -10,10 +10,12 @@ import { usePopupWithBack } from "./popups.ts";
 import s from "./HowToPlayDialog.module.css";
 
 const STEPS = [
-  "The dealer puts a Jira ticket on the table.",
+  "Everyone sits down in the lobby. Change your look while you wait: the whole table watches.",
+  "The dealer starts the game and puts a Jira ticket on the table.",
   "Everyone picks a card for how big they think it is. Nobody sees yours yet.",
   "The dealer flips the cards. Talked round? Swap your card while everyone argues, then the dealer picks the final points.",
   "Closest guess wins the pot (just for fun), but only if it's within one card of the final call. Ties split it.",
+  "A ? or ☕ card says “no idea” or “I need a break”. It adds nothing to the pot and can't win it.",
 ] as const;
 
 /** The emotes with a key of their own, and what each does, in the help's words. */

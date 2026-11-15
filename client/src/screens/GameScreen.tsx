@@ -21,6 +21,7 @@ import { GameMenu } from "./chrome/GameMenu.tsx";
 import { LeaderboardDialog } from "./chrome/LeaderboardDialog.tsx";
 import { TopBar } from "./chrome/TopBar.tsx";
 import { DealerPanel } from "./dealer/DealerPanel.tsx";
+import { HouseRulesDialog } from "./dealer/HouseRulesDialog.tsx";
 import { TicketPicker } from "./dealer/TicketPicker.tsx";
 import { HitFlash } from "./items/HitFlash.tsx";
 import { Hotbar } from "./items/Hotbar.tsx";
@@ -65,6 +66,7 @@ export function GameScreen() {
       <LeaderboardDialog />
       <TicketSheet />
       <DealerPanel />
+      <HouseRulesDialog />
       <TicketPicker />
     </div>
   );

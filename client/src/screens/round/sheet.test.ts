@@ -51,7 +51,13 @@ test("initials, the status colour and the assignee", () => {
 });
 
 test("cards wear their suit and the same small tilt every time", () => {
-  assert.deepEqual(cardFace(3), { value: 3, glyph: "♦", red: true, tilt: cardFace(3).tilt });
+  assert.deepEqual(cardFace(3), { value: 3, label: "3", glyph: "♦", red: true, tilt: cardFace(3).tilt });
+  assert.equal(cardFace(3, "M").label, "M", "a T-shirt size keeps its points' suit and says its size");
+  assert.deepEqual(
+    [cardFace(-6, "?").glyph, cardFace(-6, "?").red],
+    ["★", false],
+    "an extra card has no suit of its own",
+  );
   assert.equal(cardFace(5).red, false);
   assert.deepEqual(cardFace(40).glyph, "♠", "a value with no suit is a spade");
   for (const v of [0, 1, 2, 3, 5, 8, 13, 21, 40, 100]) assert.ok(Math.abs(cardFace(v).tilt) <= 1.8);

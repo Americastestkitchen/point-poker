@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { buildDeck } from "../../../../shared/catalog/decks.ts";
 import { ticket, view, withPlayers } from "../../app/fixtures.ts";
 import { statusModel } from "./status.ts";
 
@@ -49,4 +50,28 @@ test("settled: Settle current, the final call for everyone", () => {
   assert.equal(steps(s), "Pick:done Reveal:done Settle:current");
   assert.equal(s.line, "Final: 8 points");
   assert.equal(statusModel(room, "deb", null).line, "Final: 8 points");
+});
+
+test("the lobby: the house rules where the steps go, and everyone who's sat down", () => {
+  const s = statusModel(view({ started: false }), "ann", null);
+  assert.equal(s.line, "3 at the table");
+  assert.deepEqual(s.lobby && { ...s.lobby, players: s.lobby.players.map((p) => p.id) }, {
+    cards: "1 2 3 5 8",
+    dealer: "Dealer sits out",
+    players: ["deb", "ann", "bob"],
+  });
+  assert.equal(s.voters, null);
+  assert.equal(statusModel(view(), "ann", null).lobby, null, "once started, the steps are back");
+});
+
+test("a final call on a size says the size", () => {
+  const deck = buildDeck({ scale: "tshirt", numbers: [], unsure: false, coffee: false })!;
+  const room = view({
+    phase: "settled",
+    round: 1,
+    ticket: ticket("SD-1"),
+    finalPoints: 8,
+    settings: { deck, dealerPlays: false, environment: "basement" },
+  });
+  assert.equal(statusModel(room, "ann", null).line, "Final: XL");
 });

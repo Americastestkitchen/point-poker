@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { buildDeck } from "../../../../shared/catalog/decks.ts";
 import { player, ticket, view, withPlayers } from "../../app/fixtures.ts";
 import type { TableView } from "../../../../shared/protocol.ts";
 import { announcementFor } from "./announce.ts";
@@ -137,4 +138,30 @@ test("settled, someone else won: alone, or split", () => {
 test("a changed call is announced again", () => {
   const a = announcementFor({ t: "settled", resettled: true }, settledView({ winners: ["ann"], share: 13 }), "bob");
   assert.equal(a?.title, "ANN takes the pot");
+});
+
+test("announcements name cards by what they say, and a ? isn't on the number line", () => {
+  const deck = buildDeck({ scale: "tshirt", numbers: [], unsure: true, coffee: false })!;
+  const settings = { deck, dealerPlays: false, environment: "basement" as const };
+  const up = (votes: Record<string, number>) =>
+    announcementFor(
+      { t: "revealed" },
+      withPlayers(view({ phase: "revealed", round: 1, ticket: ticket("SD-1"), settings }), (p) => ({
+        vote: votes[p.id] ?? null,
+      })),
+      "ann",
+    );
+  assert.equal(up({ ann: 2, bob: 8 })?.sub, "From S to XL");
+  assert.equal(up({ ann: 3, bob: 3 })?.title, "Everyone said M! 🎉");
+  assert.equal(up({ ann: -6, bob: 5 })?.sub, "Every number on the table is L");
+  assert.equal(up({ ann: -6, bob: -6 })?.title, "Everyone said ?! 🎉");
+  assert.equal(up({ ann: -6, bob: -6 })?.sub, "Well, at least you agree.");
+  assert.equal(up({ ann: -6 })?.sub, "Not a number among them");
+  const settled = announcementFor(
+    settledChange,
+    settledView({ settings, finalPoints: 5, winners: [], houseWon: false }, { ann: 1 }),
+    "ann",
+  );
+  assert.equal(settled?.kicker, "Final call · L");
+  assert.equal(settled?.sub, "Nobody was within one card of L.");
 });

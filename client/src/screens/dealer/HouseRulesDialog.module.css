@@ -1,0 +1,42 @@
+/* a hair of room at the bottom, so the scrolling body never clips the last row's edge */
+.list {
+  display: grid;
+  gap: var(--pp-space-1);
+  padding-bottom: 2px;
+}
+.note {
+  margin: 0;
+  padding: 0 var(--pp-space-3) var(--pp-space-1);
+  font-size: var(--pp-size-sm);
+  color: var(--pp-color-dim);
+  line-height: 1.4;
+}
+/* a scale in the carousel: its name over a row of its cards */
+.scale {
+  display: grid;
+  justify-items: center;
+  gap: var(--pp-space-1);
+}
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  min-height: 27px;
+}
+.mini {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 27px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-family: var(--pp-font-card);
+  font-size: var(--pp-size-xs);
+  font-weight: var(--pp-weight-display);
+  color: var(--pp-color-paper-ink);
+  background: linear-gradient(155deg, var(--pp-color-paper), var(--pp-color-paper-low));
+}
+/* "your numbers", under the carousel while you roll your own */
+.own {
+  padding: 0 var(--pp-space-3) var(--pp-space-2);
+}

@@ -2,7 +2,7 @@
 import { assertType, type Equal } from "../../test/types.ts";
 import { BODY_IDS, type BodyId } from "./bodies.ts";
 import { COSMETIC, type CosmeticId } from "./cosmetics.ts";
-import type { DeckId } from "./decks.ts";
+import type { ScaleId } from "./decks.ts";
 import { EMOTE, isEmote, type EmoteId } from "./emotes.ts";
 import type { EnvironmentId } from "./environments.ts";
 import type { ItemId } from "./items.ts";
@@ -14,7 +14,7 @@ assertType<Equal<Widened<BodyId>, false>>();
 assertType<Equal<Widened<CosmeticId>, false>>();
 assertType<Equal<Widened<EmoteId>, false>>();
 assertType<Equal<Widened<EnvironmentId>, false>>();
-assertType<Equal<Widened<DeckId>, false>>();
+assertType<Equal<Widened<ScaleId>, false>>();
 assertType<Equal<Widened<ItemId>, false>>();
 
 // idsOf gives z.enum its non-empty tuple, and refuses an empty list.

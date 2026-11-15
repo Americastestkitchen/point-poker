@@ -1,15 +1,27 @@
 // What the action dock shows: a pure function of the view, who you are and the card you see as
 // played (your optimistic vote). ActionDock.tsx only draws it and wires the presses.
 import type { PublicPlayer, TableView } from "../../../../shared/protocol.ts";
-import { cardValues, favourite, nextInQueue, tally, voters } from "../../../../shared/rules.ts";
-import { names, pointsWord, safeUrl } from "../text.ts";
+import {
+  cardLabel,
+  cardValues,
+  favourite,
+  nextInQueue,
+  playValues,
+  scores,
+  tally,
+  voters,
+} from "../../../../shared/rules.ts";
+import { finalWords, names, safeUrl } from "../text.ts";
 
 /** A line of words, with the part worth shouting about (a number) called out. */
 export type Words = readonly (string | { strong: string })[];
 
 /** One card in a hand you can press. */
 export interface HandCard {
+  /** What playing it sends: its points, or an extra card's own value. */
   value: number;
+  /** What it says: its number, a T-shirt size, "?". */
+  label: string;
   /** Lit up: the card you played, or the final call once it's made. */
   selected: boolean;
   /** Another card is selected. */
@@ -25,12 +37,15 @@ export interface HandCard {
 /** One card in the spread of votes players see after the reveal. */
 export interface SpreadCard {
   value: number;
+  label: string;
   voters: PublicPlayer[];
   /** The dealer's final call. */
   final: boolean;
 }
 
 export type DockBody =
+  /** The dealer in the lobby: the big "Start the game", with how many are at the table. */
+  | { t: "start"; players: number }
   /** The dealer, before there's a ticket: the big "＋ Add a Jira ticket". */
   | { t: "addTicket" }
   /** Nothing to do but wait (with a spinner). */
@@ -55,7 +70,14 @@ export type DockAction =
   | { t: "next"; key: string }
   /** Open the ticket picker: `main` is the big "＋ Next ticket", otherwise the quiet "Choose a different one". */
   | { t: "picker"; main: boolean }
-  | { t: "jira"; url: string };
+  | { t: "jira"; url: string }
+  // ---- the lobby's
+  /** Open the house rules. */
+  | { t: "rules" }
+  /** Open the look screen: `main` is a player's one button, otherwise a quiet link beside the dealer's. */
+  | { t: "look"; main: boolean }
+  /** Open the ticket picker to line tickets up; `lined` is how many already are. */
+  | { t: "lineUp"; lined: number };
 
 export interface Dock {
   /** Changes with each phase and round, so the dock plays its entrance again. */
@@ -78,8 +100,34 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
   const me = room.players.find((p) => p.id === meId);
   const dealer = !!me?.isDealer;
   const amVoter = playing.some((p) => p.id === meId);
-  const deck = cardValues(room.settings.deck);
+  const cards = room.settings.deck;
+  /** What a played value says on this table's cards. */
+  const says = (value: number) => cardLabel(cards, value);
+  /** Every card you can play, extras and all; `points` are the ones a round can be settled on. */
+  const hand = playValues(cards);
+  const points = cardValues(cards);
   const counts = tally(playing);
+
+  // the lobby: nothing's been dealt, everyone's watching the room fill up
+  if (!room.started) {
+    const lined = room.queue.length;
+    return dealer
+      ? {
+          key: "lobby",
+          title: [room.players.length > 1 ? "Everyone here?" : "Send the invite, then deal 'em in"],
+          body: { t: "start", players: room.players.length },
+          actions: [{ t: "rules" }, { t: "look", main: false }, { t: "lineUp", lined }],
+        }
+      : {
+          key: "lobby",
+          title: null,
+          body: {
+            t: "waiting",
+            text: `Waiting for ${room.players.find((p) => p.isDealer)?.name ?? "the dealer"} to start`,
+          },
+          actions: [{ t: "look", main: true }],
+        };
+  }
 
   switch (room.phase) {
     case "waiting":
@@ -96,11 +144,12 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
         title =
           myVote === null
             ? ["How big is it? Pick a card"]
-            : ["You picked ", { strong: String(myVote) }, " · tap another card to change"];
+            : ["You picked ", { strong: says(myVote) }, " · tap another card to change"];
         body = {
           t: "vote",
-          cards: deck.map((value) => ({
+          cards: hand.map((value) => ({
             value,
+            label: says(value),
             selected: value === myVote,
             dimmed: myVote !== null && value !== myVote,
             suggested: false,
@@ -137,12 +186,13 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
           key,
           title:
             was !== null && was !== mine
-              ? [`You switched from ${was} to `, { strong: String(mine) }, " · tap another to switch again"]
-              : ["You played ", { strong: String(mine) }, " · talked round? Tap another card"],
+              ? [`You switched from ${says(was)} to `, { strong: says(mine) }, " · tap another to switch again"]
+              : ["You played ", { strong: says(mine) }, " · talked round? Tap another card"],
           body: {
             t: "change",
-            cards: deck.map((value) => ({
+            cards: hand.map((value) => ({
               value,
+              label: says(value),
               selected: value === mine,
               dimmed: value !== mine,
               suggested: false,
@@ -154,22 +204,26 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
         };
       }
       if (!dealer) {
-        const cards = deck
+        const spread = hand
           .filter((v) => counts.has(v) || (settled && v === final))
-          .map((value) => ({ value, voters: counts.get(value) ?? [], final: settled && value === final }));
+          .map((value) => ({
+            value,
+            label: says(value),
+            voters: counts.get(value) ?? [],
+            final: settled && value === final,
+          }));
         return {
           key,
-          title: settled
-            ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)}`]
-            : ["Here's how everyone voted"],
-          body: { t: "spread", cards },
+          title: settled ? ["Final: ", { strong: finalWords(cards, final) }] : ["Here's how everyone voted"],
+          body: { t: "spread", cards: spread },
           actions: [],
         };
       }
-      // only call out a favourite when there clearly is one, and only before the call
-      const top = settled ? null : favourite(counts);
-      const cards: HandCard[] = deck.map((value) => ({
+      // only call out a favourite when there clearly is one, and only before the call; a "?" is never the call
+      const top = settled ? null : favourite(new Map([...counts].filter(([value]) => scores(value))));
+      const settleHand: HandCard[] = points.map((value) => ({
         value,
+        label: says(value),
         selected: settled && value === final,
         dimmed: settled && value !== final,
         suggested: value === top,
@@ -188,9 +242,9 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
       return {
         key,
         title: settled
-          ? ["Final: ", { strong: String(final) }, ` ${pointsWord(final)} · tap a card to change it`]
+          ? ["Final: ", { strong: finalWords(cards, final) }, " · tap a card to change it"]
           : ["Tap the final points"],
-        body: { t: "settle", cards },
+        body: { t: "settle", cards: settleHand },
         actions,
       };
     }

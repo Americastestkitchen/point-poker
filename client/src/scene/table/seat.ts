@@ -22,10 +22,19 @@ export interface Seat {
   remove(): void;
 }
 
-export function createSeat(stage: Stage, player: PublicPlayer, deps: { layout: Layout; onPick?: () => void }): Seat {
+export function createSeat(
+  stage: Stage,
+  player: PublicPlayer,
+  deps: {
+    layout: Layout;
+    /** What a card value has printed on it in this table's deck. */
+    says(value: number): string;
+    onPick?: () => void;
+  },
+): Seat {
   const { layout, onPick } = deps;
   const avatar = createAvatar(player.look, { dealer: player.isDealer });
-  const card = createTableCard(stage.scene, layout);
+  const card = createTableCard(stage.scene, layout, deps.says);
   const stack = new THREE.Group();
   stage.scene.add(avatar.group, stack);
   const unpick = onPick ? stage.picking.register(avatar.hitbox, onPick) : () => {};

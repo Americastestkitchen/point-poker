@@ -10,9 +10,12 @@ closest guess wins the pot.
 
 ## How to play
 
-- **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Add a ticket (or an epic, to queue its
+- **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Everyone waits in the lobby
+  while you set the house rules: the cards (the usual 1 2 3 5 8, full Fibonacci, T-shirt sizes or your own numbers, plus
+  optional "?" and "☕" cards), whether you play too, and the room. Start the game, add a ticket (or an epic, to queue its
   children), reveal the cards, and pick the final points.
-- **Players:** open the invite link, pick a body, colour and hat, and click a card. After the reveal you
+- **Players:** open the invite link, pick a body, colour and hat (change them in the lobby and everyone watches), and
+  click a card once the game starts. After the reveal you
   can swap it if the discussion talks you round, until the dealer picks the points. Drag to
   look around, press Z X C V to emote, click someone to throw a chip, and click the duck.
 
@@ -49,8 +52,8 @@ in `.env.local`; you don't need Jira sign-in to work on the game
 
 ## Status
 
-Built for one team and still changing fast: the coin economy, the dealer's role and table
-setup are all being reworked, and there is one room so far. Nothing writes to Jira yet, so the
+Built for one team and still changing fast: the coin economy and the dealer's role are being
+reworked. Nothing writes to Jira yet, so the
 final points are entered there by hand. Plans live in the
 [issues](https://github.com/Americastestkitchen/point-poker/issues).
 

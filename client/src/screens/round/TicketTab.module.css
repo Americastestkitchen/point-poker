@@ -95,3 +95,56 @@
     transform: none;
   }
 }
+
+/* the lobby's invite, where the first ticket will land */
+.invite {
+  display: flex;
+  align-items: center;
+  gap: var(--pp-space-4);
+  max-width: 100%;
+  padding: var(--pp-space-2) var(--pp-space-3) var(--pp-space-2) var(--pp-space-4);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-panel);
+  border-radius: var(--pp-radius-lg);
+  box-shadow: var(--pp-shadow-panel);
+  backdrop-filter: blur(6px);
+}
+.code {
+  display: grid;
+  padding: 0 var(--pp-space-1);
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--pp-radius-sm);
+  cursor: copy;
+  outline: none;
+}
+.code:focus-visible {
+  box-shadow: var(--pp-glow-focus);
+}
+.eyebrow {
+  color: var(--pp-color-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: var(--pp-size-xs);
+}
+.letters {
+  font-family: var(--pp-font-display);
+  font-weight: var(--pp-weight-display);
+  font-size: var(--pp-size-xxl);
+  line-height: 1.1;
+  letter-spacing: 0.18em;
+  color: var(--pp-color-gold);
+  text-shadow: var(--pp-glow-gold);
+}
+@media (max-width: 760px) {
+  .invite {
+    justify-content: space-between;
+  }
+  .letters {
+    font-size: var(--pp-size-xl);
+  }
+}

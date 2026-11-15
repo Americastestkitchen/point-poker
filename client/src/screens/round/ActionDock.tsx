@@ -1,8 +1,11 @@
 // The action dock (region "dock", bottom centre): what you can do this phase. dock.ts decides
 // what shows (title, hand, buttons); this draws it and sends the presses through actions.
+// In the lobby it holds the dealer's Start (where Reveal will be) and the ways to the house
+// rules, your look and the ticket picker.
 // It stays within the inherited --dock-max height, so the table stays clear.
 import { Button, ButtonLink, cx, Spinner } from "../../ui/index.ts";
 import { useAppState, useGame, usePopup, useRoom, useTicketLoad } from "../game.tsx";
+import { nextInQueue } from "../../../../shared/rules.ts";
 import { skipPlan } from "../dealer/panel.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
 import { dockModel, type DockAction, type DockBody, type HandCard, type Words } from "./dock.ts";
@@ -24,7 +27,8 @@ export function ActionDock() {
           <Said words={dock.title} />
         </p>
       )}
-      <div className={s.row}>
+      {/* the lobby's dock stacks: the one big thing, its quiet links in a row under it */}
+      <div className={cx(s.row, !room.started && s.stack)}>
         {dock.body && <Body body={dock.body} />}
         {dock.actions.length > 0 && (
           <div className={s.side}>
@@ -52,13 +56,34 @@ function Said({ words }: { words: Words }) {
 }
 
 function Body({ body }: { body: DockBody }) {
-  const { actions } = useGame();
+  const { actions, ticketLoad } = useGame();
   const picker = usePopup("picker");
+  const room = useRoom();
+  const load = useTicketLoad();
   const press = (c: HandCard) => {
     if (c.press?.t === "vote") actions.vote(c.press.value);
     else if (c.press?.t === "settle") actions.dealer.settle(c.press.value);
   };
   switch (body.t) {
+    case "start": {
+      const first = room ? nextInQueue(room) : undefined;
+      return (
+        <Button
+          variant="primary"
+          size="lg"
+          className={s.big}
+          disabled={load.status === "loading"}
+          sub={`${body.players} at the table`}
+          onPress={() => {
+            // with tickets lined up the first one is dealt, so it waits like any other ticket load
+            if (first) ticketLoad.run(actions.dealer.wait.start(), `Dealing ${first.key}…`);
+            else actions.dealer.start();
+          }}
+        >
+          Start the game
+        </Button>
+      );
+    }
     case "addTicket":
       return (
         <Button variant="primary" size="lg" className={s.add} onPress={picker.show}>
@@ -84,10 +109,10 @@ function Body({ body }: { body: DockBody }) {
             <li
               key={c.value}
               className={cx(s.mini, c.final && s.final)}
-              aria-label={`${c.value} points: ${c.voters.length ? c.voters.map((p) => p.name).join(", ") : "nobody"}${c.final ? " (final)" : ""}`}
+              aria-label={`${c.label}: ${c.voters.length ? c.voters.map((p) => p.name).join(", ") : "nobody"}${c.final ? " (final)" : ""}`}
             >
               <span className={s.miniValue} aria-hidden>
-                {c.value}
+                {c.label}
               </span>
               <span className={s.miniDots} aria-hidden>
                 {c.voters.map((p) => (
@@ -104,7 +129,7 @@ function Body({ body }: { body: DockBody }) {
 }
 
 function Action({ action }: { action: DockAction }) {
-  const { actions, ticketLoad } = useGame();
+  const { actions, ticketLoad, store } = useGame();
   const picker = usePopup("picker");
   const load = useTicketLoad();
   const room = useRoom();
@@ -168,6 +193,26 @@ function Action({ action }: { action: DockAction }) {
       ) : (
         <Button variant="link" size="sm" className={s.link} onPress={picker.show}>
           Choose a different one
+        </Button>
+      );
+    case "rules":
+      return (
+        <Button variant="link" size="sm" className={s.link} onPress={() => store.popupOpened("rules")}>
+          House rules
+        </Button>
+      );
+    case "look":
+      return action.main ? (
+        <Button onPress={() => store.lookOpened()}>👕 Change my look</Button>
+      ) : (
+        <Button variant="link" size="sm" className={s.link} onPress={() => store.lookOpened()}>
+          Change my look
+        </Button>
+      );
+    case "lineUp":
+      return (
+        <Button variant="link" size="sm" className={s.link} onPress={picker.show}>
+          {action.lined ? `${action.lined} tickets lined up` : "Line up tickets"}
         </Button>
       );
     case "jira":

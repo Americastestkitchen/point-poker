@@ -77,3 +77,13 @@ test("the memory store round-trips through JSON too", () => {
   assert.deepEqual(store.load(), tables);
   assert.notEqual(store.load()[0], tables[0]);
 });
+
+test("tables saved before the lobby were already playing: they load as started", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "pp-store-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { started: _, ...old } = newTableState("OLDD", "k2", 2);
+  writeFileSync(join(dir, "rooms.json"), JSON.stringify([old]));
+  const [loaded] = fileStore(dir, quiet).load();
+  assert.equal(loaded?.started, true);
+  assert.equal(newTableState("NEWW", "k1", 1).started, false, "a new table opens in its lobby");
+});

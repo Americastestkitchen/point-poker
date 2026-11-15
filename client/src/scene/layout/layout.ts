@@ -75,6 +75,14 @@ export const layout = {
     /** What a seated camera looks at before you drag it around. */
     lookAt: vec(0, TABLE.y + 0.1, 0),
     /**
+     * The lobby's camera, the same for everyone: up in the corner behind the dealer's left
+     * shoulder, looking down the table at the sign, so you watch people sit down. `zoom` is how
+     * much tighter it frames than a seat's view, so the far beans don't shrink to dots. It
+     * stays inside z = 3, where rooms may stand things along their side walls (the Station's
+     * pillars).
+     */
+    lobby: { position: vec(-4.2, 3.0, 2.7), lookAt: vec(0.3, 0.9, 0), zoom: 1.35 },
+    /**
      * The title screens' camera: from the sign's end of the room it drifts slowly to and fro
      * on a circle round the table's middle, looking down the table at the dealer's end (so the
      * sign itself stays behind it, out of the way of the logo on screen).

@@ -1,7 +1,7 @@
 // Opening a table and checking one is still there: the HTTP calls made before you sit down,
 // plus the dealer's Jira sign-in (asking who's signed in, and signing out). Opening remembers
 // the host passcode that worked, the Jira site you picked and the dealer key, so a reload keeps
-// you the dealer. The fetch is injected, so tests run it in node.
+// you the dealer, and sends the house rules you last dealt with. The fetch is injected, so tests run it in node.
 import {
   HostInfo,
   OpenedTable,
@@ -39,7 +39,7 @@ export const OPEN_FAILED = "Couldn't open a table. Try again in a moment.";
 
 export function createTables(deps: {
   fetch: FetchLike;
-  storage: Pick<Storage, "hostPass" | "setHostPass" | "setDealerKey" | "jiraSite" | "setJiraSite">;
+  storage: Pick<Storage, "hostPass" | "setHostPass" | "setDealerKey" | "jiraSite" | "setJiraSite" | "houseRules">;
 }) {
   const { storage } = deps;
   return {
@@ -47,7 +47,12 @@ export function createTables(deps: {
     savedPasscode: () => storage.hostPass(),
     /** Opens a new table that you deal, on Jira site `site` (default: the one you picked last). */
     async open(passcode: string, site?: string): Promise<OpenResult> {
-      const body: OpenRequest = { site: site ?? (storage.jiraSite() || undefined) };
+      // the table opens with the house rules you last dealt with, if you've dealt before
+      const rules = storage.houseRules();
+      const body: OpenRequest = {
+        site: site ?? (storage.jiraSite() || undefined),
+        ...(Object.keys(rules).length ? { rules } : {}),
+      };
       const res = await deps
         .fetch("/api/rooms", {
           method: "POST",

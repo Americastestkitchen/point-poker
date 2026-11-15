@@ -212,3 +212,12 @@
       box-shadow var(--pp-motion-base);
   }
 }
+
+/* a card that says more than one character ("13", "XL") prints it a size down, so it stays on the card */
+.long .num {
+  font-size: 40cqw;
+  letter-spacing: -2px;
+}
+.long .corner {
+  font-size: 16cqw;
+}

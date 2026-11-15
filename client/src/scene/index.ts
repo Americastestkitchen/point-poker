@@ -32,6 +32,8 @@ export interface SceneDeps {
 export async function mountScene(stage: Stage, deps: SceneDeps) {
   const { store, actions, audio } = deps;
   mountShowcase(stage, store);
+  /** How bright the room in view asks to be seen: from a seat, and from the lobby's corner. */
+  let brightness = { seat: DEFAULT_EXPOSURE, lobby: DEFAULT_EXPOSURE };
   const furniture = buildTable(layout);
   stage.scene.add(furniture.object);
   const room = createRoom({
@@ -53,10 +55,10 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
         stage.scene.add(o);
       },
       remove: (o) => stage.scene.remove(o),
-      look({ background, fog, exposure }) {
+      look({ background, fog, exposure = DEFAULT_EXPOSURE, lobbyExposure = exposure }) {
         stage.scene.background = background;
         stage.scene.fog = fog;
-        stage.renderer.toneMappingExposure = exposure ?? DEFAULT_EXPOSURE;
+        brightness = { seat: exposure, lobby: lobbyExposure };
       },
     },
     table: furniture,
@@ -102,9 +104,13 @@ export async function mountScene(stage: Stage, deps: SceneDeps) {
   });
   bindInput(stage, { actions, rig, allowsWorldKeys: deps.allowsWorldKeys });
 
-  stage.onFrame((dt) => rig.update(dt));
+  stage.onFrame((dt) => {
+    rig.update(dt);
+    // the camera's eye adjusts on its way between your seat and the lobby's corner
+    stage.renderer.toneMappingExposure = brightness.seat + (brightness.lobby - brightness.seat) * rig.lifted();
+  });
   stage.onFrame((dt, t) => table.update(dt, t));
   // after the table, so your body copies the pose your bean has this frame
-  mountFirstPerson(stage, { store, mine: table.mine });
+  mountFirstPerson(stage, { store, mine: table.mine, outside: rig.outside });
   stage.onFrame((dt) => flights.update(dt));
 }

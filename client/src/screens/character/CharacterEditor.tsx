@@ -1,7 +1,8 @@
 // Character select: your bean on its turntable on one side, the body, colour, hat and
 // face (eyewear, nose, facial hair) carousels, a name and a randomize button on the other. The title screens use it before you
-// sit down, and the game menu's "Change look" opens it over the table (without the name, which
-// the table already knows you by). The draft is local until Done.
+// sit down, and at the table "Change look" opens it over the room (without the name, which
+// the table already knows you by). The draft is local until Done; at the table `onChange` sends
+// each change of look as it's made, so everyone watches you try things on.
 import { useState } from "react";
 import { BODIES, BODY_IDS } from "../../../../shared/catalog/bodies.ts";
 import { COLOR_NAMES, COLORS } from "../../../../shared/catalog/colors.ts";
@@ -34,16 +35,31 @@ export interface CharacterEditorProps {
   dealer: boolean;
   /** The primary button's words: "Done", "Open the table", "Join table ABCD". */
   doneLabel: string;
+  /** Your look changed (not your name): what it is now. */
+  onChange?(look: Profile["look"]): void;
   onDone(profile: Profile): void;
   onBack(): void;
 }
 
-export function CharacterEditor({ initial, withName, dealer, doneLabel, onDone, onBack }: CharacterEditorProps) {
+export function CharacterEditor({
+  initial,
+  withName,
+  dealer,
+  doneLabel,
+  onChange,
+  onDone,
+  onBack,
+}: CharacterEditorProps) {
   const [draft, setDraft] = useState(initial);
   const [nameError, setNameError] = useState(false);
   const stage = useShowcase(draft.look, dealer);
-  const edit = (a: ProfileAction) => setDraft((p) => editProfile(p, a));
-  const randomize = () => setDraft((p) => ({ ...p, look: randomLook() }));
+  /** The draft becomes `next`; a new look is told to whoever's listening. */
+  const change = (next: Profile) => {
+    setDraft(next);
+    if (next.look !== draft.look) onChange?.(next.look);
+  };
+  const edit = (a: ProfileAction) => change(editProfile(draft, a));
+  const randomize = () => change({ ...draft, look: randomLook() });
   useBack(onBack, true, 1);
 
   const done = () => {

@@ -23,3 +23,20 @@ test("a damaged profile keeps whichever parts still read", () => {
     assert.deepEqual(storage.profile(), {}, junk);
   }
 });
+
+test("the house rules you last dealt with come back, and damaged ones come back empty", () => {
+  const backing = memoryStorage();
+  const storage = createStorage(backing);
+  assert.deepEqual(storage.houseRules(), {});
+  const rules = {
+    deck: { scale: "tshirt", numbers: [], unsure: true, coffee: false },
+    dealerPlays: true,
+    environment: "diner",
+  } as const;
+  storage.setHouseRules({ ...rules, deck: { ...rules.deck, numbers: [] } });
+  assert.deepEqual(storage.houseRules(), rules);
+  backing.setItem("pp-rules", JSON.stringify({ ...rules, environment: "moon-base" }));
+  assert.deepEqual(storage.houseRules(), {}, "rules that no longer read aren't half-used");
+  backing.setItem("pp-rules", "{ nope");
+  assert.deepEqual(storage.houseRules(), {});
+});

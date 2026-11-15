@@ -26,6 +26,7 @@ export interface MountedEnvironment {
   readonly background: THREE.Color;
   readonly fog: THREE.Fog | null;
   readonly exposure: number | undefined;
+  readonly lobbyExposure: number | undefined;
   readonly tableMaterials: TableMaterials;
   readonly props: { readonly statusScreen: StatusScreen; readonly sign: Sign; readonly squeaky: Squeaky };
   /** Stops its sounds, frames and clicks and frees what it put on the GPU. Take `root` off the stage first. */
@@ -62,6 +63,7 @@ export function mountEnvironment(env: Environment, deps: MountDeps): MountedEnvi
     background: backdrop.background,
     fog: backdrop.fog,
     exposure: backdrop.exposure,
+    lobbyExposure: backdrop.lobbyExposure,
     tableMaterials,
     props,
     dispose() {

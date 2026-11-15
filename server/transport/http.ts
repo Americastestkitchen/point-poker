@@ -45,7 +45,7 @@ export function httpHandler(deps: { rooms: Rooms; auth: DealerAuth; distDir: str
       const body = OpenRequest.catch({}).parse(await readJson(req));
       const check = auth.open(req, body);
       if (!check.ok) return json(res, check.status, check.refusal);
-      const table = rooms.create(check.jira);
+      const table = rooms.create(check.jira, body.rules);
       return json(res, 200, { code: table.code, dealerKey: table.snapshot().dealerKey } satisfies OpenedTable);
     }
     if (url.pathname.startsWith("/api/rooms/") && req.method === "GET") {

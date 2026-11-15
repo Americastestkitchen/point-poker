@@ -3,6 +3,7 @@
 // room, and sitting down joins the table. The world gets its keyboard gate from the UI.
 // Browser APIs also live in rendering, input, audio and DOM UI modules.
 import { createActions } from "./app/actions.ts";
+import { rememberHouseRules } from "./app/house-rules.ts";
 import { createSession } from "./app/session.ts";
 import { createSit } from "./app/sit.ts";
 import { createStorage } from "./app/storage.ts";
@@ -56,6 +57,7 @@ const session = createSession({
   url: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`,
 });
 const actions = createActions(session, store);
+rememberHouseRules(store, storage);
 const tables = createTables({ fetch: (url, init) => fetch(url, init), storage });
 const stage = createStage($("scene", HTMLCanvasElement), { audio });
 

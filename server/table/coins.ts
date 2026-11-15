@@ -1,6 +1,7 @@
 // Where coins move: the pot, payouts, the house and taking a payout back.
 // Whatever the economy rework decides changes this file only.
 import type { Card } from "../../shared/protocol.ts";
+import { scores } from "../../shared/rules.ts";
 import type { PlayerState, TableState } from "./state.ts";
 
 export interface Settlement {
@@ -30,8 +31,9 @@ export function settle(votes: Map<string, number>, finalPoints: number, deck: re
   return { pot, winners, share: round2(pot / winners.length) };
 }
 
-/** What's on the table once the cards flip: every card played this round. */
-export const potOf = (players: readonly PlayerState[]) => players.reduce((sum, p) => sum + (p.vote ?? 0), 0);
+/** What's on the table once the cards flip: every card played this round that's worth points. */
+export const potOf = (players: readonly PlayerState[]) =>
+  players.reduce((sum, p) => sum + (p.vote !== null && scores(p.vote) ? p.vote : 0), 0);
 
 /** The dealer changed their mind: undo the last payout. */
 export function takeBack(players: PlayerState[]) {

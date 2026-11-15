@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
 import { layout } from "../layout/layout.ts";
-import { createCameraRig, flattened } from "./camera.ts";
+import { createCameraRig, flattened, SIT_DOWN } from "./camera.ts";
 
 function setup() {
   const camera = new THREE.PerspectiveCamera();
@@ -60,4 +60,45 @@ test("a hammer blow drops your eyes to the table for a beat, and they come back 
   assert.ok(Math.min(...heights) > layout.table.y, "never under the table");
   assert.ok(Math.abs(camera.position.y - before) < 1e-9, "and back up");
   assert.equal(flattened(-1), 0);
+});
+
+const { lobby } = layout.cameras;
+const corner = new THREE.Vector3(lobby.position.x, lobby.position.y, lobby.position.z);
+
+test("in a lobby the camera watches the room from its corner, and Start brings it down into your seat", () => {
+  const { camera, rig, gazes } = setup();
+  rig.update(0.1);
+  rig.watch(true);
+  rig.seat(-2.38, 0, true, true);
+  rig.update(0.016);
+  assert.ok(camera.position.distanceTo(corner) < 1e-9, "from the title screens you're up there at once");
+  assert.equal(camera.zoom, lobby.zoom);
+  assert.equal(rig.outside(), true, "your own bean is in the picture");
+  const ahead = new THREE.Vector3();
+  camera.getWorldDirection(ahead);
+  const toTable = new THREE.Vector3(lobby.lookAt.x, lobby.lookAt.y, lobby.lookAt.z).sub(corner).normalize();
+  assert.ok(ahead.distanceTo(toTable) < 1e-6, "looking at the table");
+  rig.drag(200, 0);
+  rig.update(0.2);
+  assert.deepEqual(gazes, [], "dragging does nothing up there");
+
+  rig.watch(false);
+  rig.update(SIT_DOWN / 2);
+  assert.ok(camera.position.distanceTo(corner) > 0.5 && atSeat(camera) > 0.5, "on its way down");
+  for (let i = 0; i < 40; i++) rig.update(0.1);
+  assert.ok(atSeat(camera) < 1e-3, "in your seat");
+  assert.equal(camera.zoom, 1);
+  assert.equal(rig.outside(), false);
+  assert.equal(rig.lifted(), 0);
+});
+
+test("a seat that moves while you're up in the corner is where the camera comes down to", () => {
+  const { camera, rig } = setup();
+  rig.watch(true);
+  rig.seat(2.38, 0, false, true);
+  for (let i = 0; i < 30; i++) rig.update(0.1);
+  rig.seat(-2.38, 0, true, false);
+  rig.watch(false);
+  for (let i = 0; i < 40; i++) rig.update(0.1);
+  assert.ok(atSeat(camera) < 1e-3);
 });

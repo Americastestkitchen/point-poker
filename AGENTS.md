@@ -40,9 +40,8 @@ sitting down only takes the invite link.
 ## Where it's heading
 
 These areas are open questions, so don't build on their current shape more than you need to:
-the coin economy (#15), what the dealer is and can do (#18, #9), table setup and a lobby
-with other decks (#14), and switching rooms (#10: only the Basement exists and it is
-hard-wired). Items, face accessories and a first-person body are planned (#5 to #8).
+the coin economy (#15), what the dealer is and can do (#18, #9), and switching rooms (#10:
+only the Basement exists and it is hard-wired). Items, face accessories and a first-person body are planned (#5 to #8).
 [Issues](https://github.com/Americastestkitchen/point-poker/issues) are the only backlog; there is no
 TODO file.
 

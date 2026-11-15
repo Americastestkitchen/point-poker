@@ -19,6 +19,8 @@ export function mountFirstPerson(
     store: Store;
     /** Your bean at the table, while you're sitting at one. */
     mine(): Avatar | null;
+    /** The camera is outside your seat (the lobby's corner): your bean is in the picture, so no body here. */
+    outside(): boolean;
   },
 ) {
   const { scene, camera, renderer } = stage;
@@ -27,7 +29,7 @@ export function mountFirstPerson(
   stage.onFrame(() => {
     const avatar = deps.mine();
     // the title screens and the look editor show your bean on its turntable instead
-    const shown = !!avatar && !deps.store.getState().showcase;
+    const shown = !!avatar && !deps.store.getState().showcase && !deps.outside();
     if (fp) fp.body.group.visible = shown;
     if (!avatar || !shown) return;
     if (!fp) {

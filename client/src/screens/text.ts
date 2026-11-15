@@ -1,4 +1,6 @@
 // Small words-and-glyphs helpers every screen needs. Pure.
+import type { Card } from "../../../shared/protocol.ts";
+import { cardLabel } from "../../../shared/rules.ts";
 
 /** "Ann", "Ann & Bob", "Ann, Bob & Cat". */
 export function names(list: readonly string[]): string {
@@ -30,3 +32,10 @@ export const safeUrl = (u: unknown): string | null => (typeof u === "string" && 
 
 /** "1 point", "5 points". */
 export const pointsWord = (n: number | null) => (n === 1 ? "point" : "points");
+
+/** The final call in words: "5 points", or what its card says when that isn't the number ("XL"). */
+export function finalWords(deck: readonly Card[], points: number | null): string {
+  if (points === null) return "";
+  const label = cardLabel(deck, points);
+  return label === String(points) ? `${points} ${pointsWord(points)}` : label;
+}

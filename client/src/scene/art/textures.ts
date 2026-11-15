@@ -1,6 +1,6 @@
 // Canvas-drawn textures: cards, felt, signage, name tags.
 import * as THREE from "three";
-import { CARD_SUIT } from "../../../../shared/catalog/decks.ts";
+import { suitOf } from "../../../../shared/catalog/decks.ts";
 
 /** The canvas's 2D context; a browser that can't give one can't draw the table. */
 export function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -29,13 +29,16 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.roundRect(x, y, w, h, r);
 }
 
-const frontCache = new Map<number, THREE.CanvasTexture>();
-export function cardFront(value: number): THREE.CanvasTexture {
-  let t = frontCache.get(value);
+const frontCache = new Map<string, THREE.CanvasTexture>();
+/** A card's face: `says` is what's printed on it ("5", "XL", "?"), `value` picks its suit and its wear. */
+export function cardFront(value: number, says = String(value)): THREE.CanvasTexture {
+  const key = `${value}:${says}`;
+  let t = frontCache.get(key);
   if (t) return t;
-  const suit = CARD_SUIT[value] ?? { glyph: "♠", red: false };
+  const suit = suitOf(value);
+  const long = says.length > 1;
   const ink = suit.red ? "#a8242c" : "#1d1a1a";
-  let seed = value * 9301 + 49297;
+  let seed = Math.abs(value) * 9301 + 49297;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   t = canvasTex(256, 368, (g) => {
     g.fillStyle = "#1b1410";
@@ -74,8 +77,8 @@ export function cardFront(value: number): THREE.CanvasTexture {
       g.save();
       g.translate(x + ox, y + oy);
       g.rotate(rot);
-      g.font = `bold ${value >= 10 ? 34 : 40}px ${CARD_SERIF}`;
-      g.fillText(String(value), 0, 0);
+      g.font = `bold ${long ? 34 : 40}px ${CARD_SERIF}`;
+      g.fillText(says, 0, 0);
       g.font = `30px ${CARD_SERIF}`;
       g.fillText(suit.glyph, 0, 36);
       g.restore();
@@ -89,17 +92,17 @@ export function cardFront(value: number): THREE.CanvasTexture {
     g.font = `220px ${CARD_SERIF}`;
     g.fillText(suit.glyph, 0, 10);
     g.globalAlpha = 1;
-    g.font = `bold ${value >= 10 ? 118 : 150}px ${CARD_SERIF}`;
-    g.fillText(String(value), 0, 6);
+    g.font = `bold ${long ? 118 : 150}px ${CARD_SERIF}`;
+    g.fillText(says, 0, 6);
     g.restore();
   });
-  frontCache.set(value, t);
+  frontCache.set(key, t);
   return t;
 }
 
 const swapCache = new Map<string, THREE.CanvasTexture>();
 /** A little sticker over a floating card: "3 → 5", the old card struck through. 256×96. */
-export function swapTag(from: number, to: number): THREE.CanvasTexture {
+export function swapTag(from: string, to: string): THREE.CanvasTexture {
   const key = `${from}:${to}`;
   let t = swapCache.get(key);
   if (t) return t;
@@ -114,8 +117,8 @@ export function swapTag(from: number, to: number): THREE.CanvasTexture {
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillStyle = "rgba(244,239,227,0.55)";
-    g.fillText(String(from), 62, 52);
-    const w = g.measureText(String(from)).width;
+    g.fillText(from, 62, 52);
+    const w = g.measureText(from).width;
     g.strokeStyle = "#e05a4f";
     g.lineWidth = 6;
     g.beginPath();
@@ -125,7 +128,7 @@ export function swapTag(from: number, to: number): THREE.CanvasTexture {
     g.fillStyle = "#e6be5a";
     g.fillText("→", 128, 50);
     g.fillStyle = "#f4efe3";
-    g.fillText(String(to), 194, 52);
+    g.fillText(to, 194, 52);
   });
   swapCache.set(key, t);
   return t;
