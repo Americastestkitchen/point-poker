@@ -55,6 +55,7 @@ export function mountTableView(
     me: meId,
     seat: (id) => seats.get(id),
     flattened: rig.flatten,
+    outside: rig.outside,
   });
 
   // Each new view redraws the table, and what changed in it shapes the animation.

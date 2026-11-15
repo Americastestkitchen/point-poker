@@ -43,29 +43,33 @@ export function createItemPlays(
     seat(id: string): Seat | undefined;
     /** A hammer just landed on you: your view drops with your bean. */
     flattened(): void;
+    /** The camera is outside your seat (the lobby's corner): your own bean is in the picture like everyone's. */
+    outside(): boolean;
   },
 ): ItemPlays {
   const { audio, layout, flights, events } = deps;
   const { scene, camera } = stage;
   const isMe = (id: string) => id === deps.me();
+  /** `id` is you and the camera is your eyes, so your bean is hidden and things come and go from the camera. */
+  const myEyes = (id: string) => isMe(id) && !deps.outside();
   const avatarOf = (id: string) => deps.seat(id)?.avatar;
   /** A point in front of your own eyes: where your hand lets go of things, as you see it. */
   const inView = (x: number, y: number, z: number) => camera.localToWorld(new THREE.Vector3(x, y, z));
   const eyes = () => camera.getWorldPosition(new THREE.Vector3());
 
-  // Where things are aimed. Your own bean is hidden on your screen: for you, it's your camera.
+  // Where things are aimed. From your seat your own bean is hidden on your screen: for you, it's your camera.
   const headOf = (id: string) =>
-    isMe(id) ? eyes().add(new THREE.Vector3(0, -0.05, 0)) : (avatarOf(id)?.headWorldPos() ?? new THREE.Vector3());
+    myEyes(id) ? eyes().add(new THREE.Vector3(0, -0.05, 0)) : (avatarOf(id)?.headWorldPos() ?? new THREE.Vector3());
   /** Where a hammer from `from` lands on `id`: the top of their head, or for you, just in front of your nose. */
   const crownOf = (id: string, from: string) => {
-    if (!isMe(id)) return avatarOf(id)?.crownWorldPos() ?? new THREE.Vector3();
+    if (!myEyes(id)) return avatarOf(id)?.crownWorldPos() ?? new THREE.Vector3();
     const at = eyes();
     const towards = headOf(from).sub(at).setY(0).normalize();
     return at.addScaledVector(towards, 0.5).add(new THREE.Vector3(0, 0.12, 0));
   };
   /** Where the hand that just let go is: in front of you for your own, the bean's hand for everyone else's. */
   const handOf = (id: string, mine: THREE.Vector3) =>
-    isMe(id) ? mine : (avatarOf(id)?.handWorldPos() ?? new THREE.Vector3());
+    myEyes(id) ? mine : (avatarOf(id)?.handWorldPos() ?? new THREE.Vector3());
   /** You took one: the screens show it (a flash, a shake). */
   const hit = (to: string, item: ItemId) => {
     if (isMe(to)) events.emit({ t: "hit", item });
@@ -82,7 +86,7 @@ export function createItemPlays(
     /** The rubber arm stretches across the table and brings the hammer down on their head. */
     hammer(from, to) {
       // your own head stays where it was when the swing started, though your view is about to drop
-      const mine = isMe(to) ? crownOf(to, from) : null;
+      const mine = myEyes(to) ? crownOf(to, from) : null;
       avatarOf(from)?.aim("bonk", () => mine ?? crownOf(to, from));
       audio.swing();
       stage.after(BONK_HIT, () => {
@@ -187,7 +191,7 @@ export function createItemPlays(
     play: (from, item, to) => PLAYS[item](from, to),
     toss(from, emoji, to) {
       const bubble = emojiBubble(emoji);
-      const over = (id: string) => headOf(id).add(new THREE.Vector3(0, isMe(id) ? 0 : 0.45, 0));
+      const over = (id: string) => headOf(id).add(new THREE.Vector3(0, myEyes(id) ? 0 : 0.45, 0));
       const start = over(from);
       bubble.position.copy(start);
       scene.add(bubble);
@@ -203,7 +207,7 @@ export function createItemPlays(
           audio.pop();
           avatarOf(to)?.play("noticed");
           // it hangs over them a moment (on your own screen it's flown into your face: it's gone)
-          stage.after(isMe(to) ? 0 : EMOJI_LINGERS, () => dropEmoji(bubble));
+          stage.after(myEyes(to) ? 0 : EMOJI_LINGERS, () => dropEmoji(bubble));
         },
       });
     },
