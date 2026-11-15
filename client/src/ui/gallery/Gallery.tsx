@@ -97,7 +97,7 @@ export function Gallery({ audio }: { audio: Audio }) {
   const [volume, setVolume] = useState(0.6);
   const [coins, setCoins] = useState(1240);
   const [dialog, setDialog] = useState<"none" | "plain" | "stacked" | "must" | "paper" | "confirm">("none");
-  const [wheel, setWheel] = useState(false);
+  const [wheel, setWheel] = useState<"shut" | "open" | "held">("shut");
   const [snack, setSnack] = useState("nothing yet");
   const [field, setField] = useState("");
   const [fieldError, setFieldError] = useState("");
@@ -532,20 +532,28 @@ export function Gallery({ audio }: { audio: Audio }) {
 
       <Section
         name="Wheel"
-        note={`Picked: ${snack}. Head for an item with the mouse, or use the arrow keys; hold W, flick and let go to pick in one move.`}
+        note={`Picked: ${snack}. Head for an item with the mouse, or use the arrow keys; hold W, flick and let go to pick in one move. Or focus the button and hold W to open it: the first flick goes from the hub, wherever the mouse is.`}
       >
         <div className={s.row}>
-          <Button onPress={() => setWheel(true)}>Open the wheel</Button>
+          <Button
+            onPress={() => setWheel("open")}
+            onKeyDown={(e) => {
+              if (e.key.toLowerCase() === "w" && !e.repeat) setWheel("held");
+            }}
+          >
+            Open the wheel
+          </Button>
         </div>
         <Wheel
-          open={wheel}
-          onClose={() => setWheel(false)}
+          open={wheel !== "shut"}
+          held={wheel === "held"}
+          onClose={() => setWheel("shut")}
           label="Snacks"
           items={SNACKS}
           holdKey="w"
           onPick={(id) => {
             setSnack(id);
-            setWheel(false);
+            setWheel("shut");
           }}
         >
           Snack time

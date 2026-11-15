@@ -46,6 +46,8 @@ export interface AppState {
     lookOpen: boolean;
     /** The one popup open over the table, if any. */
     popup: Popup | null;
+    /** It was opened with a key (E for the emote wheel), not a click or a tap. */
+    popupByKey: boolean;
     /** The hand item you've picked on the hotbar: clicking someone uses it on them. */
     item: ItemId;
     /** When you last used each item, for its cooldown (see items.ts). */
@@ -77,7 +79,15 @@ const initial: AppState = {
   room: null,
   showcase: null,
   changes: [],
-  ui: { myVote: null, votesInFlight: 0, lookOpen: false, popup: null, item: DEFAULT_ITEM, itemsUsed: {} },
+  ui: {
+    myVote: null,
+    votesInFlight: 0,
+    lookOpen: false,
+    popup: null,
+    popupByKey: false,
+    item: DEFAULT_ITEM,
+    itemsUsed: {},
+  },
 };
 
 export function createStore(): Store {
@@ -103,15 +113,15 @@ function build() {
       const action = a.t === "played" ? a : { t: "answered" as const, server: myPlayer(s)?.vote ?? null };
       store.setState({ ui: withVote(s.ui, action) });
     },
-    /** `popup` opened over the table, replacing whichever one was open. */
-    popupOpened(popup: Popup) {
+    /** `popup` opened over the table, replacing whichever one was open; `byKey` when a key opened it. */
+    popupOpened(popup: Popup, { byKey = false }: { byKey?: boolean } = {}) {
       const { ui } = store.getState();
-      if (ui.popup !== popup) store.setState({ ui: { ...ui, popup } });
+      if (ui.popup !== popup) store.setState({ ui: { ...ui, popup, popupByKey: byKey } });
     },
     /** `popup` closed. Nothing happens if it isn't the one open (another one replaced it already). */
     popupClosed(popup: Popup) {
       const { ui } = store.getState();
-      if (ui.popup === popup) store.setState({ ui: { ...ui, popup: null } });
+      if (ui.popup === popup) store.setState({ ui: { ...ui, popup: null, popupByKey: false } });
     },
     /** You picked `item` on the hotbar. */
     itemPicked(item: ItemId) {

@@ -4,7 +4,7 @@ import { useBack, useUi } from "../context.tsx";
 import { useFocusable } from "../focus.ts";
 import { intentOf } from "../input/intent.ts";
 import { step } from "../input/roving.ts";
-import { wedgeAngle, wedgeAt } from "../input/wheel.ts";
+import { aimAt, wedgeAngle, wedgeAt, type Point } from "../input/wheel.ts";
 import { cx } from "./cx.ts";
 import s from "./Wheel.module.css";
 
@@ -31,6 +31,11 @@ export interface WheelProps<T extends string> {
    * mouse, let go" picks in one move; with nothing highlighted yet the wheel just stays open.
    */
   holdKey?: string;
+  /**
+   * `holdKey` opened it and is still down. Until it's let go, the mouse aims as if it started in
+   * the hub: the first flick goes from the centre, wherever the pointer was resting.
+   */
+  held?: boolean;
   /** Gallery only: draws it in place instead of over the screen. */
   inline?: boolean;
 }
@@ -38,6 +43,7 @@ export interface WheelProps<T extends string> {
 /**
  * A wheel of things to pick from, over the game. Moving the mouse towards an item highlights it
  * (no need to reach it), as does hovering or the arrow keys; a click, a tap or Enter picks.
+ * Opened by holding a key (`held`), the mouse aims from wherever it was, as if from the hub.
  * Esc or a click outside closes it. Like a Dialog, it holds focus while it's open.
  */
 export function Wheel<T extends string>({
@@ -48,6 +54,7 @@ export function Wheel<T extends string>({
   onPick,
   children,
   holdKey,
+  held = false,
   inline = false,
 }: WheelProps<T>) {
   const { sounds, layer } = useUi();
@@ -56,6 +63,9 @@ export function Wheel<T extends string>({
   // which item has focus: the one a pick would take
   const [active, setActive] = useState(-1);
   const pressedOutside = useRef(false);
+  // while the key that opened it is held: aim from where the pointer was first seen, not the centre
+  const aiming = useRef(false);
+  const start = useRef<Point>(undefined);
   const close = () => {
     sounds.back();
     onClose();
@@ -77,20 +87,25 @@ export function Wheel<T extends string>({
     };
   }, [open, inline]);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+    aiming.current = held && !!holdKey && !inline;
+    start.current = undefined;
+  }, [open, held, holdKey, inline]);
+
   if (!open) return null;
 
   const focus = (i: number) => buttons.current[i]?.focus({ preventScroll: true });
 
-  // the mouse only has to head for an item: whichever wedge it's in gets the highlight
+  // the mouse only has to head for an item: whichever wedge it points into gets the highlight
   const flick = (e: PointerEvent<HTMLElement>) => {
     if (e.pointerType !== "mouse" || (e.movementX === 0 && e.movementY === 0) || !box.current) return;
     const r = box.current.getBoundingClientRect();
-    const i = wedgeAt(
-      e.clientX - (r.left + r.width / 2),
-      e.clientY - (r.top + r.height / 2),
-      items.length,
-      r.width * HUB,
-    );
+    const pointer = { x: e.clientX, y: e.clientY };
+    if (aiming.current) start.current ??= pointer;
+    const centre = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const aim = aimAt(pointer, centre, aiming.current ? start.current : undefined);
+    const i = wedgeAt(aim.x, aim.y, items.length, r.width * HUB);
     if (i >= 0 && i !== active) focus(i);
   };
 
@@ -123,8 +138,17 @@ export function Wheel<T extends string>({
       className={s.wheel}
       onKeyDown={keys}
       onKeyUp={(e) => {
+        if (!holdKey || e.key.toLowerCase() !== holdKey) return;
         const item = items[active];
-        if (holdKey && e.key.toLowerCase() === holdKey && item) pick(item.id);
+        if (item) pick(item.id);
+        // let go with nothing picked: it stays open, and the mouse goes back to pointing where it is
+        else aiming.current = false;
+      }}
+      // while aiming, what the pointer happens to be over doesn't take the highlight: only the flick does
+      onPointerMoveCapture={(e) => {
+        if (!aiming.current) return;
+        e.stopPropagation();
+        flick(e);
       }}
     >
       {items.map((item, i) => (

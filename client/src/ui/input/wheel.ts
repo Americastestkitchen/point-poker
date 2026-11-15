@@ -14,3 +14,18 @@ export function wedgeAt(dx: number, dy: number, count: number, hub: number): num
   const turn = (Math.atan2(dx, -dy) / (Math.PI * 2) + 1) % 1;
   return Math.round(turn * count) % count;
 }
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Where the pointer points, from the wheel's centre (px, y down). Normally that's where it is.
+ * Given `start` (where the pointer was first seen since the wheel opened), it counts as having
+ * started in the hub instead: only how far it has moved since then matters, wherever that was.
+ */
+export function aimAt(pointer: Point, centre: Point, start?: Point): Point {
+  const from = start ?? centre;
+  return { x: pointer.x - from.x, y: pointer.y - from.y };
+}

@@ -222,5 +222,9 @@ test("the emote wheel is a popup over the table", () => {
   const { sent, store, actions } = setup();
   actions.openEmotes();
   assert.equal(store.getState().ui.popup, "emotes");
+  assert.equal(store.getState().ui.popupByKey, true, "its key opened it: the wheel aims from wherever the mouse is");
   assert.deepEqual(sent, [], "opening it sends nothing");
+  store.popupClosed("emotes");
+  store.popupOpened("emotes");
+  assert.equal(store.getState().ui.popupByKey, false, "the hotbar's slot opens it like any popup");
 });

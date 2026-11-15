@@ -92,8 +92,8 @@ export function createActions(
     },
     /** Play an emote. With `to`, it answers that player's: the emoji flies over to them. */
     emote: (emote: EmoteId, to?: string) => session.fx({ kind: "emote", emote, ...(to ? { to } : {}) }),
-    /** Open the emote wheel. */
-    openEmotes: () => store.popupOpened("emotes"),
+    /** Open the emote wheel with its key (the hotbar's 😀 slot opens it as a plain popup). */
+    openEmotes: () => store.popupOpened("emotes", { byKey: true }),
     /** You clicked the squeaky (it already squeaked for you): everyone else hears it too. */
     squeak: () => session.fx({ kind: "squeak" }),
     /** Where you're looking, relative to facing the table. */

@@ -5,7 +5,7 @@ import { direction, intentOf } from "./intent.ts";
 import { countAt, fraction, snap, valueAt } from "./range.ts";
 import { first, step } from "./roving.ts";
 import { cursorOf, normalize, typeInto } from "./slots.ts";
-import { wedgeAngle, wedgeAt } from "./wheel.ts";
+import { aimAt, wedgeAngle, wedgeAt } from "./wheel.ts";
 
 test("keys become intents; shortcuts are left alone", () => {
   assert.equal(intentOf({ key: "ArrowUp" }), "up");
@@ -130,4 +130,20 @@ test("a wheel's items stand evenly round it, the first at the top, and each owns
 test("the mouse picks nothing from inside a wheel's hub, or from an empty wheel", () => {
   assert.equal(wedgeAt(5, -8, 8, 20), -1);
   assert.equal(wedgeAt(0, -100, 0, 20), -1);
+});
+
+test("a wheel aims from its centre, or, from where the pointer started, as if that were the centre", () => {
+  const centre = { x: 500, y: 400 };
+  assert.deepEqual(aimAt({ x: 560, y: 400 }, centre), { x: 60, y: 0 }, "to the right of the centre");
+  // the pointer rests far off to the right of the wheel, then flicks left
+  const start = { x: 900, y: 420 };
+  const aim = aimAt({ x: 840, y: 420 }, centre, start);
+  assert.deepEqual(aim, { x: -60, y: 0 });
+  assert.equal(
+    wedgeAt(aim.x, aim.y, 8, 20),
+    6,
+    "the flick picks the left, though the pointer is still right of the wheel",
+  );
+  const nudge = aimAt({ x: 905, y: 415 }, centre, start);
+  assert.equal(wedgeAt(nudge.x, nudge.y, 8, 20), -1, "a nudge from where it started stays in the hub");
 });

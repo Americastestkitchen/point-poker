@@ -18,6 +18,8 @@ export function EmoteSlot() {
   const popup = usePopup("emotes");
   const players = useRoom()?.players ?? [];
   const meId = useAppState((st) => st.me?.id);
+  // E opened it (and is still down): the first flick aims from the hub, wherever the mouse was
+  const byKey = useAppState((st) => st.ui.popup === "emotes" && st.ui.popupByKey);
   // transient: the emote you could answer (it lapses by itself), and whether you'd rather not
   const [offer, setOffer] = useState<(Offer & { n: number }) | null>(null);
   const [toEveryone, setToEveryone] = useState(false);
@@ -84,6 +86,7 @@ export function EmoteSlot() {
         label={to ? `Emotes, for ${to.name}` : "Emotes"}
         items={WHEEL}
         holdKey={EMOTE_WHEEL_KEY}
+        held={byKey}
         onPick={(emote) => {
           actions.emote(emote, to?.id);
           done();
