@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player, ticket, view, withPlayers } from "../../app/fixtures.ts";
 import type { TableView } from "../../../../shared/protocol.ts";
+import { buildDeck } from "../../../../shared/catalog/decks.ts";
 import { safeUrl } from "../text.ts";
 import { dockModel, plain, type Dock, type DockBody } from "./dock.ts";
 
@@ -236,4 +237,72 @@ test("only http(s) URLs are links", () => {
   assert.equal(safeUrl("javascript:alert(1)"), null);
   assert.equal(safeUrl("//x.example"), null);
   assert.equal(safeUrl(42), null);
+});
+
+// ---------------------------------------------------------------- the lobby
+
+test("the lobby: the dealer gets Start and the ways to set the table up, players wait and get their look", () => {
+  const room = view({ started: false });
+  assert.deepEqual(dock(room, "deb"), {
+    key: "lobby",
+    title: ["Everyone here?"],
+    body: { t: "start", players: 3 },
+    actions: [{ t: "rules" }, { t: "look", main: false }, { t: "lineUp", lined: 0 }],
+  });
+  assert.deepEqual(dock(room, "ann"), {
+    key: "lobby",
+    title: null,
+    body: { t: "waiting", text: "Waiting for DEB to start" },
+    actions: [{ t: "look", main: true }],
+  });
+  const alone = view({ started: false, players: [player("deb", { isDealer: true, seat: -1, plays: false })] });
+  assert.equal(title(dock(alone, "deb")), "Send the invite, then deal 'em in");
+  const lined = view({ started: false, queue: [{ key: "SD-1", summary: "", points: null, status: "" }] });
+  assert.deepEqual(dock(lined, "deb").actions.at(-1), { t: "lineUp", lined: 1 });
+});
+
+// ---------------------------------------------------------------- other cards
+
+const sizes = () => ({
+  deck: buildDeck({ scale: "tshirt", cards: [], unsure: true, coffee: true })!,
+  dealerPlays: false,
+  environment: "basement" as const,
+});
+
+test("a hand says what its cards say, and the extra cards are in it", () => {
+  const d = dock(voting({ settings: sizes() }), "ann", 3);
+  assert.deepEqual(
+    cards(d.body).map((c) => [c.value, c.label]),
+    [
+      [1, "XS"],
+      [2, "S"],
+      [3, "M"],
+      [5, "L"],
+      [8, "XL"],
+      [-6, "?"],
+      [-7, "☕"],
+    ],
+  );
+  assert.equal(title(d), "You picked M · tap another card to change");
+  assert.equal(title(dock(voting({ settings: sizes() }), "ann", -6)), "You picked ? · tap another card to change");
+});
+
+test("the dealer settles on a card with points: a ? is never the call, nor the favourite", () => {
+  const room = withPlayers(view({ phase: "revealed", round: 1, ticket: ticket("SD-1"), settings: sizes() }), (p) =>
+    p.plays ? { hasVoted: true, vote: -6 } : {},
+  );
+  const hand = cards(dock(room, "deb").body);
+  assert.deepEqual(
+    hand.map((c) => c.label),
+    ["XS", "S", "M", "L", "XL"],
+  );
+  assert.ok(hand.every((c) => !c.suggested));
+  const settled = { ...room, phase: "settled" as const, finalPoints: 3 };
+  assert.equal(title(dock(settled, "deb")), "Final: M · tap a card to change it");
+  assert.equal(title(dock(settled, "ann")), "Final: M");
+  const spread = dock(settled, "ann").body;
+  assert.deepEqual(spread?.t === "spread" ? spread.cards.map((c) => [c.label, c.voters.length, c.final]) : null, [
+    ["M", 0, true],
+    ["?", 2, false],
+  ]);
 });

@@ -7,7 +7,7 @@ import { newTableState, TableState } from "./state.ts";
 import { ITEM, type ItemId } from "../../shared/catalog/items.ts";
 import type { Command } from "./commands.ts";
 import { ROLE_ERROR, Table, type JoinRequest, type TableDeps, type TableEvent } from "./table.ts";
-import { Card, TableView } from "../../shared/protocol.ts";
+import { Card, TableView, type DeckChoice } from "../../shared/protocol.ts";
 import { z } from "zod";
 
 const DEALER_KEY = "dealer-key";
@@ -808,4 +808,163 @@ test("the fresh view goes out before the command's answer", async () => {
   });
   await table.run(ann.playerId, { t: "vote", value: 3 }).then(() => order.push("result"));
   assert.deepEqual(order, ["view:3", "result"]);
+});
+
+// ---------------------------------------------------------------- the lobby
+
+test("a new table is in its lobby until the dealer starts it, and only the dealer can", async () => {
+  const { table, deb, ann, run, view, notices } = setup();
+  assert.equal(view().started, false);
+  assert.deepEqual(await table.run(ann.playerId, { t: "start" }), { error: ROLE_ERROR });
+  // everything but voting works in the lobby
+  await run(ann, { t: "setLook", look: { color: "#ff6b4a", body: "chonk", cosmetics: ["crown"] } });
+  await run(ann, { t: "use", item: "plane", target: deb.playerId });
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: 3 }), { error: "There's nothing to vote on yet" });
+  await run(deb, { t: "start" });
+  assert.equal(view().started, true);
+  assert.equal(view().phase, "waiting", "with nothing lined up, the dealer picks a ticket next");
+  assert.deepEqual(
+    notices().map((n) => [n.text, n.except]),
+    [["🎬 The dealer started the game", deb.playerId]],
+  );
+  await run(deb, { t: "start" });
+  assert.equal(notices().length, 1, "starting again says nothing");
+});
+
+test("starting deals the first lined-up ticket, and dealing any ticket starts the game", async () => {
+  const lined = setup(
+    fakeTickets([ticket("SD-1", { currentPoints: 3 }), ticket("SD-2")], { upcoming: ["SD-1", "SD-2"] }),
+  );
+  await lined.run(lined.deb, { t: "fetchQueue" });
+  assert.equal(lined.view().started, false, "lining tickets up doesn't start anything");
+  await lined.run(lined.deb, { t: "start" });
+  assert.equal(lined.view().phase, "voting");
+  assert.equal(lined.view().ticket?.key, "SD-2", "the first one without points");
+
+  // a tab from before the lobby has no Start: its dealer just deals, and that starts the game
+  const old = setup();
+  await old.deal();
+  assert.equal(old.view().started, true);
+  await old.run(old.deb, { t: "cancelRound" });
+  assert.equal(old.view().started, true, "and it stays started with no ticket out");
+});
+
+test("a table opens with the house rules its dealer played last", () => {
+  const s = newTableState("ABCD", DEALER_KEY, 0, null, {
+    deck: { scale: "tshirt", cards: [], unsure: true, coffee: false },
+    dealerPlays: true,
+    environment: "diner",
+  });
+  assert.deepEqual(
+    s.settings.deck.map((c) => c.label),
+    ["XS", "S", "M", "L", "XL", "?"],
+  );
+  assert.equal(s.settings.dealerPlays, true);
+  assert.equal(s.environment, "diner");
+  // rules that don't make a deck fall back to the usual cards
+  const odd = newTableState("ABCD", DEALER_KEY, 0, null, {
+    deck: { scale: "custom", cards: ["4"], unsure: false, coffee: false },
+  });
+  assert.deepEqual(
+    odd.settings.deck.map((c) => c.points),
+    [1, 2, 3, 5, 8],
+  );
+});
+
+// ---------------------------------------------------------------- the cards
+
+const tshirts: DeckChoice = { scale: "tshirt", cards: [], unsure: true, coffee: true };
+
+test("the dealer changes the cards between tickets, never mid-round", async () => {
+  const { table, deb, ann, run, view, deal, notices } = setup();
+  assert.deepEqual(await table.run(ann.playerId, { t: "setDeck", deck: tshirts }), { error: ROLE_ERROR });
+  await run(deb, { t: "setDeck", deck: tshirts });
+  assert.deepEqual(
+    view().settings.deck.map((c) => c.label),
+    ["XS", "S", "M", "L", "XL", "?", "☕"],
+  );
+  assert.deepEqual(notices().at(-1), {
+    t: "notice",
+    text: "🃏 The dealer changed the cards: XS S M L XL ? ☕",
+    except: deb.playerId,
+  });
+  await run(deb, { t: "setDeck", deck: tshirts });
+  assert.equal(notices().length, 1, "the same cards again say nothing");
+  assert.deepEqual(
+    await table.run(deb.playerId, {
+      t: "setDeck",
+      deck: { scale: "custom", cards: ["5", "5"], unsure: false, coffee: false },
+    }),
+    { error: "Your own deck needs at least 2 different cards" },
+  );
+
+  await deal();
+  const fib: DeckChoice = { scale: "fibonacci", cards: [], unsure: false, coffee: false };
+  assert.deepEqual(await table.run(deb.playerId, { t: "setDeck", deck: fib }), { error: "Finish this round first" });
+  await run(ann, { t: "vote", value: 3 });
+  await run(deb, { t: "reveal" });
+  assert.deepEqual(await table.run(deb.playerId, { t: "setDeck", deck: fib }), { error: "Finish this round first" });
+  await run(deb, { t: "settle", finalPoints: 3 });
+  await run(deb, { t: "setDeck", deck: fib });
+  assert.equal(view().settings.deck.length, 8, "once the round is paid out, the next ticket can use other cards");
+});
+
+test("T-shirt sizes are worth the usual points, and the history says the size", async () => {
+  const { deb, ann, bob, run, view, deal, player, logs } = setup();
+  await run(deb, { t: "setDeck", deck: { ...tshirts, unsure: false, coffee: false } });
+  await deal();
+  await run(ann, { t: "vote", value: 3 });
+  await run(bob, { t: "vote", value: 8 });
+  await run(deb, { t: "reveal" });
+  assert.equal(view().pot, 11);
+  await run(deb, { t: "settle", finalPoints: 3 });
+  assert.equal(player(ann).chips, 11);
+  assert.deepEqual(
+    view().history.map((h) => [h.finalPoints, h.label]),
+    [[3, "M"]],
+  );
+  assert.match(logs.at(-1) ?? "", /"points":3/, "the log keeps the number, for Jira");
+});
+
+test("the extra cards add nothing to the pot and can't win it, and a coffee card speaks up", async () => {
+  const { table, deb, ann, bob, join, run, view, deal, player, notices, logs } = setup();
+  const cat = join({ name: "Cat" });
+  await run(deb, { t: "setDeck", deck: { scale: "classic", cards: [], unsure: true, coffee: true } });
+  await deal();
+  // the usual five cards, then "?" (played as -6) and "☕" (-7)
+  assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: -1 }), { error: "That card isn't in the deck" });
+  await run(ann, { t: "vote", value: -6 });
+  await run(bob, { t: "vote", value: -7 });
+  await run(cat, { t: "vote", value: 5 });
+  assert.equal(
+    view().players.every((p) => !p.plays || p.hasVoted),
+    true,
+    "an extra card counts as having played",
+  );
+  await run(deb, { t: "reveal" });
+  assert.equal(view().pot, 5, "only the 5 is in the pot");
+  assert.deepEqual(
+    notices()
+      .map((n) => n.text)
+      .filter((text) => text.startsWith("☕")),
+    ["☕ Bob could use a break"],
+  );
+  assert.deepEqual(await table.run(deb.playerId, { t: "settle", finalPoints: -6 }), {
+    error: "That card isn't in the deck",
+  });
+  await run(deb, { t: "settle", finalPoints: 3 });
+  assert.deepEqual(view().winners, [cat.playerId], "the 5 is within one card of 3; a ? never is");
+  assert.equal(player(cat).chips, 5);
+  assert.equal(player(ann).chips, 0);
+  assert.deepEqual(JSON.parse((logs.at(-1) ?? "").replace("POINTED ", "")).votes, { Cat: 5 });
+
+  // talked round after the reveal: a "?" can become a number, and then it counts
+  await deal("Another ticket");
+  await run(ann, { t: "vote", value: -6 });
+  await run(deb, { t: "reveal" });
+  await run(ann, { t: "vote", value: 2 });
+  assert.equal(view().pot, 2);
+  await run(deb, { t: "settle", finalPoints: 2 });
+  assert.deepEqual(view().winners, [ann.playerId]);
+  assert.equal(view().history.at(-1)?.switched, undefined, "coming off a ? isn't changing your points");
 });

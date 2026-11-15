@@ -17,7 +17,7 @@ export interface RoomDeps<Id extends string> {
     add(object: THREE.Object3D): void;
     remove(object: THREE.Object3D): void;
     /** Sets the backdrop's sky, fog and brightness. */
-    look(look: Pick<MountedEnvironment, "background" | "fog" | "exposure">): void;
+    look(look: Pick<MountedEnvironment, "background" | "fog" | "exposure" | "lobbyExposure">): void;
   };
   table: { setMaterials(mats: TableMaterials): void };
   curtain: Curtain;

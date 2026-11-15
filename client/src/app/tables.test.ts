@@ -87,3 +87,11 @@ test("who's signed in to Jira, and signing out", async () => {
   assert.equal(await tables.signOut(), true);
   assert.equal(asked.at(-1)?.url, "/auth/jira/signout");
 });
+
+test("opening a table sends the house rules you last dealt with", async () => {
+  const { tables, storage, asked } = setup([{ status: 200, body: { code: "ABCD", dealerKey: "k-1" } }]);
+  const rules = { deck: { scale: "fibonacci", cards: [], unsure: false, coffee: true }, dealerPlays: true } as const;
+  storage.setHouseRules({ ...rules, deck: { ...rules.deck, cards: [] } });
+  await tables.open("");
+  assert.deepEqual(JSON.parse(asked[0]?.body ?? ""), { rules });
+});

@@ -4,7 +4,8 @@
 // Loads go through useGame().ticketLoad: while one runs the form waits with a spinner; a failure
 // opens this popup with the reason in the form (ticketLoad already bonked; no toast here).
 // It opens by itself once per stretch without a ticket and closes when one is dealt (picker.ts
-// pickerCue), and waits its turn if another popup or the look editor is open. It's always dismissable, even with no ticket: the dock's
+// pickerCue), and waits its turn if another popup or the look editor is open. In the lobby it
+// stays shut (the dock's "Line up tickets" opens it), and after Start it waits for you to sit down. It's always dismissable, even with no ticket: the dock's
 // "＋ Add a Jira ticket" opens it again, and the Esc game menu stays reachable.
 // Dealer only: it follows the role. The decisions live in picker.ts.
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
@@ -39,11 +40,33 @@ import {
 import { Section } from "./Section.tsx";
 import s from "./TicketPicker.module.css";
 
+/** How long after Start the picker holds off, while the camera comes down into your seat (ms). */
+const SITTING_DOWN_MS = 2000;
+
+/**
+ * Whether the game has started and you're in your seat: straight away at a table that's already
+ * playing, a moment after Start at one that was in its lobby (the camera is on its way down).
+ */
+function useSatDown(): boolean {
+  const started = useAppState((st) => st.room?.started ?? true);
+  const [sitting, setSitting] = useState(false);
+  useViewChanges((c) => {
+    if (c.t === "started") setSitting(true);
+  });
+  useEffect(() => {
+    if (!sitting) return;
+    const timer = setTimeout(() => setSitting(false), SITTING_DOWN_MS);
+    return () => clearTimeout(timer);
+  }, [sitting]);
+  return started && !sitting;
+}
+
 export function TicketPicker() {
   const { store, ticketLoad } = useGame();
   const popup = usePopup("picker");
   const isDealer = useMe()?.isDealer ?? false;
   const hasTicket = useAppState((st) => !!st.room?.ticket);
+  const started = useSatDown();
 
   // opening and closing by itself (see pickerCue)
   const armed = useRef(true);
@@ -60,8 +83,8 @@ export function TicketPicker() {
   const free = useAppState((st) => st.ui.popup === null && !st.ui.lookOpen);
   const cueFromEffect = useEffectEvent(cue);
   useEffect(() => {
-    if (free) cueFromEffect({ t: "seen", isDealer, hasTicket });
-  }, [isDealer, hasTicket, free]);
+    if (free) cueFromEffect({ t: "seen", isDealer, started, hasTicket });
+  }, [isDealer, started, hasTicket, free]);
 
   // closed: a failure it showed is old news next time
   useEffect(() => {

@@ -229,3 +229,26 @@ a.link {
     animation-duration: 2.4s;
   }
 }
+
+/* the lobby: the one big thing in the middle, its links in a row under it */
+.stack {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pp-space-1);
+}
+.stack .side {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 var(--pp-space-2);
+  padding-bottom: 0;
+}
+/* the links sit on a chip, like the title: the room behind them can be a bright beach */
+.stack .side:has(.link) {
+  padding: 0 var(--pp-space-3);
+  border-radius: var(--pp-radius-pill);
+  background: var(--pp-color-panel);
+  border: var(--pp-border-soft);
+  backdrop-filter: blur(6px);
+}

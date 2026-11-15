@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DECKS } from "../../shared/catalog/decks.ts";
+import { SCALE } from "../../shared/catalog/decks.ts";
 import { settle as settleWith } from "./coins.ts";
 
-const settle = (votes: Map<string, number>, finalPoints: number) => settleWith(votes, finalPoints, DECKS.classic.cards);
+const settle = (votes: Map<string, number>, finalPoints: number) => settleWith(votes, finalPoints, SCALE.classic.cards);
 
 test("closest single player takes the whole pot", () => {
   const r = settle(

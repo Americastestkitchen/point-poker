@@ -1,12 +1,11 @@
 // The dealer's control panel (popup "dealer"), opened from the top bar.
 // "This round": Restart vote, Skip ticket, Cancel round (asks first), Pick a ticket; each one
-// closes the panel. The players with their state and a Kick (asks first), "I play a card too",
-// and which room the table is in. What shows and what's enabled is decided in panel.ts. Dealer
-// only: it follows the role.
+// closes the panel. The players with their state and a Kick (asks first), and the way to the
+// house rules (the cards, who plays, the room). What shows and what's enabled is decided in
+// panel.ts. Dealer only: it follows the role.
 // Confirms are local dialogs inside this one, not popups.
 import { useEffect, useRef, useState } from "react";
-import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../../../shared/catalog/environments.ts";
-import { Button, Carousel, ConfirmDialog, Dialog, ScrollArea, Toggle } from "../../ui/index.ts";
+import { Button, ConfirmDialog, Dialog, ScrollArea } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
 import {
@@ -134,19 +133,10 @@ function PanelBody() {
         )}
       </Section>
 
-      <Carousel
-        label="🧳 The table is in"
-        options={ENVIRONMENT_IDS}
-        value={room.environment}
-        onChange={(id) => actions.dealer.moveTo(id)}
-        render={(id) => ENVIRONMENT[id].name}
-      />
-
-      <Toggle
-        label="🃏 I play a card too"
-        checked={room.settings.dealerPlays}
-        onChange={(on) => actions.dealer.setPlays(on)}
-      />
+      {/* replaces this popup */}
+      <Button sub="the cards, who plays, the room" className={s.action} onPress={() => store.popupOpened("rules")}>
+        🃏 House rules
+      </Button>
 
       <ConfirmDialog
         open={confirm?.t === "cancel"}

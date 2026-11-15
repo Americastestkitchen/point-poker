@@ -74,3 +74,15 @@ test("reveal, settle and a change of mind", () => {
   ]);
   assert.deepEqual(diff(settled, { ...settled }), []);
 });
+
+test("the dealer starting the game is its own moment, once", () => {
+  const lobby = view({ started: false });
+  assert.deepEqual(kinds(diff(lobby, lobby)), []);
+  assert.deepEqual(kinds(diff(lobby, view())), ["started"]);
+  assert.deepEqual(
+    kinds(diff(lobby, view({ phase: "voting", round: 1, ticket: ticket("SD-1") }))),
+    ["started", "dealt", "ticketChanged"],
+    "started by dealing the first ticket",
+  );
+  assert.deepEqual(kinds(diff(view(), view())), []);
+});

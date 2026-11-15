@@ -1,6 +1,6 @@
 // The round's rules as plain functions over TableState. No I/O, no clocks.
 import type { Ticket } from "../../shared/protocol.ts";
-import { MAX_PLAYERS, cardValues, plays } from "../../shared/rules.ts";
+import { MAX_PLAYERS, playValues, plays } from "../../shared/rules.ts";
 import type { PlayerState, TableState } from "./state.ts";
 
 export const isDealer = (s: TableState, p: PlayerState) => p.id === s.dealerId;
@@ -13,9 +13,9 @@ const CONTROL_CHARS = /[\u0000-\u001f]/g;
 
 export const clean = (v: string, max: number) => v.replace(CONTROL_CHARS, "").trim().slice(0, max);
 
-/** A playable card value from this table's deck, or null. */
+/** `v` if it's a card this table's deck has (its points, or an extra card's value), or null. */
 export const pickVote = (s: TableState, v: number | null) =>
-  v !== null && cardValues(s.settings.deck).includes(v) ? v : null;
+  v !== null && playValues(s.settings.deck).includes(v) ? v : null;
 
 /** The first free seat, or -2 when the table is full. */
 export function freeSeat(s: TableState): number {

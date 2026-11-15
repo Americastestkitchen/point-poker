@@ -13,6 +13,8 @@ export type ViewChange =
   | { t: "left"; player: PublicPlayer }
   /** Someone switched body shape. */
   | { t: "reshaped"; player: PublicPlayer }
+  /** The lobby is over: the dealer started the game. */
+  | { t: "started" }
   /** A new round of voting started (a new ticket, or the dealer restarted the vote). */
   | { t: "dealt" }
   /** A different ticket is on the table, or the same one was dealt again. */
@@ -69,6 +71,7 @@ export function diff(prev: TableView | null, next: TableView): ViewChange[] {
   }
   for (const p of prev.players) if (!after.has(p.id)) out.push({ t: "left", player: p });
 
+  if (!prev.started && next.started) out.push({ t: "started" });
   const newRound = prev.phase !== next.phase || prev.round !== next.round;
   if (newRound && next.phase === "voting") out.push({ t: "dealt" });
   if (next.ticket && (prev.ticket?.key !== next.ticket.key || (newRound && next.phase === "voting")))

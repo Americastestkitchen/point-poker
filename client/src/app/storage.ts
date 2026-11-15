@@ -1,6 +1,7 @@
 // Every pp-* key the browser keeps, typed. The only module that knows the key names.
 import { z } from "zod";
 import { Look } from "../../../shared/look.ts";
+import { HouseRules } from "../../../shared/protocol.ts";
 
 /** The subset of the Web Storage API we use; tests pass an in-memory one. */
 export interface StorageLike {
@@ -57,6 +58,18 @@ export function createStorage(s: StorageLike) {
     /** The Jira site you last opened a table on ("" if none). */
     jiraSite: () => s.getItem("pp-jira-site") ?? "",
     setJiraSite: (id: string) => s.setItem("pp-jira-site", id),
+
+    /** The house rules you last dealt with, for your next table ({} if none, or they no longer read). */
+    houseRules(): HouseRules {
+      let saved: unknown;
+      try {
+        saved = JSON.parse(s.getItem("pp-rules") ?? "{}");
+      } catch {
+        /* start over */
+      }
+      return HouseRules.catch({}).parse(saved);
+    },
+    setHouseRules: (rules: HouseRules) => s.setItem("pp-rules", JSON.stringify(rules)),
 
     muted: () => s.getItem("pp-muted") === "1",
     setMuted: (m: boolean) => s.setItem("pp-muted", m ? "1" : "0"),

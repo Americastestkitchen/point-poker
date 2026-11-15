@@ -23,6 +23,7 @@ export function Hand({ cards, label, settle = false, onPress }: HandProps) {
           <PlayingCard
             key={c.value}
             value={c.value}
+            label={c.label}
             selected={c.selected}
             dimmed={c.dimmed}
             {...(c.suggested ? { ribbon: "most votes" } : {})}

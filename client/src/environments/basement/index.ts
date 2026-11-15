@@ -45,7 +45,13 @@ export default {
       hum.start();
       return () => hum.stop();
     });
-    return { object, background: new THREE.Color("#07050a"), fog: new THREE.Fog("#07050a", 6, 16) };
+    return {
+      object,
+      background: new THREE.Color("#07050a"),
+      fog: new THREE.Fog("#07050a", 6, 16),
+      // one lamp over the table: from the lobby's corner most of the picture is the dark around it
+      lobbyExposure: 1.8,
+    };
   },
   tableMaterials: () => ({
     felt: new THREE.MeshStandardMaterial({ map: feltTexture(), roughness: 1 }),

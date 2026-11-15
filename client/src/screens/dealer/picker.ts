@@ -95,19 +95,20 @@ export function pickerErrors(o: { jira: boolean; invalid: string | null; load: T
 
 /**
  * What tells the picker to open or close by itself:
- * - `seen`: the latest view (are you the dealer, is there a ticket on the table);
+ * - `seen`: the latest view (are you the dealer, has the game started, is there a ticket on the table);
  * - `ticketChanged`: a ticket was just dealt.
  */
-export type PickerCue = { t: "seen"; isDealer: boolean; hasTicket: boolean } | { t: "ticketChanged" };
+export type PickerCue = { t: "seen"; isDealer: boolean; started: boolean; hasTicket: boolean } | { t: "ticketChanged" };
 
 /**
  * The picker opens by itself once per stretch without a ticket, for the dealer; dealing a
  * ticket closes it and arms it for the next stretch. `armed` starts true. Dismissing it
- * doesn't re-arm it, so it never pops straight back up.
+ * doesn't re-arm it, so it never pops straight back up. It stays shut in the lobby, where the
+ * room is the point: "Line up tickets" opens it, and so does starting with nothing lined up.
  */
 export function pickerCue(armed: boolean, cue: PickerCue): { armed: boolean; popup: "open" | "close" | null } {
   if (cue.t === "ticketChanged") return { armed: true, popup: "close" };
-  if (cue.isDealer && !cue.hasTicket && armed) return { armed: false, popup: "open" };
+  if (cue.isDealer && cue.started && !cue.hasTicket && armed) return { armed: false, popup: "open" };
   return { armed, popup: null };
 }
 

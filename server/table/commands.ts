@@ -5,12 +5,13 @@
 // changed() to show something before it's done: a change made before it waits on Jira.
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+import { buildDeck, CUSTOM_SCALE, deckWords, EXTRA_CARDS } from "../../shared/catalog/decks.ts";
 import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
 import { ITEM, ITEM_IDS, type ItemId } from "../../shared/catalog/items.ts";
 import { errorMessage } from "../../shared/errors.ts";
 import { LookInput, validateLook } from "../../shared/look.ts";
-import type { Ticket } from "../../shared/protocol.ts";
-import { nextInQueue, parseIssueKey } from "../../shared/rules.ts";
+import { DeckChoice, type Ticket } from "../../shared/protocol.ts";
+import { cardLabel, cardOf, nextInQueue, parseIssueKey, scores } from "../../shared/rules.ts";
 import { payOut, takeBack } from "./coins.ts";
 import {
   changeRevealedVote,
@@ -214,6 +215,41 @@ export const COMMANDS = [
       if (!plays) me.vote = null;
     },
   }),
+  /** Changes the cards the table plays with, between tickets: a scale (or the dealer's own numbers) and the extras. */
+  defineCommand({
+    t: "setDeck",
+    role: "dealer",
+    move: "cards",
+    input: { deck: DeckChoice },
+    run({ s, notice }, me, { deck }) {
+      const cards = buildDeck(deck);
+      if (!cards) return `Your own deck needs at least ${CUSTOM_SCALE.min} different cards`;
+      if (isDeepStrictEqual(cards, s.settings.deck)) return;
+      s.settings.deck = cards;
+      notice(`🃏 The dealer changed the cards: ${deckWords(cards)}`, { except: me.id });
+    },
+  }),
+  /**
+   * Ends the lobby: everyone goes from watching the room to their own seat. With tickets lined
+   * up, the first one is dealt. (Dealing a ticket any other way ends the lobby too.)
+   */
+  defineCommand({
+    t: "start",
+    role: "dealer",
+    move: "anytime",
+    input: {},
+    run(ctx, me) {
+      const { s } = ctx;
+      if (s.started) return;
+      s.started = true;
+      ctx.notice("🎬 The dealer started the game", { except: me.id });
+      const next = s.phase === "waiting" ? nextInQueue(s) : undefined;
+      if (!next) return;
+      // everyone sits down now, while the first ticket is still on its way
+      ctx.changed();
+      return ctx.load(next.key, next.key);
+    },
+  }),
   /** Moves the table to another room. Only the looks change, so it works mid-round. */
   defineCommand({
     t: "setEnvironment",
@@ -240,8 +276,13 @@ export const COMMANDS = [
     role: "dealer",
     move: "reveal",
     input: {},
-    run({ s }) {
+    run({ s, notice }) {
       reveal(s);
+      // a coffee card speaks up for whoever played it
+      for (const p of s.players) {
+        if (p.vote === null || cardOf(s.settings.deck, p.vote)?.label !== EXTRA_CARDS.coffee.label) continue;
+        notice(`${EXTRA_CARDS.coffee.label} ${p.name} could use a break`);
+      }
     },
   }),
   defineCommand({
@@ -257,17 +298,20 @@ export const COMMANDS = [
         s.history.pop();
       }
       const votes = new Map<string, number>();
-      for (const p of s.players) if (p.vote !== null && isVoter(s, p)) votes.set(p.id, p.vote);
+      // the extra cards ("?", "☕") sit this out: they add nothing to the pot and can't win it
+      for (const p of s.players) if (p.vote !== null && scores(p.vote) && isVoter(s, p)) votes.set(p.id, p.vote);
       const result = payOut(s, votes, finalPoints);
       settleRound(s, finalPoints, result);
       const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? id;
+      const label = cardLabel(s.settings.deck, finalPoints);
       const switched = switchedSinceReveal(s)
-        .filter(({ player }) => votes.has(player.id))
+        .filter(({ player, from }) => votes.has(player.id) && scores(from))
         .map(({ player, from, to }) => ({ name: player.name, from, to }));
       s.history.push({
         key: s.ticket?.key ?? "?",
         summary: s.ticket?.summary ?? "",
         finalPoints,
+        ...(label === String(finalPoints) ? {} : { label }),
         pot: result.pot,
         share: result.share,
         winners: result.winners.map(name),

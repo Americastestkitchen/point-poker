@@ -1,10 +1,19 @@
 // Everything a table remembers, as plain JSON. Sockets live in transport/,
 // so saving a table is JSON.stringify and loading it is a schema check.
 import { z } from "zod";
-import { DECKS } from "../../shared/catalog/decks.ts";
+import { buildDeck, DEFAULT_DECK_CHOICE, DEFAULT_SCALE, SCALE } from "../../shared/catalog/decks.ts";
 import { DEFAULT_ENVIRONMENT, ENVIRONMENT_IDS } from "../../shared/catalog/environments.ts";
 import { Look } from "../../shared/look.ts";
-import { Epic, JiraSite, Phase, RoundResult, TableSettings, Ticket, TicketSummary } from "../../shared/protocol.ts";
+import {
+  Epic,
+  JiraSite,
+  Phase,
+  RoundResult,
+  TableSettings,
+  Ticket,
+  TicketSummary,
+  type HouseRules,
+} from "../../shared/protocol.ts";
 
 export const PlayerState = z.object({
   id: z.string(),
@@ -38,6 +47,11 @@ export const TableState = z.object({
   /** The dealer's Jira login (null: the server's shared one, or none). Tables saved before it had none. */
   jira: TableJira.nullable().default(null),
   players: z.array(PlayerState),
+  /**
+   * False while the table is in its lobby: nothing has been dealt and the dealer hasn't said
+   * go. Tables saved before the lobby had no such thing: they were playing.
+   */
+  started: z.boolean().default(true),
   phase: Phase,
   round: z.number(),
   ticket: Ticket.nullable(),
@@ -68,13 +82,22 @@ export type TableState = z.infer<typeof TableState>;
 type Json = string | number | boolean | null | undefined | readonly Json[] | { readonly [key: string]: Json };
 export const jsonSafe = (s: TableState): Json => s;
 
-export function newTableState(code: string, dealerKey: string, now: number, jira: TableJira | null = null): TableState {
+/** A new table, in its lobby, playing by `rules` where they say (the dealer's last table's). */
+export function newTableState(
+  code: string,
+  dealerKey: string,
+  now: number,
+  jira: TableJira | null = null,
+  rules: HouseRules = {},
+): TableState {
+  const deck = buildDeck(rules.deck ?? DEFAULT_DECK_CHOICE) ?? SCALE[DEFAULT_SCALE].cards.map((c) => ({ ...c }));
   return {
     code,
     dealerKey,
     dealerId: null,
     jira,
     players: [],
+    started: false,
     phase: "waiting",
     round: 0,
     ticket: null,
@@ -86,8 +109,8 @@ export function newTableState(code: string, dealerKey: string, now: number, jira
     history: [],
     skipped: [],
     banned: [],
-    settings: { deck: DECKS.classic.cards, dealerPlays: false, environment: "basement" },
-    environment: DEFAULT_ENVIRONMENT,
+    settings: { deck, dealerPlays: rules.dealerPlays ?? false, environment: "basement" },
+    environment: rules.environment ?? DEFAULT_ENVIRONMENT,
     epic: null,
     queue: [],
     queueLabel: "",

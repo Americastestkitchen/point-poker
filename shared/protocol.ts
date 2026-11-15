@@ -1,6 +1,7 @@
 // Messages and views shared by the server and the browser client.
 // Every message is a Zod schema; the TypeScript types come from the schemas.
 import { z } from "zod";
+import { CUSTOM_SCALE, SCALE_IDS } from "./catalog/decks.ts";
 import { EMOTE_IDS } from "./catalog/emotes.ts";
 import { DEFAULT_ENVIRONMENT, ENVIRONMENT_IDS } from "./catalog/environments.ts";
 import { ITEM_IDS } from "./catalog/items.ts";
@@ -44,6 +45,21 @@ export type TicketSummary = z.infer<typeof TicketSummary>;
 export const Epic = z.object({ key: z.string(), summary: z.string(), url: z.string() });
 export type Epic = z.infer<typeof Epic>;
 
+/**
+ * The cards a dealer picks: one of the scales (or their own numbers) and which extra cards go
+ * in. The table turns it into a deck; `choiceOf()` reads it back out of one.
+ */
+export const DeckChoice = z.object({
+  scale: z.enum([...SCALE_IDS, CUSTOM_SCALE.id]),
+  /** What each card of a custom scale says ("1", "left"); the other scales bring their own. */
+  cards: z.array(z.string().max(100)).max(50).default([]),
+  /** A "?" card: no idea. */
+  unsure: z.boolean().default(false),
+  /** A "☕" card: I need a break. */
+  coffee: z.boolean().default(false),
+});
+export type DeckChoice = z.infer<typeof DeckChoice>;
+
 /** The deck and the extra house rules. */
 export const TableSettings = z.object({
   deck: z.array(Card),
@@ -66,7 +82,10 @@ export const PublicPlayer = z.object({
   connected: z.boolean(),
   plays: z.boolean(), // false for a dealer who sits out
   hasVoted: z.boolean(),
-  /** Everyone's once the cards are up; before that only your own. */
+  /**
+   * The card they played: its points, or for a card with none ("?") a negative number (see
+   * `playValue()` in rules.ts). Everyone's once the cards are up; before that only your own.
+   */
   vote: z.number().nullable(),
   /**
    * The card they had at the reveal, once they've changed it since (null until then, or before
@@ -82,6 +101,8 @@ export const RoundResult = z.object({
   key: z.string(),
   summary: z.string(),
   finalPoints: z.number(),
+  /** What the final card said, when that isn't its points (a T-shirt size). */
+  label: z.string().optional(),
   pot: z.number(),
   winners: z.array(z.string()), // names
   share: z.number(),
@@ -95,6 +116,11 @@ export type RoundResult = z.infer<typeof RoundResult>;
 /** What one player gets to see of the table. */
 export const TableView = z.object({
   code: z.string(),
+  /**
+   * False while the table is still in its lobby: people are sitting down and nothing has been
+   * dealt. A server from before the lobby doesn't say, and its tables are always playing.
+   */
+  started: z.boolean().default(true),
   phase: Phase,
   round: z.number(),
   ticket: Ticket.nullable(),
@@ -179,8 +205,20 @@ export type ClientMsg = z.infer<typeof ClientMsg>;
 export const JiraSite = z.object({ id: z.string(), name: z.string(), url: z.string() });
 export type JiraSite = z.infer<typeof JiraSite>;
 
-/** POST /api/rooms's body: which of your Jira sites the table uses, once you've picked one. */
-export const OpenRequest = z.object({ site: z.string().optional() });
+/** The house rules a dealer last played with: their next table opens with them. */
+export const HouseRules = z
+  .object({ deck: DeckChoice, dealerPlays: z.boolean(), environment: z.enum(ENVIRONMENT_IDS) })
+  .partial();
+export type HouseRules = z.infer<typeof HouseRules>;
+
+/**
+ * POST /api/rooms's body: which of your Jira sites the table uses, once you've picked one, and
+ * the house rules to open it with (rules that don't read are left out, not refused).
+ */
+export const OpenRequest = z.object({
+  site: z.string().optional(),
+  rules: HouseRules.optional().catch(undefined),
+});
 export type OpenRequest = z.infer<typeof OpenRequest>;
 
 /** POST /api/rooms: a new table, and the key that makes you its dealer. */

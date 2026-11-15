@@ -1,11 +1,17 @@
 // Your eyes: the camera sits behind your seat and you drag to look around.
 // Where you look is shared (throttled) so your bean turns its head for others.
 // Until you sit down it drifts slowly round the room for the title screens instead.
+// While the table is in its lobby it watches the room from a corner, the same view for
+// everyone; when the game starts it comes down into your seat.
 import * as THREE from "three";
 import type { Layout } from "../layout/layout.ts";
 
 /** How long being flattened lasts, down and back up (seconds). */
 const FLAT = 1.6;
+/** How long the camera takes between the lobby's corner and your seat (seconds). */
+export const SIT_DOWN = 1.8;
+/** This far up from your seat (0 to 1) you see the room from outside, your own bean included. */
+const OUTSIDE = 0.25;
 const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
@@ -31,6 +37,16 @@ export function createCameraRig(
   const { lookAt: l, title } = layout.cameras;
   const lookAt = new THREE.Vector3(l.x, l.y, l.z);
   const titleLookAt = new THREE.Vector3(title.lookAt.x, title.lookAt.y, title.lookAt.z);
+  const { lobby } = layout.cameras;
+  const corner = new THREE.Vector3(lobby.position.x, lobby.position.y, lobby.position.z);
+  /** Which way the camera faces from the corner. */
+  const cornerFacing = new THREE.Quaternion().setFromRotationMatrix(
+    new THREE.Matrix4().lookAt(corner, new THREE.Vector3(lobby.lookAt.x, lobby.lookAt.y, lobby.lookAt.z), camera.up),
+  );
+  /** The table is in its lobby: the camera belongs up in the corner. */
+  let watching = false;
+  /** How far up towards the corner the camera is: 0 in your seat, 1 there. It glides between. */
+  let lift = 0;
   /** Drifting for the title screens until the first seat(). */
   let drifting = true;
   let driftTime = 0;
@@ -44,12 +60,25 @@ export function createCameraRig(
     seat(x: number, z: number, dealer: boolean, snap: boolean) {
       const p = layout.cameras.seat(x, z, dealer);
       target.set(p.x, p.y, p.z);
-      // from the title screens, glide down into the seat rather than jump
-      if (snap && !drifting) pos.copy(target);
+      if (watching) {
+        // into a lobby from the title screens you're up in the corner at once: the two views
+        // face opposite ends of the room, and gliding between them would fly through the lamp
+        if (drifting) lift = 1;
+        // from up there nobody sees your seat move, so the way down starts from where it is now
+        if (lift === 1) pos.copy(target);
+      } else if (snap && !drifting) pos.copy(target); // from the title screens, glide down into the seat rather than jump
       drifting = false;
     },
+    /** The table is in its lobby (watch the room from the corner) or playing (come down into your seat). */
+    watch(on: boolean) {
+      watching = on;
+    },
+    /** How far up towards the lobby's corner the camera is, eased: 0 in your seat, 1 there. */
+    lifted: () => ease(lift),
+    /** Whether the camera is far enough from your seat to see your own bean in it. */
+    outside: () => lift > OUTSIDE,
     drag(dx: number, dy: number) {
-      if (drifting) return;
+      if (drifting || watching) return;
       view.yaw = THREE.MathUtils.clamp(view.yaw - dx * 0.003, -1.9, 1.9);
       view.pitch = THREE.MathUtils.clamp(view.pitch - dy * 0.00225, -0.55, 0.9);
     },
@@ -82,6 +111,19 @@ export function createCameraRig(
       const baseYaw = Math.atan2(-d.x, -d.z);
       const basePitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
       camera.rotation.set(basePitch - view.pitch, baseYaw - view.yaw, 0, "YXZ");
+      // between your seat and the lobby's corner
+      const step = dt / SIT_DOWN;
+      lift = watching ? Math.min(1, lift + step) : Math.max(0, lift - step);
+      const up = ease(lift);
+      if (up > 0) {
+        camera.position.lerp(corner, up);
+        camera.quaternion.slerp(cornerFacing, up);
+      }
+      const zoom = 1 + (lobby.zoom - 1) * up;
+      if (camera.zoom !== zoom) {
+        camera.zoom = zoom;
+        camera.updateProjectionMatrix();
+      }
       gazeTimer += dt;
       if (
         gazeTimer > 0.1 &&

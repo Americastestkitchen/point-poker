@@ -1,8 +1,8 @@
 // Reacting to what happens, from any component: each caller gets its own subscription, made
 // on mount and dropped on unmount. Handlers can change every render; the latest one is called.
 //
-// - useViewChanges: what changed with each new view (ViewChange: synced, joined, left, dealt,
-//   ticketChanged, allIn, revealed, settled), once per new view, with the state it arrived in.
+// - useViewChanges: what changed with each new view (ViewChange: synced, joined, left, started,
+//   dealt, ticketChanged, allIn, revealed, settled), once per new view, with the state it arrived in.
 // - useGameEvents: the event stream (GameEvent: toast, fx, played, openTicket, hit).
 //
 // Nothing is replayed on mount: a component only hears what happens while it's mounted.

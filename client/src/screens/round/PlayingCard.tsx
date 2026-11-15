@@ -6,11 +6,14 @@ import type { PublicPlayer } from "../../../../shared/protocol.ts";
 import { cx, useFocusable } from "../../ui/index.ts";
 import { names } from "../text.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
+import { letters } from "../../../../shared/catalog/decks.ts";
 import { cardFace } from "./card.ts";
 import s from "./PlayingCard.module.css";
 
 export interface PlayingCardProps {
   value: number;
+  /** What the card says: its number, a T-shirt size, "?". */
+  label: string;
   /** Lit up: the card you played, or the final call. */
   selected?: boolean;
   /** Faded back, because another card is lit. */
@@ -29,6 +32,7 @@ export interface PlayingCardProps {
 
 export function PlayingCard({
   value,
+  label,
   selected = false,
   dimmed = false,
   ribbon,
@@ -38,7 +42,8 @@ export function PlayingCard({
   roving,
   onKeyDown,
 }: PlayingCardProps) {
-  const face = cardFace(value);
+  const face = cardFace(value, label);
+  const { length } = letters(label);
   const focus = useFocusable();
   const about = useId();
   const said = [
@@ -51,7 +56,7 @@ export function PlayingCard({
     .join(". ");
   const corner = (
     <>
-      <span>{value}</span>
+      <span>{label}</span>
       <span>{face.glyph}</span>
     </>
   );
@@ -61,9 +66,17 @@ export function PlayingCard({
       {...focus}
       {...roving}
       onKeyDown={onKeyDown}
-      className={cx(s.card, face.red && s.red, selected && s.selected, dimmed && s.dimmed, ribbon && s.suggested)}
-      style={{ "--tilt": `${face.tilt}deg`, "--i": index }}
-      aria-label={`${value} ${value === 1 ? "point" : "points"}`}
+      className={cx(
+        s.card,
+        face.red && s.red,
+        length > 1 && s.long,
+        length > 3 && s.wordy,
+        selected && s.selected,
+        dimmed && s.dimmed,
+        ribbon && s.suggested,
+      )}
+      style={{ "--tilt": `${face.tilt}deg`, "--i": index, "--len": length }}
+      aria-label={label === String(value) ? `${value} ${value === 1 ? "point" : "points"}` : label}
       aria-pressed={selected}
       aria-describedby={said ? about : undefined}
       onClick={onPress}
@@ -71,7 +84,7 @@ export function PlayingCard({
       <span className={s.face} aria-hidden>
         <span className={cx(s.corner, s.tl)}>{corner}</span>
         <span className={s.suit}>{face.glyph}</span>
-        <span className={s.num}>{value}</span>
+        <span className={s.num}>{label}</span>
         <span className={cx(s.corner, s.br)}>{corner}</span>
       </span>
       {ribbon && (

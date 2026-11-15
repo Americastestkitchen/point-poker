@@ -1,5 +1,5 @@
 // Test helpers: small table views to diff and act on.
-import { DECKS } from "../../../shared/catalog/decks.ts";
+import { SCALE } from "../../../shared/catalog/decks.ts";
 import type { PublicPlayer, TableView } from "../../../shared/protocol.ts";
 
 export function player(id: string, extra: Partial<PublicPlayer> = {}): PublicPlayer {
@@ -23,6 +23,7 @@ export function player(id: string, extra: Partial<PublicPlayer> = {}): PublicPla
 export function view(extra: Partial<TableView> = {}): TableView {
   return {
     code: "ABCD",
+    started: true,
     phase: "waiting",
     round: 0,
     ticket: null,
@@ -39,7 +40,7 @@ export function view(extra: Partial<TableView> = {}): TableView {
     history: [],
     skipped: [],
     jiraEnabled: false,
-    settings: { deck: DECKS.classic.cards, dealerPlays: false, environment: "basement" },
+    settings: { deck: [...SCALE.classic.cards], dealerPlays: false, environment: "basement" },
     environment: "basement",
     epic: null,
     queue: [],

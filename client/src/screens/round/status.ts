@@ -1,8 +1,9 @@
 // The status line's words: where the round is (Pick → Reveal → Settle), one line of what's
 // happening, and while voting who has picked. Pure; StatusLine.tsx draws it.
 import type { PublicPlayer, TableView } from "../../../../shared/protocol.ts";
+import { deckWords } from "../../../../shared/catalog/decks.ts";
 import { voters } from "../../../../shared/rules.ts";
-import { pointsWord } from "../text.ts";
+import { finalWords } from "../text.ts";
 
 export type StepState = "done" | "current" | "idle";
 
@@ -13,6 +14,11 @@ export interface Status {
   line: string;
   /** While voting, every voter and whether they've picked; null otherwise. */
   voters: { player: PublicPlayer; voted: boolean; label: string }[] | null;
+  /**
+   * In the lobby, in place of the steps: the house rules in a few words, and everyone who has
+   * sat down (the dots beside the line). Null once the game has started.
+   */
+  lobby: { cards: string; dealer: string; players: PublicPlayer[] } | null;
 }
 
 const STEPS = ["Pick", "Reveal", "Settle"] as const;
@@ -27,6 +33,19 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
     label,
     state: i + 1 < step ? "done" : i + 1 === step ? "current" : "idle",
   }));
+
+  if (!room.started)
+    return {
+      steps,
+      idle: true,
+      line: `${room.players.length} at the table`,
+      voters: null,
+      lobby: {
+        cards: deckWords(room.settings.deck),
+        dealer: room.settings.dealerPlays ? "Dealer plays too" : "Dealer sits out",
+        players: room.players,
+      },
+    };
 
   let line: string;
   switch (room.phase) {
@@ -43,7 +62,7 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
       line = dealer ? "Choose the final points below" : "The dealer is choosing the final points…";
       break;
     case "settled":
-      line = `Final: ${room.finalPoints} ${pointsWord(room.finalPoints)}`;
+      line = `Final: ${finalWords(room.settings.deck, room.finalPoints)}`;
       break;
   }
 
@@ -59,5 +78,6 @@ export function statusModel(room: TableView, meId: string | undefined, myVote: n
             label: `${p.name}${p.hasVoted ? " ✓" : " is thinking…"}`,
           }))
         : null,
+    lobby: null,
   };
 }

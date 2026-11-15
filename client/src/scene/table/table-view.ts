@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { EMOTE } from "../../../../shared/catalog/emotes.ts";
 import type { Fx } from "../../../../shared/protocol.ts";
-import { cardValues, voters } from "../../../../shared/rules.ts";
+import { cardLabel, playValues, voters } from "../../../../shared/rules.ts";
 import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
@@ -45,6 +45,8 @@ export function mountTableView(
   const seats = new Map<string, Seat>();
 
   const meId = () => store.getState().me?.id ?? "";
+  /** What a card value says in this table's deck: a number, a T-shirt size, "?". */
+  const says = (value: number) => cardLabel(store.getState().room?.settings.deck ?? [], value);
   const items = createItemPlays(stage, {
     audio,
     layout,
@@ -53,6 +55,7 @@ export function mountTableView(
     me: meId,
     seat: (id) => seats.get(id),
     flattened: rig.flatten,
+    outside: rig.outside,
   });
 
   // Each new view redraws the table, and what changed in it shapes the animation.
@@ -78,6 +81,8 @@ export function mountTableView(
     });
     const payingOut = potDoes === "payOut";
 
+    // in the lobby everyone watches the room from its corner; Start brings the camera down
+    rig.watch(!st.started);
     const players = st.players.filter((p) => !p.isDealer).toSorted((a, b) => a.seat - b.seat);
     const count = players.length;
     const slotOf = new Map<string, number>(players.map((p, i) => [p.id, i]));
@@ -98,14 +103,14 @@ export function mountTableView(
       let seat = seats.get(p.id);
       if (!seat) {
         // clicking someone uses the hand item you've picked on them
-        seat = createSeat(stage, p, { layout, onPick: mine ? undefined : () => actions.items.use(p.id) });
+        seat = createSeat(stage, p, { layout, says, onPick: mine ? undefined : () => actions.items.use(p.id) });
         seats.set(p.id, seat);
       }
       seat.place(slot, count, mine);
       const { avatar, card } = seat;
       avatar.setLook(p.look);
       avatar.setTag(p.name + (p.isDealer ? " 🎩" : ""), p.chips, p.look.color, p.connected);
-      avatar.setFirstPerson(mine);
+      avatar.setFirstPerson(mine && !rig.outside());
 
       if (mine) {
         const s = layout.seat(slot, count);
@@ -191,7 +196,7 @@ export function mountTableView(
             key: t.key,
             type: t.type,
             summary: t.summary,
-            points: st.finalPoints !== null && st.phase === "settled" ? `${st.finalPoints} PTS` : "",
+            points: st.finalPoints !== null && st.phase === "settled" ? final(st.finalPoints) : "",
           }
         : null,
     );
@@ -201,10 +206,16 @@ export function mountTableView(
         ? `${playing.filter((p) => p.hasVoted).length}/${playing.length} BETS IN`
         : st.phase === "revealed"
           ? `POT ${st.pot}`
-          : st.phase === "settled"
-            ? `FINAL ${st.finalPoints} PTS`
+          : st.phase === "settled" && st.finalPoints !== null
+            ? `FINAL ${final(st.finalPoints)}`
             : "";
     screen.show(t?.key ?? "NO TICKET", t?.summary ?? "the dealer is shuffling the backlog", status);
+  }
+
+  /** The final call as the ticket and the screen stamp it: "5 PTS", or what the card says when that's a size. */
+  function final(points: number) {
+    const label = says(points);
+    return label === String(points) ? `${points} PTS` : label;
   }
 
   /** After the reveal: the bean grabs its card back off the felt and slaps the new one down, face up. */
@@ -273,7 +284,7 @@ export function mountTableView(
             seat.card.nudge(0.2);
           } else {
             // your card flies from your hand to the felt, and your arm puts it down and pats it
-            const deck = cardValues(store.getState().room?.settings.deck ?? []);
+            const deck = playValues(store.getState().room?.settings.deck ?? []);
             const i = deck.indexOf(e.value);
             const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
             seat.card.show(e.value, from);
@@ -295,6 +306,8 @@ export function mountTableView(
   return {
     mine: () => seats.get(meId())?.avatar ?? null,
     update(dt, t) {
+      // your own bean is in the picture while the camera is up in the lobby's corner, and gone once it's in your seat
+      seats.get(meId())?.avatar.setFirstPerson(!rig.outside());
       for (const s of seats.values()) s.update(dt, t);
     },
   };

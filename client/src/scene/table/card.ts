@@ -73,7 +73,7 @@ type Facing =
   | { side: "up" };
 
 /** A playing card: two faces back to back. */
-function cardMesh() {
+function cardMesh(says: (value: number) => string) {
   const g = new THREE.Group();
   const geo = new THREE.PlaneGeometry(CARD_W, CARD_H);
   const frontMat = new THREE.MeshStandardMaterial({ map: cardBack(), roughness: 0.55 });
@@ -83,15 +83,16 @@ function cardMesh() {
   front.castShadow = back.castShadow = true;
   g.add(front, back);
   const setValue = (value: number | null) => {
-    frontMat.map = value === null ? cardBack() : cardFront(value);
+    frontMat.map = value === null ? cardBack() : cardFront(value, says(value));
     frontMat.needsUpdate = true;
   };
   return { object: g, setValue };
 }
 
-export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
+/** `says` is what a card value has printed on it in this table's deck ("5", "XL", "?"). */
+export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value: number) => string): TableCard {
   const group = new THREE.Group();
-  const card = cardMesh();
+  const card = cardMesh(says);
   card.object.scale.setScalar(1.5);
   group.add(card.object);
   group.visible = false;
@@ -262,7 +263,7 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
       }
       if (flip > 0.98 && value !== null && !self.noFloat && place.at === "felt") {
         if (!float.visible || floatShows !== value) {
-          float.material.map = cardFront(value);
+          float.material.map = cardFront(value, says(value));
           float.material.needsUpdate = true;
           float.visible = true;
           floatShows = value;
@@ -274,7 +275,7 @@ export function createTableCard(scene: THREE.Scene, layout: Layout): TableCard {
         const tagFor = was !== null && was !== value ? `${was}:${value}` : null;
         tag.visible = tagFor !== null;
         if (tagFor !== null && tagShows !== tagFor && was !== null) {
-          tag.material.map = swapTag(was, value);
+          tag.material.map = swapTag(says(was), says(value));
           tag.material.needsUpdate = true;
           tagShows = tagFor;
         }

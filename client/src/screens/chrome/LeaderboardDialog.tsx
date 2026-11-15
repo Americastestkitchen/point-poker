@@ -107,7 +107,7 @@ function Round({ round }: { round: RoundResult }) {
       <span className={s.arrow} aria-hidden>
         →
       </span>
-      <span className={s.points}>{round.finalPoints} pts</span>
+      <span className={s.points}>{round.label ?? `${round.finalPoints} pts`}</span>
       <span className={s.sep} aria-hidden>
         ·
       </span>

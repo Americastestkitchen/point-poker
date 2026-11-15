@@ -12,6 +12,7 @@ import { errorMessage } from "../../../shared/errors.ts";
 import type { EnvironmentId } from "../../../shared/catalog/environments.ts";
 import { itemAfter, type ItemId } from "../../../shared/catalog/items.ts";
 import type { Look } from "../../../shared/look.ts";
+import type { DeckChoice } from "../../../shared/protocol.ts";
 import { coolingFor } from "./items.ts";
 import type { Session } from "./session.ts";
 import { myPlayer, type Store } from "./store.ts";
@@ -39,6 +40,10 @@ export function createActions(
     loadSprint: () => run({ t: "fetchQueue" }),
     clearQueue: () => run({ t: "clearQueue" }),
     setPlays: (plays: boolean) => run({ t: "dealerPlays", plays }),
+    /** Changes the cards the table plays with (between tickets only). */
+    setDeck: (deck: DeckChoice) => run({ t: "setDeck", deck }),
+    /** Ends the lobby: everyone sits down, and the first lined-up ticket is dealt. */
+    start: () => run({ t: "start" }),
     /** Moves the table to another room, for everyone. */
     moveTo: (environment: EnvironmentId) => run({ t: "setEnvironment", environment }),
     deal: () => run({ t: "deal" }),
@@ -107,6 +112,8 @@ export function createActions(
       loadSprint: told(wait.loadSprint),
       clearQueue: told(wait.clearQueue),
       setPlays: told(wait.setPlays),
+      setDeck: told(wait.setDeck),
+      start: told(wait.start),
       /** Moves the table to another room, for everyone. */
       moveTo: told(wait.moveTo),
       deal: told(wait.deal),

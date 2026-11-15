@@ -42,6 +42,11 @@ export interface Backdrop {
   fog: THREE.Fog | null;
   /** How bright the camera sees the room (tone mapping exposure); the stage's default if left out. */
   exposure?: number;
+  /**
+   * How bright the lobby's camera sees it, up in its corner: for a room lit by one lamp over
+   * the table, where the corner's picture is mostly shadow. The same as from a seat if left out.
+   */
+  lobbyExposure?: number;
 }
 
 /** What a room is handed to build with. Everything it registers here goes when the room does. */

@@ -212,3 +212,20 @@
       box-shadow var(--pp-motion-base);
   }
 }
+
+/* a card that says more than one character ("13", "XL") prints it a size down, so it stays on the card */
+.long .num {
+  font-size: 40cqw;
+  letter-spacing: -2px;
+}
+.long .corner {
+  font-size: 16cqw;
+}
+/* a word ("left", "huge") is printed in the middle only, as big as its letters leave room for */
+.wordy .num {
+  font-size: min(40cqw, calc(125cqw / var(--len)));
+  letter-spacing: 0;
+}
+.wordy .corner span:first-child {
+  display: none;
+}

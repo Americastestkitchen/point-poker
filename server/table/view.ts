@@ -27,6 +27,7 @@ export function viewFor(
   }));
   return {
     code: s.code,
+    started: s.started,
     phase: s.phase,
     round: s.round,
     ticket: s.ticket,

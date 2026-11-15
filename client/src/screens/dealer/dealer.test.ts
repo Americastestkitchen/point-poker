@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player, ticket, view } from "../../app/fixtures.ts";
+import { buildDeck } from "../../../../shared/catalog/decks.ts";
 import { kickConfirm, othersOf, playerState, roundActions, skipPlan } from "./panel.ts";
+import { cardsLocked, ownText, scaleLabels, scaleName, typedCards } from "./rules.ts";
 import {
   BAD_KEY,
   jiraSubmit,
@@ -154,7 +156,12 @@ function run(cues: PickerCue[]) {
     return next.popup;
   });
 }
-const seen = (isDealer: boolean, hasTicket: boolean): PickerCue => ({ t: "seen", isDealer, hasTicket });
+const seen = (isDealer: boolean, hasTicket: boolean, started = true): PickerCue => ({
+  t: "seen",
+  isDealer,
+  started,
+  hasTicket,
+});
 
 test("it opens by itself once per stretch without a ticket, and not again after being dismissed", () => {
   assert.deepEqual(run([seen(true, false), seen(true, false), seen(true, false)]), ["open", null, null]);
@@ -190,4 +197,38 @@ test("the footer counts everyone but the dealer, with up to eight dots", () => {
     text: "Nobody's here yet",
     nobody: true,
   });
+});
+
+test("it stays shut in the lobby, and opens once the game starts with no ticket", () => {
+  assert.deepEqual(run([seen(true, false, false), seen(true, false, false), seen(true, false, true)]), [
+    null,
+    null,
+    "open",
+  ]);
+});
+
+// ---------------------------------------------------------------- house rules
+
+test("your own cards: a list with commas between them, or just spaces", () => {
+  assert.deepEqual(typedCards("left,right"), ["left", "right"]);
+  assert.deepEqual(typedCards("A, b, c"), ["A", " b", " c"]);
+  assert.deepEqual(typedCards("tiny, quite big; huge"), ["tiny", " quite big", " huge"], "a card can say two words");
+  assert.deepEqual(typedCards("4 6 10"), ["4", "6", "10"], "no commas: the spaces split them");
+  assert.equal(ownText(buildDeck({ scale: "classic", cards: [], unsure: true, coffee: false })!), "1, 2, 3, 5, 8");
+  assert.equal(
+    ownText(buildDeck({ scale: "custom", cards: ["left", "right"], unsure: true, coffee: false })!),
+    "left, right",
+  );
+  assert.deepEqual(scaleLabels("custom", "A, b, c,"), ["A", "b", "c"]);
+  assert.deepEqual(scaleLabels("custom", ""), []);
+  assert.deepEqual(scaleLabels("tshirt", ""), ["XS", "S", "M", "L", "XL"]);
+  assert.deepEqual(scaleLabels("custom", "4 6 10"), ["4", "6", "10"]);
+  assert.deepEqual([scaleName("classic"), scaleName("custom")], ["The Usual", "Roll your own"]);
+});
+
+test("the cards are locked while a round is live", () => {
+  assert.deepEqual(
+    (["waiting", "voting", "revealed", "settled"] as const).map((phase) => cardsLocked(phase) !== null),
+    [false, true, true, false],
+  );
 });

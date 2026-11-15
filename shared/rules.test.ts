@@ -1,6 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allIn, favourite, nextInQueue, parseIssueKey, tally, voters } from "./rules.ts";
+import { buildDeck } from "./catalog/decks.ts";
+import {
+  allIn,
+  cardLabel,
+  cardOf,
+  cardValues,
+  favourite,
+  nextInQueue,
+  parseIssueKey,
+  playValues,
+  scores,
+  tally,
+  voters,
+} from "./rules.ts";
 
 test("issue keys come out of links and bare keys", () => {
   assert.equal(parseIssueKey("https://x.atlassian.net/browse/SD-1975"), "SD-1975");
@@ -54,4 +67,18 @@ test("the next ticket skips what's played, skipped or on the table, and prefers 
     "pointed ones still come up last",
   );
   assert.equal(nextInQueue({ queue: [q("A-1")], history: [{ key: "A-1" }], skipped: [], ticket: null }), undefined);
+});
+
+test("a card is played as its points, and a card with none as minus its place in the deck", () => {
+  const deck = buildDeck({ scale: "tshirt", cards: [], unsure: true, coffee: true })!;
+  assert.deepEqual(playValues(deck), [1, 2, 3, 5, 8, -6, -7]);
+  assert.deepEqual(cardValues(deck), [1, 2, 3, 5, 8], "only cards with points can be the final call");
+  assert.equal(cardLabel(deck, 3), "M");
+  assert.equal(cardLabel(deck, -6), "?");
+  assert.equal(cardLabel(deck, -7), "☕");
+  assert.equal(cardOf(deck, 13), undefined, "not in this deck");
+  assert.equal(cardOf(deck, -1), undefined, "the first card has points: it isn't played as -1");
+  assert.equal(cardOf(deck, -9), undefined);
+  assert.equal(cardLabel(deck, 13), "13", "a value the deck doesn't know says its number");
+  assert.deepEqual([scores(0), scores(8), scores(-6)], [true, true, false]);
 });
