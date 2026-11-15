@@ -1,6 +1,7 @@
 // The dealer's ticket picker (popup "picker"): a Jira link or key (a pasted one
 // deals at once), "Or pick from this sprint", the lined-up tickets, "No Jira ticket? Type it
-// in", who's at the table with the invite link, and "I play a card too".
+// in", and who's at the table with the invite link. ("I play a card too" lives in the dealer
+// menu's house rules.)
 // Loads go through useGame().ticketLoad: while one runs the form waits with a spinner; a failure
 // opens this popup with the reason in the form (ticketLoad already bonked; no toast here).
 // It opens by itself once per stretch without a ticket and closes when one is dealt (picker.ts
@@ -10,18 +11,7 @@
 // Dealer only: it follows the role. The decisions live in picker.ts.
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import type { TableView } from "../../../../shared/protocol.ts";
-import {
-  Button,
-  cx,
-  Dialog,
-  ScrollArea,
-  Spinner,
-  TextField,
-  Toggle,
-  useFocusable,
-  useRoving,
-  useUi,
-} from "../../ui/index.ts";
+import { Button, cx, Dialog, ScrollArea, Spinner, TextField, useFocusable, useRoving, useUi } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, usePopup, useRoom, useTicketLoad } from "../game.tsx";
 import { useViewChanges } from "../moments.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
@@ -334,9 +324,8 @@ function QueueItem({
   );
 }
 
-/** Who's here, the invite link (the thing to do while nobody is) and "I'll vote too". */
+/** Who's here, and the invite link (the thing to do while nobody is). */
 function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
-  const { actions } = useGame();
   const people = peopleLine(room.players);
   return (
     <footer className={s.foot}>
@@ -351,11 +340,6 @@ function Footer({ room, onInvite }: { room: TableView; onInvite: () => void }) {
           🔗 Copy invite link
         </Button>
       </div>
-      <Toggle
-        label="🃏 I play a card too"
-        checked={room.settings.dealerPlays}
-        onChange={(on) => actions.dealer.setPlays(on)}
-      />
     </footer>
   );
 }

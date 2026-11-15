@@ -1,6 +1,6 @@
 // The always-visible top bar: only what you need at a glance, right to left from
 // the corner: the menu (☰, Esc), the mic, your coins (the leaderboard) and, for the dealer, the
-// dealer's controls. A line about the connection shows up beside them while it's down.
+// dealer menu. A line about the connection shows up beside them while it's down.
 // Invite, Character, Sound and Help live in the game menu.
 import { useRef } from "react";
 import { Button, CoinCounter, cx, KeyHint, Spinner, Tooltip } from "../../ui/index.ts";
@@ -29,8 +29,8 @@ export function TopBar() {
         {iAmDealer && (
           // its tip opens to the right: it's the leftmost button, and on a phone that's mid-screen
           <span className={s.tipStart}>
-            <Tooltip text="Dealer controls: skip, cancel, kick" side="bottom">
-              <Button shape="pill" size="md" className={s.dealer} aria-label="Dealer controls" {...dealerTap}>
+            <Tooltip text="Dealer menu: the round, the players, the house rules" side="bottom">
+              <Button shape="pill" size="md" className={s.dealer} aria-label="Dealer menu" {...dealerTap}>
                 <span aria-hidden>🎩</span>
                 <span className={s.wide} aria-hidden>
                   Dealer

@@ -17,6 +17,7 @@ import { Panel } from "../kit/Panel.tsx";
 import { ScrollArea } from "../kit/ScrollArea.tsx";
 import { Slider } from "../kit/Slider.tsx";
 import { Spinner } from "../kit/Spinner.tsx";
+import { Tabs } from "../kit/Tabs.tsx";
 import { TextField } from "../kit/TextField.tsx";
 import { Toast } from "../kit/Toast.tsx";
 import { Toggle } from "../kit/Toggle.tsx";
@@ -69,6 +70,18 @@ const MENU = [
 ] as const;
 type MenuId = (typeof MENU)[number]["id"];
 
+const TABS = [
+  { id: "sound", label: "Sound" },
+  { id: "video", label: "Video" },
+  { id: "controls", label: "Controls" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+const TAB_TEXT: Record<TabId, string> = {
+  sound: "Music, effects and the mic.",
+  video: "Shadows, sparkles and how sharp it all is.",
+  controls: "Which keys do what.",
+};
+
 const HATS = fitting("head");
 
 const SNACKS = [
@@ -102,6 +115,7 @@ export function Gallery({ audio }: { audio: Audio }) {
   const [field, setField] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [on, setOn] = useState(true);
+  const [tab, setTab] = useState<TabId>("sound");
   const submitField = (v: string) => {
     if (/^[A-Z]+-\d+$/i.test(v.trim())) {
       setFieldError("");
@@ -331,6 +345,28 @@ export function Gallery({ audio }: { audio: Audio }) {
             />
           )}
         />
+      </Section>
+
+      <Section name="Tabs" note="←/→ move between tabs, Enter or a click picks one. The mouse only moves the focus.">
+        <States
+          wide
+          render={(demo) => (
+            <Tabs
+              label="Settings"
+              tabs={TABS}
+              value="sound"
+              onChange={() => {}}
+              demo={demo ? { id: "video", state: demo } : undefined}
+            >
+              <p className={s.note}>The sound tab.</p>
+            </Tabs>
+          )}
+        />
+        <div className={s.row}>
+          <Tabs label="Settings" tabs={TABS} value={tab} onChange={setTab}>
+            <p className={s.note}>{TAB_TEXT[tab]}</p>
+          </Tabs>
+        </div>
       </Section>
 
       <Section name="Carousel">

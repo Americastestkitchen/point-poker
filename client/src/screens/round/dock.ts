@@ -64,7 +64,7 @@ export type DockAction =
   | { t: "reveal"; voted: number; of: number; everyone: boolean }
   /** Deal the same ticket again. */
   | { t: "restart"; label: "Restart vote" | "Vote again" }
-  /** Skip this ticket (no payout) and deal the next one in the queue, as the dealer panel's Skip does. */
+  /** Skip this ticket (no payout) and deal the next one in the queue, as the dealer menu's Skip does. */
   | { t: "skip" }
   /** Deal the next ticket in the queue. */
   | { t: "next"; key: string }

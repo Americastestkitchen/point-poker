@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { player, ticket, view } from "../../app/fixtures.ts";
 import { buildDeck } from "../../../../shared/catalog/decks.ts";
-import { kickConfirm, othersOf, playerState, roundActions, skipPlan } from "./panel.ts";
+import { kickConfirm, landingTab, othersOf, playerState, roundActions, roundCard, skipPlan } from "./panel.ts";
 import { cardsLocked, ownText, scaleLabels, scaleName, typedCards } from "./rules.ts";
 import {
   BAD_KEY,
@@ -21,36 +21,56 @@ import {
 const q = (key: string, points: number | null = null) => ({ key, summary: `About ${key}`, points, status: "To Do" });
 const result = (key: string) => ({ key, summary: "", finalPoints: 3, pot: 0, winners: [], share: 0 });
 
-// ---------------------------------------------------------------- the panel
+// ---------------------------------------------------------------- the dealer menu
+
+test("the menu opens on the house rules in the lobby, and on this round once the game is on", () => {
+  assert.equal(landingTab(view({ started: false })), "rules");
+  assert.equal(landingTab(view({ started: true })), "round");
+});
+
+test("the round card: the ticket and how the round is going, or what to do without one", () => {
+  const players = [player("deb", { isDealer: true, plays: false }), player("ann", { hasVoted: true }), player("bob")];
+  const on = (phase: "waiting" | "voting" | "revealed" | "settled") =>
+    roundCard(view({ phase, ticket: ticket("SD-1"), players }));
+  assert.deepEqual(on("voting"), { key: "SD-1", title: "About SD-1", line: "1 of 2 cards down", empty: false });
+  assert.equal(on("revealed").line, "The cards are up");
+  assert.equal(on("settled").line, "Pointed");
+  assert.equal(roundCard(view({ started: false })).title, "No ticket yet");
+  assert.equal(roundCard(view({ started: true })).title, "No ticket on the table");
+  assert.equal(roundCard(view()).empty, true);
+});
 
 test("round actions are only live while voting or revealed; picking a ticket always is", () => {
   const enabled = (phase: "waiting" | "voting" | "revealed" | "settled") =>
     roundActions(view({ phase }))
       .map((a) => `${a.id}:${a.enabled}`)
       .join(" ");
-  assert.equal(enabled("waiting"), "restart:false skip:false cancel:false pick:true");
-  assert.equal(enabled("voting"), "restart:true skip:true cancel:true pick:true");
-  assert.equal(enabled("revealed"), "restart:true skip:true cancel:true pick:true");
-  assert.equal(enabled("settled"), "restart:false skip:false cancel:false pick:true");
+  assert.equal(enabled("waiting"), "restart:false skip:false pick:true cancel:false");
+  assert.equal(enabled("voting"), "restart:true skip:true pick:true cancel:true");
+  assert.equal(enabled("revealed"), "restart:true skip:true pick:true cancel:true");
+  assert.equal(enabled("settled"), "restart:false skip:false pick:true cancel:false");
   assert.deepEqual(
     roundActions(view())
       .filter((a) => a.danger)
       .map((a) => a.id),
     ["cancel"],
   );
+  const pick = (t: ReturnType<typeof ticket> | null) => roundActions(view({ ticket: t })).find((a) => a.id === "pick");
+  assert.equal(pick(null)?.label, "🗂️ Pick a ticket");
+  assert.equal(pick(ticket("SD-1"))?.label, "🗂️ Pick a different ticket");
 });
 
 test("skip says which ticket comes next, and waits for it like a load; with none queued it just skips", () => {
   const queued = view({ phase: "voting", ticket: ticket("SD-1"), queue: [q("SD-1"), q("SD-2", 3), q("SD-3")] });
   assert.equal(
     roundActions(queued).find((a) => a.id === "skip")?.sub,
-    "no payout · next SD-3",
+    "No payout · next up SD-3",
     "the next one without points goes first",
   );
   assert.deepEqual(skipPlan(queued), { t: "load", text: "Skipping to SD-3…" });
 
   const alone = view({ phase: "voting", ticket: ticket("SD-1") });
-  assert.equal(roundActions(alone).find((a) => a.id === "skip")?.sub, "no payout");
+  assert.equal(roundActions(alone).find((a) => a.id === "skip")?.sub, "No payout");
   assert.deepEqual(skipPlan(alone), { t: "do" });
 });
 

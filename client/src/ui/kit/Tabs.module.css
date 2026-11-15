@@ -1,0 +1,65 @@
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pp-space-4);
+  min-height: 0;
+}
+
+/* one segmented bar: the chosen tab is a gold chip */
+.list {
+  flex: none;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  background: var(--pp-color-well);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-lg);
+}
+
+.tab {
+  min-width: 0;
+  padding: var(--pp-space-2) var(--pp-space-2);
+  font: inherit;
+  font-family: var(--pp-font-display);
+  font-size: var(--pp-size-md);
+  font-weight: var(--pp-weight-strong);
+  color: var(--pp-color-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--pp-radius-md);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  transition:
+    color var(--pp-motion-base),
+    background var(--pp-motion-base),
+    transform var(--pp-motion-fast);
+}
+.tab:hover,
+.tab[data-demo="hover"] {
+  color: var(--pp-color-dim);
+}
+.tab:focus,
+.tab[data-demo="focus"] {
+  color: var(--pp-color-ink);
+  border-color: var(--pp-color-edge);
+  box-shadow: var(--pp-glow-focus);
+}
+.tab:active,
+.tab[data-demo="pressed"] {
+  transform: translateY(1px);
+}
+.tab[aria-selected="true"] {
+  color: var(--pp-color-gold-ink);
+  background: linear-gradient(var(--pp-color-gold-hi), var(--pp-color-gold-mid) 55%, var(--pp-color-gold-low));
+  border-color: var(--pp-color-gold-hi);
+}
+
+.panel {
+  min-height: 0;
+}

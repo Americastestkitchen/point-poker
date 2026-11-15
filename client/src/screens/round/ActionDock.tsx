@@ -197,7 +197,7 @@ function Action({ action }: { action: DockAction }) {
       );
     case "rules":
       return (
-        <Button variant="link" size="sm" className={s.link} onPress={() => store.popupOpened("rules")}>
+        <Button variant="link" size="sm" className={s.link} onPress={() => store.popupOpened("dealer")}>
           House rules
         </Button>
       );
