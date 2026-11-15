@@ -35,7 +35,7 @@ export function DealerMenu() {
   }, [store, popup.open, isDealer]);
   if (!isDealer) return null;
   return (
-    <Dialog open={popup.open} onClose={popup.close} title="🎩 Dealer" width="sm">
+    <Dialog open={popup.open} onClose={popup.close} title="🎩 Dealer">
       <MenuBody />
     </Dialog>
   );
