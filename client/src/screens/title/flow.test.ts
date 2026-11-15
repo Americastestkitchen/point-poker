@@ -86,6 +86,22 @@ test("joining by code: asks once, says why a closed table failed, sits you at an
   assert.deepEqual(run(joining, [{ t: "codeEntered", code: "AB" }]).effects, [], "a short code isn't asked about");
 });
 
+test("a pasted link that isn't ours says why in the panel, until a code is asked about", () => {
+  const joining = run(menu(true), [{ t: "pick", item: "join" }]).state;
+  const rejected = run(joining, [{ t: "linkRejected", reason: "Not ours." }]);
+  assert.deepEqual(rejected.view, { t: "join", checking: null, error: "Not ours." });
+  assert.deepEqual(rejected.effects, [], "the panel shows it, not a toast");
+  assert.deepEqual(run(rejected.state, [{ t: "codeEntered", code: "ABCD" }]).view, {
+    t: "join",
+    checking: "ABCD",
+    error: null,
+  });
+
+  const asked = run(joining, [{ t: "codeEntered", code: "ABCD" }]).state;
+  assert.deepEqual(run(asked, [{ t: "linkRejected", reason: "Not ours." }]).view, asked.view, "not while checking");
+  assert.deepEqual(run(menu(true), [{ t: "linkRejected", reason: "Not ours." }]).view, { t: "menu" });
+});
+
 test("going Back while a typed code is checked: its answer can't sit you down", () => {
   const asked = run(menu(true), [
     { t: "pick", item: "join" },

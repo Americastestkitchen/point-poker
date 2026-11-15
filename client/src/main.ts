@@ -70,6 +70,7 @@ const game = createGameUi({
   mic: createMic(),
   title: {
     inviteCode: invite,
+    here: location.origin + location.pathname,
     signedIn: takeSignIn(),
     tables,
     signIn: () => location.assign("/auth/jira/start"),

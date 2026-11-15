@@ -9,6 +9,8 @@ import { start, step, type SignedIn, type Step, type TitleEffect, type TitleEven
 export interface Title {
   /** The table code from the invite link (`?room=`), or "" when the site was opened directly. */
   inviteCode: string;
+  /** This page's address (origin and path), to tell a pasted invite link from another site's. */
+  here: string;
   /** How the Jira sign-in you just came back from went (null: you didn't). */
   signedIn: SignedIn;
   /** Opening a table, and checking an invite's table is still open. */

@@ -13,6 +13,11 @@ export interface CodeSlotsProps {
   onComplete?: (code: string) => void;
   length?: number;
   alphabet?: string;
+  /**
+   * Reads a paste yourself, e.g. a link with a code inside it. Return the code to fill in ("" to
+   * empty the slots), or null to take the paste like typing.
+   */
+  readPaste?: (text: string) => string | null;
   /** Shakes and turns the slots red, e.g. "no table with that code". */
   error?: boolean;
   disabled?: boolean;
@@ -31,6 +36,7 @@ export function CodeSlots({
   onComplete,
   length = 4,
   alphabet = LETTERS,
+  readPaste,
   error,
   disabled,
   autoFocus,
@@ -86,6 +92,16 @@ export function CodeSlots({
             if (next.length > value.length) sounds.hover();
             onChange(next);
             if (next.length === length && value.length < length) onComplete?.(next);
+          }}
+          onPaste={(e) => {
+            const read = readPaste?.(e.clipboardData.getData("text"));
+            if (typeof read !== "string") return;
+            e.preventDefault();
+            const next = normalize(read, length, alphabet);
+            if (next) sounds.hover();
+            onChange(next);
+            // a paste replaces the code, so even a full one checks again
+            if (next.length === length) onComplete?.(next);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && value.length === length) {
