@@ -19,6 +19,7 @@
 }
 .cards {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 3px;
   min-height: 27px;
@@ -36,7 +37,7 @@
   color: var(--pp-color-paper-ink);
   background: linear-gradient(155deg, var(--pp-color-paper), var(--pp-color-paper-low));
 }
-/* "your numbers", under the carousel while you roll your own */
+/* "your cards", under the carousel while you roll your own */
 .own {
   padding: 0 var(--pp-space-3) var(--pp-space-2);
 }

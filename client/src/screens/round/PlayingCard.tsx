@@ -6,6 +6,7 @@ import type { PublicPlayer } from "../../../../shared/protocol.ts";
 import { cx, useFocusable } from "../../ui/index.ts";
 import { names } from "../text.ts";
 import { PlayerDot } from "../parts/PlayerDot.tsx";
+import { letters } from "../../../../shared/catalog/decks.ts";
 import { cardFace } from "./card.ts";
 import s from "./PlayingCard.module.css";
 
@@ -42,6 +43,7 @@ export function PlayingCard({
   onKeyDown,
 }: PlayingCardProps) {
   const face = cardFace(value, label);
+  const { length } = letters(label);
   const focus = useFocusable();
   const about = useId();
   const said = [
@@ -67,12 +69,13 @@ export function PlayingCard({
       className={cx(
         s.card,
         face.red && s.red,
-        label.length > 1 && s.long,
+        length > 1 && s.long,
+        length > 3 && s.wordy,
         selected && s.selected,
         dimmed && s.dimmed,
         ribbon && s.suggested,
       )}
-      style={{ "--tilt": `${face.tilt}deg`, "--i": index }}
+      style={{ "--tilt": `${face.tilt}deg`, "--i": index, "--len": length }}
       aria-label={label === String(value) ? `${value} ${value === 1 ? "point" : "points"}` : label}
       aria-pressed={selected}
       aria-describedby={said ? about : undefined}

@@ -851,7 +851,7 @@ test("starting deals the first lined-up ticket, and dealing any ticket starts th
 
 test("a table opens with the house rules its dealer played last", () => {
   const s = newTableState("ABCD", DEALER_KEY, 0, null, {
-    deck: { scale: "tshirt", numbers: [], unsure: true, coffee: false },
+    deck: { scale: "tshirt", cards: [], unsure: true, coffee: false },
     dealerPlays: true,
     environment: "diner",
   });
@@ -863,7 +863,7 @@ test("a table opens with the house rules its dealer played last", () => {
   assert.equal(s.environment, "diner");
   // rules that don't make a deck fall back to the usual cards
   const odd = newTableState("ABCD", DEALER_KEY, 0, null, {
-    deck: { scale: "custom", numbers: [4], unsure: false, coffee: false },
+    deck: { scale: "custom", cards: ["4"], unsure: false, coffee: false },
   });
   assert.deepEqual(
     odd.settings.deck.map((c) => c.points),
@@ -873,7 +873,7 @@ test("a table opens with the house rules its dealer played last", () => {
 
 // ---------------------------------------------------------------- the cards
 
-const tshirts: DeckChoice = { scale: "tshirt", numbers: [], unsure: true, coffee: true };
+const tshirts: DeckChoice = { scale: "tshirt", cards: [], unsure: true, coffee: true };
 
 test("the dealer changes the cards between tickets, never mid-round", async () => {
   const { table, deb, ann, run, view, deal, notices } = setup();
@@ -893,13 +893,13 @@ test("the dealer changes the cards between tickets, never mid-round", async () =
   assert.deepEqual(
     await table.run(deb.playerId, {
       t: "setDeck",
-      deck: { scale: "custom", numbers: [5, 5], unsure: false, coffee: false },
+      deck: { scale: "custom", cards: ["5", "5"], unsure: false, coffee: false },
     }),
-    { error: "Your own deck needs at least 2 different numbers" },
+    { error: "Your own deck needs at least 2 different cards" },
   );
 
   await deal();
-  const fib: DeckChoice = { scale: "fibonacci", numbers: [], unsure: false, coffee: false };
+  const fib: DeckChoice = { scale: "fibonacci", cards: [], unsure: false, coffee: false };
   assert.deepEqual(await table.run(deb.playerId, { t: "setDeck", deck: fib }), { error: "Finish this round first" });
   await run(ann, { t: "vote", value: 3 });
   await run(deb, { t: "reveal" });
@@ -929,7 +929,7 @@ test("T-shirt sizes are worth the usual points, and the history says the size", 
 test("the extra cards add nothing to the pot and can't win it, and a coffee card speaks up", async () => {
   const { table, deb, ann, bob, join, run, view, deal, player, notices, logs } = setup();
   const cat = join({ name: "Cat" });
-  await run(deb, { t: "setDeck", deck: { scale: "classic", numbers: [], unsure: true, coffee: true } });
+  await run(deb, { t: "setDeck", deck: { scale: "classic", cards: [], unsure: true, coffee: true } });
   await deal();
   // the usual five cards, then "?" (played as -6) and "☕" (-7)
   assert.deepEqual(await table.run(ann.playerId, { t: "vote", value: -1 }), { error: "That card isn't in the deck" });

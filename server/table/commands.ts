@@ -223,7 +223,7 @@ export const COMMANDS = [
     input: { deck: DeckChoice },
     run({ s, notice }, me, { deck }) {
       const cards = buildDeck(deck);
-      if (!cards) return `Your own deck needs at least ${CUSTOM_SCALE.min} different numbers`;
+      if (!cards) return `Your own deck needs at least ${CUSTOM_SCALE.min} different cards`;
       if (isDeepStrictEqual(cards, s.settings.deck)) return;
       s.settings.deck = cards;
       notice(`🃏 The dealer changed the cards: ${deckWords(cards)}`, { except: me.id });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { player, ticket, view } from "../../app/fixtures.ts";
 import { buildDeck } from "../../../../shared/catalog/decks.ts";
 import { kickConfirm, othersOf, playerState, roundActions, skipPlan } from "./panel.ts";
-import { cardsLocked, numbersText, scaleLabels, scaleName, typedNumbers } from "./rules.ts";
+import { cardsLocked, ownText, scaleLabels, scaleName, typedCards } from "./rules.ts";
 import {
   BAD_KEY,
   jiraSubmit,
@@ -209,14 +209,18 @@ test("it stays shut in the lobby, and opens once the game starts with no ticket"
 
 // ---------------------------------------------------------------- house rules
 
-test("your own numbers: whatever reads as a whole number, in order, once each", () => {
-  assert.deepEqual(typedNumbers("8, 2 ,2;4 x16"), [2, 4, 8, 16]);
-  assert.deepEqual(typedNumbers(""), []);
-  assert.deepEqual(typedNumbers("1.5"), [1, 5], "no fractions: a dot is just another gap");
+test("your own cards: a list with commas between them, or just spaces", () => {
+  assert.deepEqual(typedCards("left,right"), ["left", "right"]);
+  assert.deepEqual(typedCards("A, b, c"), ["A", " b", " c"]);
+  assert.deepEqual(typedCards("tiny, quite big; huge"), ["tiny", " quite big", " huge"], "a card can say two words");
+  assert.deepEqual(typedCards("4 6 10"), ["4", "6", "10"], "no commas: the spaces split them");
+  assert.equal(ownText(buildDeck({ scale: "classic", cards: [], unsure: true, coffee: false })!), "1, 2, 3, 5, 8");
   assert.equal(
-    numbersText(buildDeck({ scale: "classic", numbers: [], unsure: true, coffee: false })!),
-    "1, 2, 3, 5, 8",
+    ownText(buildDeck({ scale: "custom", cards: ["left", "right"], unsure: true, coffee: false })!),
+    "left, right",
   );
+  assert.deepEqual(scaleLabels("custom", "A, b, c,"), ["A", "b", "c"]);
+  assert.deepEqual(scaleLabels("custom", ""), []);
   assert.deepEqual(scaleLabels("tshirt", ""), ["XS", "S", "M", "L", "XL"]);
   assert.deepEqual(scaleLabels("custom", "4 6 10"), ["4", "6", "10"]);
   assert.deepEqual([scaleName("classic"), scaleName("custom")], ["The Usual", "Roll your own"]);

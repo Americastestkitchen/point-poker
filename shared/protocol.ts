@@ -51,8 +51,8 @@ export type Epic = z.infer<typeof Epic>;
  */
 export const DeckChoice = z.object({
   scale: z.enum([...SCALE_IDS, CUSTOM_SCALE.id]),
-  /** A custom scale's numbers; the other scales bring their own. */
-  numbers: z.array(z.number()).max(50).default([]),
+  /** What each card of a custom scale says ("1", "left"); the other scales bring their own. */
+  cards: z.array(z.string().max(100)).max(50).default([]),
   /** A "?" card: no idea. */
   unsure: z.boolean().default(false),
   /** A "☕" card: I need a break. */

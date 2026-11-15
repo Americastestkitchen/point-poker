@@ -141,7 +141,7 @@ test("a changed call is announced again", () => {
 });
 
 test("announcements name cards by what they say, and a ? isn't on the number line", () => {
-  const deck = buildDeck({ scale: "tshirt", numbers: [], unsure: true, coffee: false })!;
+  const deck = buildDeck({ scale: "tshirt", cards: [], unsure: true, coffee: false })!;
   const settings = { deck, dealerPlays: false, environment: "basement" as const };
   const up = (votes: Record<string, number>) =>
     announcementFor(

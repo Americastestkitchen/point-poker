@@ -65,7 +65,7 @@ test("the lobby: the house rules where the steps go, and everyone who's sat down
 });
 
 test("a final call on a size says the size", () => {
-  const deck = buildDeck({ scale: "tshirt", numbers: [], unsure: false, coffee: false })!;
+  const deck = buildDeck({ scale: "tshirt", cards: [], unsure: false, coffee: false })!;
   const room = view({
     phase: "settled",
     round: 1,

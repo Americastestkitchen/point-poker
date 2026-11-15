@@ -29,11 +29,11 @@ test("the house rules you last dealt with come back, and damaged ones come back 
   const storage = createStorage(backing);
   assert.deepEqual(storage.houseRules(), {});
   const rules = {
-    deck: { scale: "tshirt", numbers: [], unsure: true, coffee: false },
+    deck: { scale: "tshirt", cards: [], unsure: true, coffee: false },
     dealerPlays: true,
     environment: "diner",
   } as const;
-  storage.setHouseRules({ ...rules, deck: { ...rules.deck, numbers: [] } });
+  storage.setHouseRules({ ...rules, deck: { ...rules.deck, cards: [] } });
   assert.deepEqual(storage.houseRules(), rules);
   backing.setItem("pp-rules", JSON.stringify({ ...rules, environment: "moon-base" }));
   assert.deepEqual(storage.houseRules(), {}, "rules that no longer read aren't half-used");

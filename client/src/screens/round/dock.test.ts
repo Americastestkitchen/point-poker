@@ -264,7 +264,7 @@ test("the lobby: the dealer gets Start and the ways to set the table up, players
 // ---------------------------------------------------------------- other cards
 
 const sizes = () => ({
-  deck: buildDeck({ scale: "tshirt", numbers: [], unsure: true, coffee: true })!,
+  deck: buildDeck({ scale: "tshirt", cards: [], unsure: true, coffee: true })!,
   dealerPlays: false,
   environment: "basement" as const,
 });

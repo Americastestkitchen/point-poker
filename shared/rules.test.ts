@@ -70,7 +70,7 @@ test("the next ticket skips what's played, skipped or on the table, and prefers 
 });
 
 test("a card is played as its points, and a card with none as minus its place in the deck", () => {
-  const deck = buildDeck({ scale: "tshirt", numbers: [], unsure: true, coffee: true })!;
+  const deck = buildDeck({ scale: "tshirt", cards: [], unsure: true, coffee: true })!;
   assert.deepEqual(playValues(deck), [1, 2, 3, 5, 8, -6, -7]);
   assert.deepEqual(cardValues(deck), [1, 2, 3, 5, 8], "only cards with points can be the final call");
   assert.equal(cardLabel(deck, 3), "M");

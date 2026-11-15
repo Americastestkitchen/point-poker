@@ -1,6 +1,6 @@
 // Canvas-drawn textures: cards, felt, signage, name tags.
 import * as THREE from "three";
-import { suitOf } from "../../../../shared/catalog/decks.ts";
+import { letters, suitOf } from "../../../../shared/catalog/decks.ts";
 
 /** The canvas's 2D context; a browser that can't give one can't draw the table. */
 export function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -29,6 +29,13 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.roundRect(x, y, w, h, r);
 }
 
+/** Sets the font to `size`, or as much smaller as `text` needs to stay within `width`. */
+function fit(g: CanvasRenderingContext2D, text: string, size: number, width: number, weight: string, family: string) {
+  g.font = `${weight} ${size}px ${family}`;
+  const wide = g.measureText(text).width;
+  if (wide > width) g.font = `${weight} ${Math.floor((size * width) / wide)}px ${family}`;
+}
+
 const frontCache = new Map<string, THREE.CanvasTexture>();
 /** A card's face: `says` is what's printed on it ("5", "XL", "?"), `value` picks its suit and its wear. */
 export function cardFront(value: number, says = String(value)): THREE.CanvasTexture {
@@ -36,7 +43,10 @@ export function cardFront(value: number, says = String(value)): THREE.CanvasText
   let t = frontCache.get(key);
   if (t) return t;
   const suit = suitOf(value);
-  const long = says.length > 1;
+  const { length } = letters(says);
+  const long = length > 1;
+  /** A word, not a number or a size: it's printed in the middle only, as big as fits. */
+  const wordy = length > 3;
   const ink = suit.red ? "#a8242c" : "#1d1a1a";
   let seed = Math.abs(value) * 9301 + 49297;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -77,10 +87,12 @@ export function cardFront(value: number, says = String(value)): THREE.CanvasText
       g.save();
       g.translate(x + ox, y + oy);
       g.rotate(rot);
-      g.font = `bold ${long ? 34 : 40}px ${CARD_SERIF}`;
-      g.fillText(says, 0, 0);
+      if (!wordy) {
+        g.font = `bold ${long ? 34 : 40}px ${CARD_SERIF}`;
+        g.fillText(says, 0, 0);
+      }
       g.font = `30px ${CARD_SERIF}`;
-      g.fillText(suit.glyph, 0, 36);
+      g.fillText(suit.glyph, 0, wordy ? 0 : 36);
       g.restore();
     };
     corner(34, 40, 0);
@@ -92,7 +104,7 @@ export function cardFront(value: number, says = String(value)): THREE.CanvasText
     g.font = `220px ${CARD_SERIF}`;
     g.fillText(suit.glyph, 0, 10);
     g.globalAlpha = 1;
-    g.font = `bold ${long ? 118 : 150}px ${CARD_SERIF}`;
+    fit(g, says, long ? 118 : 150, 200, `bold`, CARD_SERIF);
     g.fillText(says, 0, 6);
     g.restore();
   });
@@ -113,10 +125,10 @@ export function swapTag(from: string, to: string): THREE.CanvasTexture {
     g.strokeStyle = "#e6be5a";
     g.lineWidth = 5;
     g.stroke();
-    g.font = `bold 52px ${FONT}`;
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillStyle = "rgba(244,239,227,0.55)";
+    fit(g, from, 52, 84, "bold", FONT);
     g.fillText(from, 62, 52);
     const w = g.measureText(from).width;
     g.strokeStyle = "#e05a4f";
@@ -126,8 +138,10 @@ export function swapTag(from: string, to: string): THREE.CanvasTexture {
     g.lineTo(62 + w / 2 + 6, 44);
     g.stroke();
     g.fillStyle = "#e6be5a";
+    g.font = `bold 52px ${FONT}`;
     g.fillText("→", 128, 50);
     g.fillStyle = "#f4efe3";
+    fit(g, to, 52, 84, "bold", FONT);
     g.fillText(to, 194, 52);
   });
   swapCache.set(key, t);

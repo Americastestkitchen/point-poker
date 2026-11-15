@@ -11,7 +11,7 @@ closest guess wins the pot.
 ## How to play
 
 - **Dealer:** open a table (you sign in with Jira the first time) and share the invite link. Everyone waits in the lobby
-  while you set the house rules: the cards (the usual 1 2 3 5 8, full Fibonacci, T-shirt sizes or your own numbers, plus
+  while you set the house rules: the cards (the usual 1 2 3 5 8, full Fibonacci, T-shirt sizes or your own numbers or words, plus
   optional "?" and "☕" cards), whether you play too, and the room. Start the game, add a ticket (or an epic, to queue its
   children), reveal the cards, and pick the final points.
 - **Players:** open the invite link, pick a body, colour and hat (change them in the lobby and everyone watches), and

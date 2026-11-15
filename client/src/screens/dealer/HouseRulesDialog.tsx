@@ -1,23 +1,24 @@
 // The house rules (popup "rules"), the dealer's: which cards the table plays with (a scale or
-// the dealer's own numbers, plus the "?" and "☕" extras), whether the dealer plays a card too,
+// the dealer's own cards, plus the "?" and "☕" extras), whether the dealer plays a card too,
 // and which room the table is in. Everyone sees a change as it's made, and the dealer's next
 // table opens the same way. The cards only change between tickets; the rest changes any time.
 // Opened from the lobby's dock and from Dealer controls. Dealer only: it follows the role.
 // What shows and what's allowed is decided in rules.ts.
 import { useEffect, useState } from "react";
-import { choiceOf, EXTRA_CARDS } from "../../../../shared/catalog/decks.ts";
+import { buildDeck, choiceOf, EXTRA_CARDS } from "../../../../shared/catalog/decks.ts";
 import { ENVIRONMENT, ENVIRONMENT_IDS } from "../../../../shared/catalog/environments.ts";
 import type { DeckChoice } from "../../../../shared/protocol.ts";
 import { Button, Carousel, Dialog, TextField, Toggle } from "../../ui/index.ts";
 import { useGame, useMe, usePopup, useRoom } from "../game.tsx";
 import {
   cardsLocked,
-  numbersText,
+  OWN_HINT,
+  ownText,
   SCALE_OPTIONS,
   scaleLabels,
   scaleName,
   TOO_FEW,
-  typedNumbers,
+  typedCards,
   type ScaleOption,
 } from "./rules.ts";
 import s from "./HouseRulesDialog.module.css";
@@ -48,15 +49,15 @@ export function HouseRulesDialog() {
   );
 }
 
-/** Mounted only while the popup is open, so half-typed numbers are gone next time. */
+/** Mounted only while the popup is open, so half-typed cards are gone next time. */
 function RulesBody() {
   const { actions } = useGame();
   const room = useRoom();
-  // What's typed in "your numbers" while the dealer rolls their own; null while a named scale is picked.
-  // It's a draft: the table's deck stays the truth, and only numbers that make a deck are sent.
+  // What's typed in "your cards" while the dealer rolls their own; null while a named scale is picked.
+  // It's a draft: the table's deck stays the truth, and only cards that make a deck are sent.
   const [own, setOwn] = useState<string | null>(() => {
     const deck = room?.settings.deck ?? [];
-    return choiceOf(deck).scale === "custom" ? numbersText(deck) : null;
+    return choiceOf(deck).scale === "custom" ? ownText(deck) : null;
   });
   const [tooFew, setTooFew] = useState(false);
   if (!room) return null;
@@ -69,15 +70,15 @@ function RulesBody() {
 
   const pickScale = (id: ScaleOption) => {
     setTooFew(false);
-    if (id === "custom") return setOwn(numbersText(deck));
+    if (id === "custom") return setOwn(ownText(deck));
     setOwn(null);
-    deal({ ...choice, scale: id, numbers: [] });
+    deal({ ...choice, scale: id, cards: [] });
   };
   const dealOwn = () => {
-    const numbers = typedNumbers(own ?? "");
-    if (numbers.length < 2) return setTooFew(true);
+    const next: DeckChoice = { ...choice, scale: "custom", cards: typedCards(own ?? "") };
+    if (!buildDeck(next)) return setTooFew(true);
     setTooFew(false);
-    deal({ ...choice, scale: "custom", numbers });
+    deal(next);
   };
 
   return (
@@ -104,19 +105,18 @@ function RulesBody() {
       {own !== null && (
         <div className={s.own}>
           <TextField
-            label="Your numbers"
+            label="Your cards"
             value={own}
             onChange={(text) => {
               setTooFew(false);
               setOwn(text);
             }}
             onSubmit={dealOwn}
-            placeholder="1, 2, 4, 8, 16"
-            inputMode="numeric"
+            placeholder="1, 2, 4, 8 or small, big, huge"
             enterKeyHint="done"
             disabled={!!locked}
             error={tooFew ? TOO_FEW : undefined}
-            hint="Whole numbers, smallest to biggest."
+            hint={OWN_HINT}
             trailing={
               <Button onPress={dealOwn} disabled={!!locked}>
                 Deal these

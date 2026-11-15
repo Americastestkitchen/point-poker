@@ -34,8 +34,15 @@ export const SCALE = byId(SCALES);
 /** The scale a new table plays with. */
 export const DEFAULT_SCALE: ScaleId = "classic";
 
-/** A dealer's own scale: how many numbers it can have, and how big they get. */
-export const CUSTOM_SCALE = { id: "custom", name: "Roll your own", min: 2, max: 10, highest: 999 } as const;
+/** A dealer's own scale: how many cards it can have, how many characters a card can say, and how big a number gets. */
+export const CUSTOM_SCALE = {
+  id: "custom",
+  name: "Roll your own",
+  min: 2,
+  max: 10,
+  longest: 10,
+  highest: 999,
+} as const;
 
 /**
  * Extra cards a dealer can add to any scale. They say something instead of a number: they add
@@ -47,21 +54,40 @@ export const EXTRA_CARDS = {
 } as const;
 
 /** The cards a dealer picks when they open a table without saying. */
-export const DEFAULT_DECK_CHOICE: DeckChoice = { scale: DEFAULT_SCALE, numbers: [], unsure: false, coffee: false };
+export const DEFAULT_DECK_CHOICE: DeckChoice = { scale: DEFAULT_SCALE, cards: [], unsure: false, coffee: false };
 
-/** A custom scale's numbers as they'll be dealt: whole, in order, each one once. */
-export function customNumbers(raw: readonly number[]): number[] {
-  const whole = raw.filter((n) => Number.isInteger(n) && n >= 0 && n <= CUSTOM_SCALE.highest);
-  return [...new Set(whole)].toSorted((a, b) => a - b).slice(0, CUSTOM_SCALE.max);
+const WHOLE = /^\d+$/;
+const SEGMENTER = new Intl.Segmenter();
+/** What a card says, a character at a time as a person counts them: an emoji is one. */
+export const letters = (text: string): string[] => Array.from(SEGMENTER.segment(text), (s) => s.segment);
+
+/**
+ * A dealer's own cards as they'll be dealt, from what each one should say. When they're all
+ * whole numbers those are the points, smallest first. Anything else ("left", "right") and the
+ * cards say what was typed, in that order, and are worth their place in it: 1 for the first.
+ * Each card once (whatever its capitals), and no more than a card has room for.
+ */
+export function customCards(raw: readonly string[]): Card[] {
+  const seen = new Set<string>();
+  const labels = raw
+    .map((text) => letters(text.trim().replace(/\s+/g, " ")).slice(0, CUSTOM_SCALE.longest).join("").trim())
+    .filter((label) => {
+      const key = label.toLowerCase();
+      if (!label || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  if (labels.every((label) => WHOLE.test(label) && Number(label) <= CUSTOM_SCALE.highest))
+    return numbers(...[...new Set(labels.map(Number))].toSorted((a, b) => a - b).slice(0, CUSTOM_SCALE.max));
+  return labels.slice(0, CUSTOM_SCALE.max).map((label, i) => ({ label, points: i + 1 }));
 }
 
-/** The deck a choice deals, or null when a custom scale has too few numbers to vote with. */
+/** The deck a choice deals, or null when a custom scale has too few cards to vote with. */
 export function buildDeck(choice: DeckChoice): Card[] | null {
   let cards: Card[];
   if (choice.scale === "custom") {
-    const own = customNumbers(choice.numbers);
-    if (own.length < CUSTOM_SCALE.min) return null;
-    cards = numbers(...own);
+    cards = customCards(choice.cards);
+    if (cards.length < CUSTOM_SCALE.min) return null;
   } else cards = SCALE[choice.scale].cards.map((c) => ({ ...c }));
   if (choice.unsure) cards.push({ label: EXTRA_CARDS.unsure.label, points: null });
   if (choice.coffee) cards.push({ label: EXTRA_CARDS.coffee.label, points: null });
@@ -81,7 +107,7 @@ export function choiceOf(deck: readonly Card[]): DeckChoice {
   const scale = SCALES.find((s) => same(s.cards));
   return {
     scale: scale?.id ?? "custom",
-    numbers: scale ? [] : scored.flatMap((c) => (c.points === null ? [] : [c.points])),
+    cards: scale ? [] : scored.map((c) => c.label),
     unsure: says(EXTRA_CARDS.unsure.label),
     coffee: says(EXTRA_CARDS.coffee.label),
   };
