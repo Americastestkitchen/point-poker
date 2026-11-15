@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { BODY_IDS } from "../../../shared/catalog/bodies.ts";
-import { cardSeed, MOVES, pickMove, roll01, STYLE, type CardMove } from "./card-moves.ts";
+import { cardSeed, MOVES, pickChange, pickMove, roll01, SHUFFLE, STYLE, type CardMove } from "./card-moves.ts";
 
 /** How often `body` picks each move over many deals. */
 function tally(body: (typeof BODY_IDS)[number], deals = 4000) {
@@ -28,9 +28,26 @@ test("the same player gets different moves across rounds", () => {
 });
 
 test("a swap gets its own move, and swapping to another card can get another", () => {
-  assert.notEqual(cardSeed("abc", 3), cardSeed("abc", 3, 5));
-  const swaps = new Set([1, 2, 3, 5, 8, 13, 21].map((v) => pickMove("bean", cardSeed("abc", 3, v))));
+  assert.notEqual(cardSeed("abc", 3), cardSeed("abc", 3, "swap:5"));
+  const swaps = new Set([1, 2, 3, 5, 8, 13, 21].map((v) => pickMove("bean", cardSeed("abc", 3, `swap:${v}`))));
   assert.ok(swaps.size > 1);
+});
+
+test("changing your card before the reveal is a move or a shuffle, by the body's weights, and never the same every time", () => {
+  for (const body of BODY_IDS) {
+    const picks = Array.from({ length: 4000 }, (_, i) => pickChange(body, cardSeed(`p${i % 7}`, i, "change:1")));
+    const total = MOVES.reduce((sum, m) => sum + STYLE[body][m], SHUFFLE[body]);
+    const shuffled = picks.filter((p) => p === "shuffle").length / picks.length;
+    assert.ok(
+      Math.abs(shuffled - SHUFFLE[body] / total) < 0.04,
+      `${body} shuffles ${(shuffled * 100).toFixed(0)}% of the time`,
+    );
+    for (const move of MOVES)
+      if (STYLE[body][move] === 0) assert.ok(!picks.includes(move), `${body} never does a ${move}`);
+    const inARound = new Set([1, 2, 3, 4, 5, 6, 7, 8].map((n) => pickChange(body, cardSeed("abc", 3, `change:${n}`))));
+    assert.ok(inARound.size > 1, `${body} changes its card more than one way`);
+  }
+  assert.ok(SHUFFLE.box > SHUFFLE.chonk, "a box likes squaring it up best");
 });
 
 test("rolls spread evenly from 0 to 1", () => {

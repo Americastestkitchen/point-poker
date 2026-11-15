@@ -36,10 +36,11 @@ export interface TableCard {
   /** Turns it face up showing `value`, after `delay` seconds; `onTurn` runs as it starts to turn. */
   turnUp(value: number | null, opts?: { delay?: number; onTurn?: () => void }): void;
   /**
-   * Someone changed their card after the reveal: after `grab` seconds the card goes up into
-   * `hand`, and at `release` the new one leaves it face up and comes down `how` the bean puts it.
+   * Someone changed their card: after `grab` seconds the card goes up into `hand`, and at
+   * `release` the new one (null: a face we don't know) leaves it and comes down `how` the bean
+   * puts it. It lands the way up it was: face down before the reveal, face up after.
    */
-  swap(value: number, hand: () => THREE.Vector3, opts: { grab: number; release: number; how: Landing }): void;
+  swap(value: number | null, hand: () => THREE.Vector3, opts: { grab: number; release: number; how: Landing }): void;
   /** The card they had at the reveal, shown over the floating copy as "3 → 5" (null: no change to show). */
   setWas(value: number | null): void;
   turnDown(): void;
@@ -62,7 +63,7 @@ type Placement =
       release: number;
       how: Landing;
       hand: () => THREE.Vector3;
-      next: number;
+      next: number | null;
     };
 
 /**

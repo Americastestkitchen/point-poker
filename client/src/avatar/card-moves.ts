@@ -1,4 +1,5 @@
-// How a bean puts its card down: a pat, a slam, a toss, a sneaky slide or a dainty set-down.
+// How a bean puts its card down: a pat, a slam, a toss, a sneaky slide or a dainty set-down,
+// and how it changes its mind before the reveal (one of those, or a shuffle where it stays put).
 // Each body type has its own taste in moves (a chonk slams, a pear is dainty), and the move is
 // picked from a seed every screen already has, so the whole table sees the same one. The beats
 // say when the card leaves the hand and lands, so the card and its sounds keep time with the
@@ -75,6 +76,14 @@ export const STYLE: Record<BodyId, Record<CardMove, number>> = {
   pear: { dainty: 6, sneaky: 2, pat: 1, toss: 1, slam: 0 },
 };
 
+/**
+ * Changing your card before the reveal: grab it back and put it down again with a move, or
+ * `shuffle` it about where it lies with both hands. How much each body type goes for the shuffle,
+ * next to its STYLE weights for the moves.
+ */
+export type CardChange = CardMove | "shuffle";
+export const SHUFFLE: Record<BodyId, number> = { bean: 2, chonk: 1, noodle: 1, box: 6, pear: 1 };
+
 /** Changing your card after the reveal starts by reaching out and grabbing the old one: it's in the hand at this. */
 export const SWAP_GRAB = 0.28;
 
@@ -94,19 +103,32 @@ export function swapBeats(move: CardMove): Beats & { grab: number } {
 
 /** The move `body` makes for this seed: the same seed always gets the same move. */
 export function pickMove(body: BodyId, seed: string): CardMove {
-  const style = STYLE[body];
-  const total = MOVES.reduce((sum, m) => sum + style[m], 0);
-  let roll = roll01(seed) * total;
-  for (const move of MOVES) {
-    roll -= style[move];
-    if (style[move] > 0 && roll < 0) return move;
-  }
-  return "pat";
+  return pick(STYLE[body], MOVES, seed) ?? "pat";
 }
 
-/** What everyone at the table can agree on for one player's card: who, which deal, and for a swap, the card it's swapped to. */
-export function cardSeed(playerId: string, round: number, swappedTo?: number): string {
-  return swappedTo === undefined ? `${playerId}:${round}` : `${playerId}:${round}:swap:${swappedTo}`;
+/** How `body` changes its card before the reveal for this seed: a move, or a shuffle. */
+export function pickChange(body: BodyId, seed: string): CardChange {
+  const weights: Record<CardChange, number> = { ...STYLE[body], shuffle: SHUFFLE[body] };
+  return pick(weights, [...MOVES, "shuffle"], seed) ?? "shuffle";
+}
+
+/** One of `options`, as often as its weight says. */
+function pick<K extends string>(weights: Record<K, number>, options: readonly K[], seed: string): K | null {
+  const total = options.reduce((sum, k) => sum + weights[k], 0);
+  let roll = roll01(seed) * total;
+  for (const k of options) {
+    roll -= weights[k];
+    if (weights[k] > 0 && roll < 0) return k;
+  }
+  return null;
+}
+
+/**
+ * What everyone at the table can agree on for one player's card: who, which deal, and what
+ * happened to it since (`swap:5` after the reveal, `change:2` for the second change before it).
+ */
+export function cardSeed(playerId: string, round: number, then?: string): string {
+  return then === undefined ? `${playerId}:${round}` : `${playerId}:${round}:${then}`;
 }
 
 /** A number in [0, 1) from a string, the same on every screen (FNV-1a, then mixed so close seeds land far apart). */

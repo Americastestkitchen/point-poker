@@ -8,7 +8,7 @@ import type { Look } from "../../../shared/look.ts";
 import { toon } from "../scene/art/materials.ts";
 import { createAnimator, type ClipId, type Gesture, type HandPose, type Pose } from "./animator.ts";
 import { anchorsFor, type AnchorId, type Anchors, type Spot } from "./bodies/anchors.ts";
-import { CARD_MOVES, pickMove, swapBeats, type Beats } from "./card-moves.ts";
+import { CARD_MOVES, pickChange, pickMove, swapBeats, type Beats } from "./card-moves.ts";
 import { BODY_SHAPES } from "./bodies/index.ts";
 import { BUILDERS, DEALER_GEAR, SLOT_ANCHOR } from "./cosmetics/index.ts";
 import { talkers } from "./cosmetics/talk.ts";
@@ -39,6 +39,12 @@ export interface Avatar {
   placeCard(seed: string): Beats;
   /** After the reveal: grabs the card back and puts the new one down its own way, as `placeCard` does. */
   swapCard(seed: string): Beats & { grab: number };
+  /**
+   * Changing the card before the reveal: grabs it back and puts it down again its own way (the
+   * beats, as `swapCard`), or shuffles it about where it lies. A bean still putting the last one
+   * down just shuffles.
+   */
+  changeCard(seed: string): (Beats & { grab: number }) | "shuffle";
   /**
    * Plays a gesture aimed at someone: the arm follows `target` (a point in the room) for as
    * long as the gesture lasts, so it keeps pointing at them while either of you moves.
@@ -236,6 +242,16 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
       const move = pickMove(look.body, seed);
       animator.swapCard(move);
       return swapBeats(move);
+    },
+
+    changeCard(seed) {
+      const how = pickChange(look.body, seed);
+      if (how === "shuffle" || animator.busyWithCard) {
+        animator.play("adjustCard");
+        return "shuffle";
+      }
+      animator.swapCard(how);
+      return swapBeats(how);
     },
 
     aim(gesture, at) {

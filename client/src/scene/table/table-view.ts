@@ -43,6 +43,11 @@ export function mountTableView(
   const { store, actions, audio, layout, flights, rig, ticket, pot, screen } = deps;
   const { camera } = stage;
   const seats = new Map<string, Seat>();
+  /**
+   * How many times each player has changed their card before this round's reveal, as this screen
+   * has seen it: what picks how they do it, so every screen picks the same.
+   */
+  const changeCounts = new Map<string, { round: number; n: number }>();
 
   const meId = () => store.getState().me?.id ?? "";
   /** What a card value says in this table's deck: a number, a T-shirt size, "?". */
@@ -112,6 +117,7 @@ export function mountTableView(
       if (!st.players.some((p) => p.id === id)) {
         seat.remove();
         seats.delete(id);
+        changeCounts.delete(id);
       }
     }
 
@@ -236,14 +242,36 @@ export function mountTableView(
 
   /** After the reveal: the bean grabs its card back off the felt and puts the new one down its own way, face up. */
   function swapCard(seat: Seat, playerId: string, value: number, mine: boolean) {
-    const beats = seat.avatar.swapCard(cardSeed(playerId, store.getState().room?.round ?? 0, value));
+    const beats = seat.avatar.swapCard(cardSeed(playerId, store.getState().room?.round ?? 0, `swap:${value}`));
+    regrab(seat, value, mine, beats, true);
+  }
+
+  /**
+   * Before the reveal: the bean grabs its card back and puts it down again its own way, face down,
+   * or shuffles it about where it lies. `value` is the new card, when it's yours to know.
+   */
+  function changeCard(seat: Seat, playerId: string, value: number | null, mine: boolean) {
+    const round = store.getState().room?.round ?? 0;
+    const seen = changeCounts.get(playerId);
+    const n = seen?.round === round ? seen.n + 1 : 1;
+    changeCounts.set(playerId, { round, n });
+    const how = seat.avatar.changeCard(cardSeed(playerId, round, `change:${n}`));
+    if (how !== "shuffle") return regrab(seat, value, mine, how, false);
+    // both hands square it up where it lies
+    if (value !== null) seat.card.show(value);
+    seat.card.nudge(0.2);
+    if (mine) audio.slide();
+  }
+
+  /** The card goes up into the hand at `grab` and comes back down on the move's beats. `slap`: a plain pat lands with a SLAP. */
+  function regrab(seat: Seat, value: number | null, mine: boolean, beats: Beats & { grab: number }, slap: boolean) {
     // your own comes up in front of your eyes; everyone else's in their bean's hand
     const hand = mine
       ? () => camera.localToWorld(new THREE.Vector3(0.12, -0.12, -0.45))
       : () => seat.avatar.handWorldPos();
     seat.card.swap(value, hand, { grab: beats.grab, release: beats.release, how: beats.landing });
     // a plain pat after a change of mind is a SLAP; the showier moves keep their own sounds
-    const sounds = beats.move === "pat" ? [[beats.land, audio.slap] as const] : SOUNDS[beats.move](beats);
+    const sounds = slap && beats.move === "pat" ? [[beats.land, audio.slap] as const] : SOUNDS[beats.move](beats);
     for (const [at, play] of sounds) stage.after(at, play);
   }
 
@@ -271,11 +299,8 @@ export function mountTableView(
       case "squeak":
         return; // the room's squeaky plays it (scene/index.ts)
       case "adjust":
-        // someone swapped their card: they reach in and square it up (you see your own on "played")
-        if (seat && seat.card.group.visible) {
-          seat.avatar.play("adjustCard");
-          seat.card.nudge(0.2);
-        }
+        // someone changed their card before the reveal (you see your own on "played")
+        if (seat && seat.card.group.visible) changeCard(seat, from, null, false);
         return;
       default:
         fx satisfies never;
@@ -297,11 +322,8 @@ export function mountTableView(
         }
         if (seat) {
           if (e.changed && seat.card.group.visible) {
-            // swapping it: the card stays on the felt and both hands square it up, as everyone sees
-            seat.card.show(e.value);
-            seat.avatar.play("adjustCard");
-            seat.card.nudge(0.2);
-            audio.slide();
+            // changing it: the way everyone else sees it
+            changeCard(seat, meId(), e.value, true);
           } else {
             // your card waits in front of you while your arms do your bean's move, and leaves on its beat
             const room = store.getState().room;
