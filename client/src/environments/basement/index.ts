@@ -7,7 +7,7 @@ import { toon } from "../../scene/art/materials.ts";
 import { FONT, wrapText } from "../../scene/art/textures.ts";
 import { textLines } from "../kit/canvas.ts";
 import { box, plane, put } from "../kit/build.ts";
-import { flickeringNeonLogo } from "../kit/neon.ts";
+import { flickeringNeonLogo, neonBuzz } from "../kit/neon.ts";
 import { rubberDuck } from "../kit/props/duck.ts";
 import { statusCanvas, type PaintStatus } from "../kit/status.ts";
 import type { EnvCtx, Environment, Sign, StatusScreen } from "../types.ts";
@@ -62,14 +62,17 @@ export default {
   props: { statusScreen: telly, sign: neonSign, squeaky: rubberDuck() },
 } satisfies Environment;
 
-/** The Point Poker neon sign, buzzing, its R dropping out now and then. */
-function neonSign({ onFrame }: EnvCtx): Sign {
+/** The Point Poker neon sign, buzzing, its R dropping out now and then (and the buzz with it). */
+function neonSign({ onFrame, sound }: EnvCtx): Sign {
   const object = new THREE.Group();
   const logo = flickeringNeonLogo(2.2);
+  const buzz = neonBuzz(sound);
   const light = put(new THREE.PointLight(NEON.pink.tube, 3, 6, 1.5), 0, 0, 0.45); // just out from the wall
   object.add(logo.object, light);
   onFrame((_, t) => {
-    light.intensity = logo.update(t) ? 3 : 2.4;
+    const lit = logo.update(t);
+    buzz(lit, t);
+    light.intensity = lit ? 3 : 2.4;
   });
   return { object };
 }
