@@ -1,4 +1,4 @@
-// The diner's background noise: the fryer sizzling with the odd clink of a
+// The diner's background noise: the fryer sizzling now and then, the odd clink of a
 // plate, and the jukebox's doo-wop bass, heard from the other end of the room.
 // Both are baked into loops once, so nothing has to be scheduled while it plays.
 import type { EnvCtx } from "../types.ts";
@@ -6,7 +6,7 @@ import type { EnvCtx } from "../types.ts";
 type Bed = Parameters<EnvCtx["sound"]["bed"]>[0];
 
 /** Seconds; the two loops differ so they don't line up the same way every time. */
-const FRYER_LOOP = 7.3;
+const FRYER_LOOP = 23.3; // long enough that you don't hear it go round
 const JUKEBOX_LOOP = 16; // eight bars of four beats at 120 bpm
 
 function loop(c: AudioContext, seconds: number, fill: (d: Float32Array, rate: number) => void) {
@@ -18,20 +18,28 @@ function loop(c: AudioContext, seconds: number, fill: (d: Float32Array, rate: nu
   return src;
 }
 
-/** Hiss that swells and settles, with pops of fat and a couple of plates set down. */
+/**
+ * A soft sizzle that comes and goes: busy for a while, then barely there. Fat pops
+ * now and then, more of them while it's busy, and a few plates set down. The swell
+ * goes round a whole number of times per loop, so the loop joins without a seam.
+ */
 function fryer(d: Float32Array, rate: number) {
+  const fade = Math.exp(-1 / (rate * 0.004)); // a pop dies away in a few milliseconds
+  let pop = 0;
   for (let i = 0; i < d.length; i++) {
-    const t = i / rate;
-    const swell = 0.6 + 0.25 * Math.sin((t / FRYER_LOOP) * Math.PI * 2 * 3) + 0.15 * Math.sin(t * 5.1);
-    d[i] = (Math.random() * 2 - 1) * swell * 0.5;
-    if (Math.random() < 0.0006) d[i] = (Math.random() < 0.5 ? -1 : 1) * 0.9; // a pop
+    const turn = (i / rate / FRYER_LOOP) * Math.PI * 2;
+    const busy = (0.5 - 0.5 * Math.cos(turn)) * (0.75 + 0.25 * Math.sin(turn * 3));
+    const swell = 0.15 + 0.85 * busy ** 1.5 + 0.06 * Math.sin(turn * 11);
+    if (Math.random() < (5 * busy) / rate) pop = Math.max(pop, 0.15 + Math.random() * 0.2);
+    d[i] = (Math.random() * 2 - 1) * (swell * 0.4 + pop);
+    pop *= fade;
   }
-  for (const at of [1.7, 5.2]) {
+  for (const at of [3.1, 11.8, 19.4]) {
     const start = Math.floor(at * rate);
     for (let i = 0; i < rate * 0.6 && start + i < d.length; i++) {
       const t = i / rate;
       const ring = Math.exp(-t * 9) * (Math.sin(t * 3150 * 2 * Math.PI) + 0.6 * Math.sin(t * 4720 * 2 * Math.PI));
-      d[start + i] = (d[start + i] ?? 0) + ring * 0.35;
+      d[start + i] = (d[start + i] ?? 0) + ring * 0.3;
     }
   }
 }
@@ -60,12 +68,16 @@ function walkingBass(d: Float32Array, rate: number) {
 
 export const dinerAmbience: Bed = (c, out) => {
   const sizzle = loop(c, FRYER_LOOP, fryer);
+  // lower than a hiss and with the top taken off, so it doesn't grate
   const hiss = c.createBiquadFilter();
   hiss.type = "highpass";
-  hiss.frequency.value = 2200;
+  hiss.frequency.value = 900;
+  const soft = c.createBiquadFilter();
+  soft.type = "lowpass";
+  soft.frequency.value = 6000;
   const sizzleGain = c.createGain();
-  sizzleGain.gain.value = 0.012;
-  sizzle.connect(hiss).connect(sizzleGain).connect(out);
+  sizzleGain.gain.value = 0.011;
+  sizzle.connect(hiss).connect(soft).connect(sizzleGain).connect(out);
 
   const bass = loop(c, JUKEBOX_LOOP, walkingBass);
   const far = c.createBiquadFilter();

@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { GLASS, GLOW_BLUR, LAYERS, LOGO, NEON, type Tube } from "../../../../shared/brand.ts";
 import { FONT, canvasTex } from "../../scene/art/textures.ts";
+import type { EnvCtx } from "../types.ts";
 import { plane } from "./build.ts";
 
 const PIXELS = 1024; // canvas width
@@ -77,6 +78,77 @@ export function flickeringNeonLogo(width: number) {
       return on;
     },
   };
+}
+
+/** How loud the buzz drops while the flickering tubes are out: the rest of the sign keeps humming. */
+const BUZZ_DARK = 0.2;
+/** Seconds the tubes must stay lit before going dark counts as a new burst of flicker, with its own snap. */
+const BURST_GAP = 0.4;
+
+/**
+ * A neon transformer's buzz in the room: a 120 Hz hum with a bit of crackle, kept low.
+ * Call what it returns every frame with whether the flickering tubes are lit (what
+ * `flickeringNeonLogo().update` says). While they're out the buzz drops, so a burst of
+ * flicker stutters on the same frames as the tube, and each burst starts with one snap.
+ */
+export function neonBuzz(sound: EnvCtx["sound"], volume = 0.014) {
+  let gate: GainNode | null = null;
+  let lit = true;
+  let litSince = -Infinity;
+  sound.bed((c, out) => {
+    // the mains twice over, as a transformer hums, with a sawtooth's edge taken off
+    const hum = c.createOscillator();
+    hum.type = "sawtooth";
+    hum.frequency.value = 120;
+    const body = c.createBiquadFilter();
+    body.type = "lowpass";
+    body.frequency.value = 900;
+    const humGain = c.createGain();
+    humGain.gain.value = volume;
+    // the crackle: sparse ticks of noise up high
+    const crackle = c.createBufferSource();
+    crackle.buffer = crackleBuffer(c, 3.1);
+    crackle.loop = true;
+    const fizz = c.createBiquadFilter();
+    fizz.type = "highpass";
+    fizz.frequency.value = 2500;
+    const crackleGain = c.createGain();
+    crackleGain.gain.value = volume * 0.5;
+    const g = c.createGain();
+    g.gain.value = lit ? 1 : BUZZ_DARK;
+    hum.connect(body).connect(humGain).connect(g);
+    crackle.connect(fizz).connect(crackleGain).connect(g);
+    g.connect(out);
+    hum.start();
+    crackle.start();
+    gate = g;
+    return () => {
+      hum.stop();
+      crackle.stop();
+      gate = null;
+    };
+  });
+  return (on: boolean, t: number) => {
+    if (on === lit) return;
+    lit = on;
+    if (on) litSince = t;
+    else if (t - litSince > BURST_GAP) sound.noise(0.06, 3200, 0.05); // the snap as it catches out
+    if (gate) gate.gain.setTargetAtTime(on ? 1 : BUZZ_DARK, gate.context.currentTime, 0.004);
+  };
+}
+
+/** Noise that's mostly silent, ticking now and then: a tube's crackle. */
+function crackleBuffer(c: AudioContext, seconds: number) {
+  const buf = c.createBuffer(1, Math.ceil(c.sampleRate * seconds), c.sampleRate);
+  const d = buf.getChannelData(0);
+  const fade = Math.exp(-1 / (c.sampleRate * 0.002)); // each tick dies away in a couple of milliseconds
+  let env = 0;
+  for (let i = 0; i < d.length; i++) {
+    if (Math.random() < 30 / c.sampleRate) env = Math.max(env, 0.3 + Math.random() * 0.7);
+    d[i] = (Math.random() * 2 - 1) * env;
+    env *= fade;
+  }
+  return buf;
 }
 
 /** Strokes whatever `draw` paths or writes as a lit tube: a glow, the tube and its hot core. */
