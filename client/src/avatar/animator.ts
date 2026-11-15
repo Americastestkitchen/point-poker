@@ -1,12 +1,14 @@
 // Everything a bean does, as numbers: breathing, emotes (a wave, a laugh, a yawn…), getting bonked,
-// celebrating, putting a card down, swapping it after the reveal, using a hand item on someone
+// celebrating, putting a card down (card-moves.ts: a pat, a slam, a toss…) and swapping it after
+// the reveal, using a hand item on someone
 // (pointing, a hammer, a chip, a paper plane) and taking one, poking the duck, talking
 // and looking around. It has three layers (body, arms, face) and produces a
 // Pose; the rig turns that into meshes. No three.js here, so the same animator
 // drives the bean and your first-person body, and tests can run it.
 import { isEmote, type EmoteId } from "../../../shared/catalog/emotes.ts";
+import { CARD_MOVES, SWAP_GRAB, type CardMove } from "./card-moves.ts";
 
-export type ClipId = EmoteId | Reaction | "celebrate" | "placeCard" | "adjustCard" | "swapCard" | Gesture;
+export type ClipId = EmoteId | Reaction | "celebrate" | "adjustCard" | Gesture;
 
 /**
  * Taking a hit: `bonked` by a chip, `bopped` (softly) by a paper plane, `squashed` flat by the
@@ -63,16 +65,6 @@ export interface Pose {
 }
 
 const REST_ARM_X = -1.15;
-/** How long putting a card down takes, and when the hand pats it (seconds). */
-const PLACE = 1.05;
-export const PLACE_PAT = 0.65;
-/**
- * Changing your card after the reveal: the hand grabs the old card off the felt, hoists it up
- * and slaps the new one down. When it grabs and when it slaps (seconds), and how long it all takes.
- */
-export const SWAP_GRAB = 0.28,
-  SWAP_SLAP = 0.72;
-const SWAP = 1.15;
 /** How long a flick and a poke take (seconds). */
 const FLICK = 0.5,
   POKE = 0.6;
@@ -95,9 +87,109 @@ const ease = (x: number) => {
   const c = Math.min(1, Math.max(0, x));
   return c * c * (3 - 2 * c);
 };
+/** Eases in from `from` over `ramp` seconds, holds, and eases out from `to` over `ramp`. */
+const span = (e: number, from: number, to: number, ramp: number) =>
+  ease((e - from) / ramp) * (1 - ease((e - to) / ramp));
+
+/**
+ * What a card move does to the bean `e` seconds in, as changes from resting: the right arm (swing,
+ * stretch, out to the side), how far the body leans in, its squash and hop, a glance to the side,
+ * the eyes and a tilt of the head.
+ */
+interface MovePose {
+  arm: number;
+  stretch: number;
+  z: number;
+  lean: number;
+  squash: number;
+  hop: number;
+  glance: number;
+  eyes: number;
+  tilt: number;
+}
+const REST_MOVE: MovePose = { arm: 0, stretch: 0, z: 0, lean: 0, squash: 0, hop: 0, glance: 0, eyes: 0, tilt: 0 };
+/** How far the arm swings from resting to reach the felt in front of it. */
+const TO_FELT = -1.58 - REST_ARM_X;
+
+const MOVE_POSE: Record<CardMove, (e: number) => MovePose> = {
+  pat(e) {
+    // the right arm swings forward and stretches out to the felt, pats the card once it's landed, and comes back
+    const k = span(e, 0, CARD_MOVES.pat.length - 0.3, 0.3);
+    const pat = Math.sin(Math.min(1, Math.max(0, (e - 0.55) / 0.2)) * Math.PI);
+    return { ...REST_MOVE, arm: TO_FELT * k + 0.12 * pat, stretch: 1.5 * k, z: -0.2 * k, lean: 0.18 * k };
+  },
+  slam(e) {
+    // up it goes over the head, the bean drawing itself up tall, then the whole body goes into
+    // bringing it down; it squashes on impact and wobbles back
+    const up = ease(e / 0.24) * (1 - ease((e - 0.28) / 0.08));
+    const down = ease((e - 0.28) / 0.08) * (1 - ease((e - (CARD_MOVES.slam.length - 0.35)) / 0.35));
+    const hit = CARD_MOVES.slam.land - 0.02;
+    const wobble = e > hit ? Math.cos((e - hit) * 10) * Math.exp(-(e - hit) * 5) : 0;
+    return {
+      ...REST_MOVE,
+      arm: (-2.65 - REST_ARM_X) * up + (-1.55 - REST_ARM_X) * down,
+      stretch: 0.3 * up + 1.45 * down,
+      z: 0.05 * up - 0.2 * down,
+      lean: -0.1 * up + 0.28 * down,
+      squash: -0.06 * up + 0.22 * wobble,
+      hop: 0.05 * up,
+    };
+  },
+  toss(e) {
+    // cocked up and in, then flung out from the chair without reaching; the rubber arm wobbles
+    // and overshoots after it lets go
+    const { release, length } = CARD_MOVES.toss;
+    const back = ease(e / 0.18) * (1 - ease((e - 0.18) / 0.08));
+    const out = ease((e - 0.2) / 0.08) * (1 - ease((e - (length - 0.35)) / 0.35));
+    const wob = e > release ? Math.sin((e - release) * 22) * Math.exp(-(e - release) * 5) : 0;
+    return {
+      ...REST_MOVE,
+      arm: (-2.0 - REST_ARM_X) * back + (-1.45 - REST_ARM_X + 0.15 * wob) * out,
+      stretch: 0.1 * back + (0.9 + 0.35 * wob) * out,
+      z: -0.3 * back - 0.1 * out,
+      lean: -0.05 * back + 0.08 * out,
+    };
+  },
+  sneaky(e) {
+    // hunched down with shifty eyes, a look left, a look right, then the arm slides it in low
+    const { length } = CARD_MOVES.sneaky;
+    const crouch = span(e, 0, length - 0.25, 0.15);
+    const glance = -0.5 * span(e, 0.02, 0.22, 0.08) + 0.5 * span(e, 0.26, 0.42, 0.08);
+    const reach = ease((e - 0.3) / 0.25) * (1 - ease((e - (length - 0.3)) / 0.3));
+    return {
+      ...REST_MOVE,
+      arm: (-1.42 - REST_ARM_X) * reach,
+      stretch: 1.3 * reach,
+      z: -0.15 * reach,
+      lean: 0.22 * crouch,
+      squash: 0.05 * crouch,
+      glance,
+      eyes: -0.2 * crouch,
+    };
+  },
+  dainty(e) {
+    // held up high with the elbow out, chin up and eyes closed, a pause, then lowered to the felt
+    // ever so slowly and let go
+    const up = ease(e / 0.25) * (1 - ease((e - 0.42) / 0.2));
+    const down = ease((e - 0.42) / 0.2) * (1 - ease((e - (CARD_MOVES.dainty.length - 0.3)) / 0.3));
+    return {
+      ...REST_MOVE,
+      arm: (-2.35 - REST_ARM_X) * up + (-1.6 - REST_ARM_X) * down,
+      stretch: 0.45 * up + 1.35 * down,
+      z: 0.3 * up - 0.15 * down,
+      lean: -0.04 * up + 0.12 * down,
+      eyes: -0.3 * up,
+      tilt: 0.1 * up,
+    };
+  },
+};
 
 export interface Animator {
   play(clip: ClipId): void;
+  /** Puts a card down with `move` (card-moves.ts has its beats). */
+  placeCard(move: CardMove): void;
+  /** After the reveal: grabs the card back off the felt, then puts the new one down with `move`. */
+  swapCard(move: CardMove): void;
   /** Where they're looking, relative to facing the table. */
   setGaze(yaw: number, pitch: number): void;
   /** Mic loudness 0..1; the mouth flaps while it's above zero. */
@@ -134,9 +226,9 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
   /** What the hands are doing with the card, and how many seconds in. */
   let hands:
     | { kind: "idle" }
-    | { kind: "placing"; t: number }
+    | { kind: "placing"; t: number; move: CardMove }
     | { kind: "adjusting"; t: number }
-    | { kind: "swapping"; t: number } = { kind: "idle" };
+    | { kind: "swapping"; t: number; move: CardMove } = { kind: "idle" };
   /** A flick or poke going on, and how many seconds in. */
   let gesture: { kind: Gesture; t: number } | null = null;
   let talkTarget = 0,
@@ -172,15 +264,9 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         case "celebrate":
           celebrateT = 2.2;
           return;
-        case "placeCard":
-          hands = { kind: "placing", t: 0 };
-          return;
         case "adjustCard":
           // squaring it up waits until it's been put down
           if (hands.kind !== "placing" && hands.kind !== "swapping") hands = { kind: "adjusting", t: 0 };
-          return;
-        case "swapCard":
-          hands = { kind: "swapping", t: 0 };
           return;
         case "flick":
         case "poke":
@@ -192,6 +278,14 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         default:
           if (isEmote(clip)) emote = { id: clip, t: 0 };
       }
+    },
+
+    placeCard(move) {
+      hands = { kind: "placing", t: 0, move };
+    },
+
+    swapCard(move) {
+      hands = { kind: "swapping", t: 0, move };
     },
 
     setGaze(y, p) {
@@ -341,20 +435,13 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         zR = 0.25 - 0.22 * k + w;
         lean = 0.14 * k;
       };
+      /** What the card move going on adds, if one is. */
+      let move = REST_MOVE;
       if (hands.kind === "placing") {
         hands.t += dt;
-        const e = hands.t;
         armSpeed = 22;
-        if (e < PLACE) {
-          // one move: the right arm swings forward and stretches out to the felt, pats the card
-          // down once it's landed, and comes back
-          const k = ease(e / 0.32) * (1 - ease((e - (PLACE - 0.3)) / 0.3));
-          const pat = Math.sin(Math.min(1, Math.max(0, (e - 0.55) / 0.2)) * Math.PI);
-          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * k + 0.12 * pat;
-          stretchR = 1 + 1.5 * k;
-          zR = 0.25 - 0.2 * k;
-          lean = 0.18 * k;
-        } else hands = { kind: "idle" };
+        if (hands.t < CARD_MOVES[hands.move].length) move = MOVE_POSE[hands.move](hands.t);
+        else hands = { kind: "idle" };
       } else if (hands.kind === "adjusting") {
         hands.t += dt;
         armSpeed = 22;
@@ -364,17 +451,29 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
         hands.t += dt;
         const e = hands.t;
         armSpeed = 26;
-        if (e < SWAP) {
-          // reach out to the felt and grab the card, hoist it up over the head for a big wind-up,
-          // then SLAP the new one down with the whole body behind it, and settle back
+        if (e < SWAP_GRAB + CARD_MOVES[hands.move].length) {
+          // reach out to the felt and grab the card, then put the new one down the way this bean does
           const reach = ease(e / SWAP_GRAB) * (1 - ease((e - SWAP_GRAB) / 0.12));
-          const hoist = ease((e - SWAP_GRAB) / 0.22) * (1 - ease((e - (SWAP_SLAP - 0.1)) / 0.1));
-          const slam = ease((e - (SWAP_SLAP - 0.1)) / 0.1) * (1 - ease((e - (SWAP - 0.3)) / 0.3));
-          armR = REST_ARM_X + (-1.58 - REST_ARM_X) * reach + (-2.6 - REST_ARM_X) * hoist + (-1.55 - REST_ARM_X) * slam;
-          stretchR = 1 + 1.5 * reach + 0.35 * hoist + 1.45 * slam;
-          zR = 0.25 - 0.2 * reach + 0.1 * hoist - 0.2 * slam;
-          lean = 0.16 * reach - 0.08 * hoist + 0.24 * slam;
+          const then = e > SWAP_GRAB ? MOVE_POSE[hands.move](e - SWAP_GRAB) : REST_MOVE;
+          move = {
+            ...then,
+            arm: then.arm + TO_FELT * reach,
+            stretch: then.stretch + 1.5 * reach,
+            z: then.z - 0.2 * reach,
+            lean: then.lean + 0.16 * reach,
+          };
         } else hands = { kind: "idle" };
+      }
+      if (move !== REST_MOVE) {
+        armR = REST_ARM_X + move.arm;
+        stretchR = 1 + move.stretch;
+        zR = 0.25 + move.z;
+        lean = move.lean;
+        sy -= move.squash;
+        sx += move.squash * 0.75;
+        y += move.hop;
+        eyeScale += move.eyes;
+        rotZ += move.tilt;
       }
       // ---- gestures: the right arm uses a hand item on someone, or jabs at something on the felt
       let prop: Prop | null = null;
@@ -443,7 +542,8 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       const talking = talk < 0.02 ? 0 : Math.min(1, talk * 1.4) * (0.45 + 0.55 * Math.abs(Math.sin(tt * 15)));
       const mouthOpen = Math.max(talking, yawn);
       // pupils spring toward where we're looking, with wobble
-      const tx = Math.min(0.6, Math.max(-0.6, Math.sin(yaw) * 0.5));
+      const facing = yaw + move.glance;
+      const tx = Math.min(0.6, Math.max(-0.6, Math.sin(facing) * 0.5));
       const ty = Math.min(0.6, Math.max(-0.6, pitch * 0.8));
       const spring = (p: ReturnType<typeof pupil>) => {
         p.vel.x += ((tx - p.off.x) * 120 - p.vel.x * 7) * dt;
@@ -461,7 +561,7 @@ export function createAnimator(deps: { random?: () => number; now?: () => number
       const looking: Pose["face"]["pupils"] = [spring(pupils[0]), spring(pupils[1])];
 
       return {
-        body: { sx, sy, y, rotX: -pitch * 0.25 + lean - rock, rotY: yaw * 0.6, rotZ },
+        body: { sx, sy, y, rotX: -pitch * 0.25 + lean - rock, rotY: facing * 0.6, rotZ },
         arms: [{ ...L }, { ...R }],
         face: { mouthOpen, eyeScale, pupils: looking },
         emote: playing,

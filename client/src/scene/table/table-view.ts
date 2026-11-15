@@ -8,8 +8,8 @@ import type { Actions } from "../../app/actions.ts";
 import type { GameEvent, ViewChange } from "../../app/events.ts";
 import type { Store } from "../../app/store.ts";
 import type { Audio } from "../../audio/sfx.ts";
-import { PLACE_PAT, SWAP_GRAB, SWAP_SLAP } from "../../avatar/animator.ts";
 import type { Avatar } from "../../avatar/avatar.ts";
+import { cardSeed, type Beats, type CardMove } from "../../avatar/card-moves.ts";
 import type { StatusScreen } from "../../environments/types.ts";
 import type { CameraRig } from "../engine/camera.ts";
 import type { Stage } from "../engine/stage.ts";
@@ -57,6 +57,25 @@ export function mountTableView(
     flattened: rig.flatten,
     outside: rig.outside,
   });
+
+  /** What each way of putting a card down sounds like, and when. */
+  const SOUNDS: Record<CardMove, (b: Beats) => [at: number, play: () => void][]> = {
+    pat: (b) => [[b.release, audio.slide]],
+    slam: (b) => [[b.land, audio.thud]],
+    toss: (b) => [
+      [b.release, audio.whoosh],
+      [b.land - 0.3, audio.skid],
+    ],
+    sneaky: (b) => [[b.release, audio.shh]],
+    dainty: (b) => [[b.land, audio.tink]],
+  };
+
+  /** Puts `card` down in time with the move its bean just started: it leaves the hand, lands and makes its sounds on the move's beats. */
+  function putDown(card: Seat["card"], value: number | null, hand: () => THREE.Vector3, beats: Beats) {
+    card.show(value, hand, { delay: beats.release, how: beats.landing });
+    if (beats.pat !== null) card.nudge(beats.pat);
+    for (const [at, play] of SOUNDS[beats.move](beats)) stage.after(at, play);
+  }
 
   // Each new view redraws the table, and what changed in it shapes the animation.
   store.subscribe((s, prev) => {
@@ -132,11 +151,8 @@ export function mountTableView(
               card.nudge(0.5);
               audio.slide();
             } else {
-              // they lean in, set it down from their hand and pat it
-              avatar.play("placeCard");
-              card.show(value, () => avatar.handWorldPos(), { delay: 0.3, gentle: true });
-              card.nudge(PLACE_PAT);
-              stage.after(0.3, audio.slide);
+              // they put it down their own way: everyone sees the same move, picked from who and which deal
+              putDown(card, value, () => avatar.handWorldPos(), avatar.placeCard(cardSeed(p.id, st.round)));
             }
           } else card.show(value);
           card.turnDown();
@@ -153,7 +169,7 @@ export function mountTableView(
             delay: stagger ? 0.25 * flipIndex++ : 0,
             onTurn: stagger ? () => audio.flip() : undefined,
           });
-        } else if (card.value !== value) swapCard(seat, value, mine); // they changed their mind
+        } else if (card.value !== value) swapCard(seat, p.id, value, mine); // they changed their mind
         card.setWas(p.revealedVote);
       } else card.hide();
 
@@ -218,14 +234,17 @@ export function mountTableView(
     return label === String(points) ? `${points} PTS` : label;
   }
 
-  /** After the reveal: the bean grabs its card back off the felt and slaps the new one down, face up. */
-  function swapCard(seat: Seat, value: number, mine: boolean) {
-    seat.avatar.play("swapCard");
+  /** After the reveal: the bean grabs its card back off the felt and puts the new one down its own way, face up. */
+  function swapCard(seat: Seat, playerId: string, value: number, mine: boolean) {
+    const beats = seat.avatar.swapCard(cardSeed(playerId, store.getState().room?.round ?? 0, value));
     // your own comes up in front of your eyes; everyone else's in their bean's hand
     const hand = mine
       ? () => camera.localToWorld(new THREE.Vector3(0.12, -0.12, -0.45))
       : () => seat.avatar.handWorldPos();
-    seat.card.swap(value, hand, { grab: SWAP_GRAB, slap: SWAP_SLAP, onSlap: audio.slap });
+    seat.card.swap(value, hand, { grab: beats.grab, release: beats.release, how: beats.landing });
+    // a plain pat after a change of mind is a SLAP; the showier moves keep their own sounds
+    const sounds = beats.move === "pat" ? [[beats.land, audio.slap] as const] : SOUNDS[beats.move](beats);
+    for (const [at, play] of sounds) stage.after(at, play);
   }
 
   /** What someone's effect looks like at the table. */
@@ -273,7 +292,7 @@ export function mountTableView(
         const seat = seats.get(meId());
         if (seat && store.getState().room?.phase === "revealed") {
           // changing your mind during the discussion: face up, for everyone to see
-          if (seat.card.group.visible) swapCard(seat, e.value, true);
+          if (seat.card.group.visible) swapCard(seat, meId(), e.value, true);
           return;
         }
         if (seat) {
@@ -282,17 +301,17 @@ export function mountTableView(
             seat.card.show(e.value);
             seat.avatar.play("adjustCard");
             seat.card.nudge(0.2);
+            audio.slide();
           } else {
-            // your card flies from your hand to the felt, and your arm puts it down and pats it
-            const deck = playValues(store.getState().room?.settings.deck ?? []);
+            // your card waits in front of you while your arms do your bean's move, and leaves on its beat
+            const room = store.getState().room;
+            const deck = playValues(room?.settings.deck ?? []);
             const i = deck.indexOf(e.value);
-            const from = camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
-            seat.card.show(e.value, from);
-            seat.avatar.play("placeCard");
+            const from = () => camera.localToWorld(new THREE.Vector3((i - (deck.length - 1) / 2) * 0.06, -0.35, -0.5));
+            putDown(seat.card, e.value, from, seat.avatar.placeCard(cardSeed(meId(), room?.round ?? 0)));
           }
           seat.card.turnDown();
-        }
-        audio.slide();
+        } else audio.slide();
         return;
       }
       default:

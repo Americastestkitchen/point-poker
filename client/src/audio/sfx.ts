@@ -161,6 +161,14 @@ export function createAudio(storage: Pick<Storage, "muted" | "setMuted">) {
     /** A channel for one room's sounds; dispose it when the room goes. */
     room,
     slide: () => sfx.noise(0.18, 2400, 0.25),
+    /** Ways a card comes down: slammed with the whole body, skidding in after a toss, slid in on the sly, set down daintily. */
+    thud: () => {
+      sfx.tone(110, 0.22, "sine", 0.45, 45);
+      sfx.noise(0.1, 600, 0.4);
+    },
+    skid: () => sfx.noise(0.3, 3200, 0.18),
+    shh: () => sfx.noise(0.4, 1800, 0.1),
+    tink: () => sfx.tone(2600, 0.12, "sine", 0.08, 2900),
     flip: (delay = 0) => {
       sfx.noise(0.05, 4000, 0.35, delay);
       sfx.tone(900, 0.05, "triangle", 0.08, 600, delay);

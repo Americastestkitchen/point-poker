@@ -1,7 +1,9 @@
 // The card in front of each seat: it slides or is set down onto the felt,
 // sits a little crooked, gets fiddled with, and flips over on the reveal.
-// After the reveal it can be grabbed back and a new one slapped down face up.
+// After the reveal it can be grabbed back and a new one put down face up. How it comes down
+// out of a hand (set, tossed, slammed, skidded, slid) follows the bean's move (card-moves.ts).
 import * as THREE from "three";
+import { LANDING_TIME, type Landing } from "../../avatar/card-moves.ts";
 import { cardBack, cardFront, swapTag } from "../art/textures.ts";
 import type { Layout } from "../layout/layout.ts";
 
@@ -19,12 +21,12 @@ export interface TableCard {
   /**
    * Puts the card on the felt (if it isn't there yet) showing `value`. It flies in
    * from `from`, a point or a moving hand; `delay` holds it in the hand first, and
-   * `gentle` sets it down low and flat instead of tossing it.
+   * `how` is the way it comes down (tossed, unless it says otherwise).
    */
   show(
     value: number | null,
     from?: THREE.Vector3 | (() => THREE.Vector3),
-    opts?: { delay?: number; gentle?: boolean },
+    opts?: { delay?: number; how?: Landing },
   ): void;
   /** Where the card lies for this seat at this table size. */
   placeAt(slot: number, count: number, mine: boolean): void;
@@ -35,9 +37,9 @@ export interface TableCard {
   turnUp(value: number | null, opts?: { delay?: number; onTurn?: () => void }): void;
   /**
    * Someone changed their card after the reveal: after `grab` seconds the card goes up into
-   * `hand`, and at `slap` the new one comes down face up, hard (`onSlap` runs as it hits).
+   * `hand`, and at `release` the new one leaves it face up and comes down `how` the bean puts it.
    */
-  swap(value: number, hand: () => THREE.Vector3, opts: { grab: number; slap: number; onSlap?: () => void }): void;
+  swap(value: number, hand: () => THREE.Vector3, opts: { grab: number; release: number; how: Landing }): void;
   /** The card they had at the reveal, shown over the floating copy as "3 → 5" (null: no change to show). */
   setWas(value: number | null): void;
   turnDown(): void;
@@ -47,24 +49,35 @@ export interface TableCard {
 /** Where the card is. */
 type Placement =
   | { at: "hidden" }
-  /** In someone's hand: it leaves after `wait` seconds, from wherever the hand is by then. */
+  /** In someone's hand, held up: it leaves after `wait` seconds, from wherever the hand is by then. */
   | { at: "hand"; wait: number; hand: () => THREE.Vector3; how: Landing }
   /** On its way down to the felt; `t` goes 0..1. */
   | { at: "landing"; t: number; how: Landing }
   | { at: "felt" }
-  /** Being swapped: on the felt until `grab`, up in the hand until `slap`, then `next` lands. `t` counts seconds. */
+  /** Being swapped: on the felt until `grab`, up in the hand until `release`, then `next` lands `how`. `t` counts seconds. */
   | {
       at: "swapping";
       t: number;
       grab: number;
-      slap: number;
+      release: number;
+      how: Landing;
       hand: () => THREE.Vector3;
       next: number;
-      onSlap?: () => void;
     };
 
-/** How a card comes down: hand-placed ones drift in low and flat, tossed ones arc and spin, slapped ones smack down fast. */
-type Landing = "gentle" | "toss" | "slap";
+/**
+ * What each landing looks like: how high it arcs on the way, how far it spins round, and how it
+ * moves along its path. Gentle ones drift in low and flat, tossed ones arc and spin, slapped and
+ * slammed ones speed up into the felt, skidded ones hop once and slide the rest, slid ones stay low.
+ */
+const LANDS: Record<Landing, { arc: number; spin: number; path: (t: number) => number }> = {
+  gentle: { arc: 0.05, spin: 0.7, path: (t) => 1 - Math.pow(1 - t, 3) },
+  toss: { arc: 0.25, spin: 4, path: (t) => 1 - Math.pow(1 - t, 3) },
+  slap: { arc: 0, spin: 0.3, path: (t) => t * t },
+  slam: { arc: 0, spin: 0.2, path: (t) => t * t },
+  skid: { arc: 0.2, spin: 7, path: (t) => 1 - Math.pow(1 - t, 3) },
+  slide: { arc: 0, spin: 0.25, path: (t) => 1 - Math.pow(1 - t, 2) },
+};
 
 /** Which way up it is. On a reveal, a card can wait its turn before it turns. */
 type Facing =
@@ -128,6 +141,8 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
   let wiggle = 0;
   /** Seconds until someone fiddles with it, if anyone's about to. */
   let nudgeIn: number | null = null;
+  /** A slammed card bouncing back up off the felt: 1 as it hits, down to 0. */
+  let bounce = 0;
 
   const setValue = (next: number | null) => {
     if (next === value) return;
@@ -148,9 +163,11 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
 
     show(next, fromWorld, opts = {}) {
       if (place.at === "hidden") {
-        const how: Landing = opts.gentle ? "gentle" : "toss";
-        if (typeof fromWorld === "function") place = { at: "hand", wait: opts.delay ?? 0, hand: fromWorld, how };
-        else if (fromWorld) {
+        const how = opts.how ?? "toss";
+        if (typeof fromWorld === "function") {
+          base.copy(fromWorld());
+          place = { at: "hand", wait: opts.delay ?? 0, hand: fromWorld, how };
+        } else if (fromWorld) {
           from.copy(fromWorld);
           place = { at: "landing", t: 0, how };
         } else {
@@ -180,6 +197,7 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
       place = { at: "hidden" };
       facing = { side: "down" };
       nudgeIn = null;
+      bounce = 0;
       group.visible = false;
       flip = 0;
       float.visible = false;
@@ -188,14 +206,14 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
       tag.visible = false;
     },
 
-    swap(next, hand, { grab, slap, onSlap }) {
+    swap(next, hand, { grab, release, how }) {
       if (place.at === "hidden") return;
       if (place.at === "swapping") {
         // changed again mid-swap: the new card is the one that comes down
         place.next = next;
         return;
       }
-      place = { at: "swapping", t: 0, grab, slap, hand, next, onSlap };
+      place = { at: "swapping", t: 0, grab, release, how, hand, next };
     },
 
     setWas(next) {
@@ -221,25 +239,25 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
 
     update(dt) {
       if (place.at === "hidden") return;
+      /** Where the hand holding it is, while it's held. */
+      let held: (() => THREE.Vector3) | null = null;
       if (place.at === "hand") {
-        // still in someone's hand
+        // still in someone's hand, until it leaves
         place.wait -= dt;
-        card.object.visible = false;
-        if (place.wait > 0) return;
-        from.copy(place.hand());
-        place = { at: "landing", t: 0, how: place.how };
+        if (place.wait > 0) held = place.hand;
+        else {
+          from.copy(place.hand());
+          place = { at: "landing", t: 0, how: place.how };
+        }
       }
-      let held = false;
       if (place.at === "swapping") {
         place.t += dt;
-        if (place.t >= place.slap) {
+        if (place.t >= place.release) {
           // the new card comes down from the hand, face up
           from.copy(place.hand());
           setValue(place.next);
-          const { onSlap } = place;
-          place = { at: "landing", t: 0, how: "slap" };
-          onSlap?.();
-        } else held = place.t >= place.grab;
+          place = { at: "landing", t: 0, how: place.how };
+        } else if (place.t >= place.grab) held = place.hand;
       }
       card.object.visible = true;
       if (nudgeIn !== null) {
@@ -293,30 +311,37 @@ export function createTableCard(scene: THREE.Scene, layout: Layout, says: (value
         how: Landing = "toss";
       if (place.at === "landing") {
         how = place.how;
-        place.t = Math.min(1, place.t + dt * (how === "slap" ? 6 : 2.4));
-        // a slap speeds up into the felt; the others ease in
-        e = how === "slap" ? place.t * place.t : 1 - Math.pow(1 - place.t, 3);
+        place.t = Math.min(1, place.t + dt / LANDING_TIME[how]);
+        e = LANDS[how].path(place.t);
         if (place.t >= 1) {
           place = { at: "felt" };
-          if (how === "slap") {
-            // smack: it shudders and sits a little crooked
+          if (how === "slap" || how === "slam") {
+            // smack: it shudders and sits a little crooked, and a slammed one bounces too
             wiggle = 1;
             skewTarget = (Math.random() - 0.5) * 0.3;
+            if (how === "slam") bounce = 1;
           }
         }
       }
       if (place.at === "landing") base.lerpVectors(from, home, e);
-      else if (held && place.at === "swapping") base.lerp(place.hand(), Math.min(1, dt * 14));
+      else if (held) base.lerp(held(), Math.min(1, dt * 14));
       else base.lerp(home, Math.min(1, dt * 6));
       group.position.copy(base).add(shift);
       const jiggle = Math.sin(wiggle * 30) * wiggle;
       group.position.x += jiggle * 0.012;
-      const arc = how === "gentle" ? 0.05 : how === "slap" ? 0 : 0.25;
-      group.position.y += Math.sin(e * Math.PI) * arc + Math.sin(flip * Math.PI) * 0.12 + Math.abs(jiggle) * 0.006;
+      // a skidded card hops once on its way and slides the rest
+      const airborne = how === "skid" ? Math.min(1, e / 0.7) : e;
+      if (bounce > 0) bounce = Math.max(0, bounce - dt * 2.5);
+      const hop = Math.abs(Math.sin((1 - bounce) * Math.PI * 2)) * bounce * 0.07;
+      group.position.y +=
+        Math.sin(airborne * Math.PI) * LANDS[how].arc +
+        Math.sin(flip * Math.PI) * 0.12 +
+        Math.abs(jiggle) * 0.006 +
+        hop;
       group.rotation.y = yaw + skew + jiggle * 0.12;
       // face down = front pointing at the felt; held up in a hand, it tips towards whoever holds it
       card.object.rotation.x = Math.PI / 2 - flip * Math.PI + (held ? 0.5 : 0);
-      card.object.rotation.z = (1 - e) * (how === "gentle" ? 0.7 : how === "slap" ? 0.3 : 4);
+      card.object.rotation.z = (1 - e) * LANDS[how].spin;
     },
   };
   return self;

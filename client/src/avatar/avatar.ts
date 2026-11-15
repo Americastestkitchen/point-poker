@@ -8,6 +8,7 @@ import type { Look } from "../../../shared/look.ts";
 import { toon } from "../scene/art/materials.ts";
 import { createAnimator, type ClipId, type Gesture, type HandPose, type Pose } from "./animator.ts";
 import { anchorsFor, type AnchorId, type Anchors, type Spot } from "./bodies/anchors.ts";
+import { CARD_MOVES, pickMove, swapBeats, type Beats } from "./card-moves.ts";
 import { BODY_SHAPES } from "./bodies/index.ts";
 import { BUILDERS, DEALER_GEAR, SLOT_ANCHOR } from "./cosmetics/index.ts";
 import { talkers } from "./cosmetics/talk.ts";
@@ -31,6 +32,13 @@ export interface Avatar {
   /** Colour, shape and what they're wearing. A new shape is swapped in place; callers never rebuild. */
   setLook(look: Look): void;
   play(clip: ClipId): void;
+  /**
+   * Puts a card down the way this body likes to, picked by `seed` (card-moves.ts `cardSeed`) so
+   * every screen sees the same move. Returns its beats, for the card and its sounds to keep time.
+   */
+  placeCard(seed: string): Beats;
+  /** After the reveal: grabs the card back and puts the new one down its own way, as `placeCard` does. */
+  swapCard(seed: string): Beats & { grab: number };
   /**
    * Plays a gesture aimed at someone: the arm follows `target` (a point in the room) for as
    * long as the gesture lasts, so it keeps pointing at them while either of you moves.
@@ -215,6 +223,19 @@ export function createAvatar(initial: Look, opts: { dealer?: boolean } = {}): Av
     play(clip) {
       animator.play(clip);
       if (isEmote(clip)) labels.showEmoji(EMOTE[clip].emoji);
+    },
+
+    placeCard(seed) {
+      // the body it has now: someone who changed shape puts their next card down the new shape's way
+      const move = pickMove(look.body, seed);
+      animator.placeCard(move);
+      return CARD_MOVES[move];
+    },
+
+    swapCard(seed) {
+      const move = pickMove(look.body, seed);
+      animator.swapCard(move);
+      return swapBeats(move);
     },
 
     aim(gesture, at) {

@@ -6,12 +6,11 @@ import {
   DIZZY,
   FLICK_RELEASE,
   POINT,
-  SWAP_GRAB,
-  SWAP_SLAP,
   THROW_RELEASE,
   type Animator,
   type Pose,
 } from "./animator.ts";
+import { CARD_MOVES, MOVES, SWAP_GRAB, swapBeats } from "./card-moves.ts";
 
 /** Runs the animator for `seconds` at 60fps and returns every pose. */
 function run(a: Animator, seconds: number, from = 0): Pose[] {
@@ -20,6 +19,8 @@ function run(a: Animator, seconds: number, from = 0): Pose[] {
   return poses;
 }
 const still = () => createAnimator({ random: () => 0.5, now: () => 0 });
+/** The right arm `sec` seconds into `poses`. */
+const rightArm = (poses: Pose[], sec: number) => poses[Math.round(sec * 60) - 1]!.arms[1];
 
 test("at rest the arms hang forward and the face smiles", () => {
   const p = run(still(), 1).at(-1)!;
@@ -51,47 +52,76 @@ test("a shock widens the eyes", () => {
   assert.equal(run(a, 2, 0.5).at(-1)!.face.eyeScale, 1);
 });
 
-test("putting a card down is one reach of the right arm, about a second long", () => {
-  const a = still();
-  a.play("placeCard");
-  assert.equal(a.busyWithCard, true);
-  const poses = run(a, 1.1);
-  assert.ok(poses[17]!.arms[1].stretch > 1.5, "the right arm stretches out to the felt");
+test("every way of putting a card down reaches the felt with the right arm and is back at rest in about a second", () => {
+  for (const move of MOVES) {
+    const a = still();
+    a.placeCard(move);
+    assert.equal(a.busyWithCard, true);
+    const { release, land, length } = CARD_MOVES[move];
+    assert.ok(release < land && land < length, `${move}: it leaves the hand, then lands, then the arm's back`);
+    assert.ok(length >= 0.9 && length <= 1.25, `${move} takes about a second`);
+    const poses = run(a, length + 0.15);
+    const arm = rightArm(poses, release);
+    assert.ok(arm.stretch > 1.3 || move === "toss", `${move}: the hand is out over the felt as it lets go`);
+    assert.ok(arm.x < -1.3, `${move}: the arm is forward as it lets go`);
+    assert.ok(
+      poses.every((p) => Math.abs(p.arms[0].x + 1.15) < 1e-9),
+      `${move}: the left hand stays put: no squaring up with both hands`,
+    );
+    assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, `${move}: back at rest`);
+    assert.ok(Math.abs(poses.at(-1)!.body.rotX) < 0.01, `${move}: sitting up straight again`);
+    assert.equal(a.busyWithCard, false);
+  }
+});
+
+test("each move has its own look", () => {
+  const during = (move: (typeof MOVES)[number], sec: number) => {
+    const a = still();
+    a.placeCard(move);
+    return run(a, sec).at(-1)!;
+  };
+  const slam = CARD_MOVES.slam;
+  assert.ok(during("slam", 0.22).arms[1].x < -2.3, "a slam hoists the card up high first");
+  assert.ok(during("slam", slam.land + 0.04).body.sy < 0.9, "and the bean squashes as it hits");
+  assert.ok(during("toss", CARD_MOVES.toss.release).arms[1].stretch < 2, "a toss flings it from the chair");
+  const sneaky = during("sneaky", 0.15).body.rotY;
+  assert.ok(sneaky < -0.15 && during("sneaky", 0.36).body.rotY > 0.15, "sneaky looks left, then right");
+  assert.ok(during("dainty", 0.4).arms[1].x < -2.1, "dainty holds it up high");
+  assert.ok(during("dainty", 0.4).face.eyeScale < 0.8, "with its eyes closed");
   assert.ok(
-    poses.every((p) => Math.abs(p.arms[0].x + 1.15) < 1e-9),
-    "the left hand stays put: no squaring up with both hands",
+    during("pat", CARD_MOVES.pat.pat! + 0.1).arms[1].x > during("pat", 0.4).arms[1].x,
+    "a pat comes down on the card",
   );
-  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "back at rest");
-  assert.equal(a.busyWithCard, false);
-  a.play("adjustCard");
-  assert.equal(a.busyWithCard, true);
 });
 
 test("squaring up the card waits until it's been put down", () => {
   const a = still();
-  a.play("placeCard");
+  a.placeCard("pat");
   run(a, 0.6);
   a.play("adjustCard"); // ignored: still putting it down
   run(a, 0.5);
   assert.equal(a.busyWithCard, false, "done at about 1.05s, not restarted by the adjust");
   a.play("adjustCard");
-  a.play("placeCard"); // a new card takes over from the fiddle
+  a.placeCard("pat"); // a new card takes over from the fiddle
   run(a, 0.9);
   assert.equal(a.busyWithCard, true);
 });
 
-test("swapping a card after the reveal reaches out, hoists it up, slaps it down and comes back", () => {
+test("swapping a card after the reveal reaches out and grabs it, then puts the new one down with a move", () => {
+  for (const move of MOVES) {
+    const a = still();
+    a.swapCard(move);
+    assert.equal(a.busyWithCard, true);
+    const beats = swapBeats(move);
+    assert.equal(beats.grab, SWAP_GRAB);
+    assert.ok(beats.grab < beats.release && beats.release < beats.land && beats.land < beats.length);
+    const poses = run(a, beats.length + 0.15);
+    assert.ok(rightArm(poses, SWAP_GRAB).stretch > 1.4, `${move}: the right arm stretches out to grab the card`);
+    assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, `${move}: back at rest`);
+    assert.equal(a.busyWithCard, false);
+  }
   const a = still();
-  a.play("swapCard");
-  assert.equal(a.busyWithCard, true);
-  const poses = run(a, 1.2);
-  const at = (sec: number) => poses[Math.round(sec * 60) - 1]!.arms[1];
-  assert.ok(at(SWAP_GRAB).stretch > 1.4, "the right arm stretches out to grab the card");
-  assert.ok(at(SWAP_SLAP - 0.15).x < -2.2, "then it's hoisted up high");
-  assert.ok(at(SWAP_SLAP + 0.05).stretch > 1.4, "and slapped back down on the felt");
-  assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.05, "back at rest");
-  assert.equal(a.busyWithCard, false);
-  a.play("swapCard");
+  a.swapCard("slam");
   a.play("adjustCard"); // ignored: busy swapping
   run(a, 0.9);
   assert.equal(a.busyWithCard, true);
@@ -144,8 +174,6 @@ test("a poke reaches out to the felt and comes back, without holding up a card",
   assert.ok(Math.abs(poses.at(-1)!.arms[1].stretch - 1) < 0.01, "back at rest");
 });
 
-/** The right arm `sec` seconds into `poses`. */
-const rightArm = (poses: Pose[], sec: number) => poses[Math.round(sec * 60) - 1]!.arms[1];
 const AIM = { x: -1.7, z: -0.4, reach: 9 };
 
 test("pointing swings the right arm round to whoever it's aimed at and keeps it there a couple of seconds", () => {
