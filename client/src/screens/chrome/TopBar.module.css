@@ -66,6 +66,9 @@
 }
 
 /* the mic: greyed and struck through when off, green and glowing with your voice when on */
+.look.look {
+  width: 44px;
+}
 .mic.mic {
   width: 44px;
   position: relative;

@@ -192,7 +192,7 @@
   padding-top: var(--pp-space-4);
   border-top: var(--pp-border-soft);
 }
-/* inset like the toggle's label and switch below it */
+/* inset like the rows above it */
 .people {
   display: flex;
   flex-wrap: wrap;

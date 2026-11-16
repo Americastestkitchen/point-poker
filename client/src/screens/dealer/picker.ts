@@ -104,7 +104,7 @@ export type PickerCue = { t: "seen"; isDealer: boolean; started: boolean; hasTic
  * The picker opens by itself once per stretch without a ticket, for the dealer; dealing a
  * ticket closes it and arms it for the next stretch. `armed` starts true. Dismissing it
  * doesn't re-arm it, so it never pops straight back up. It stays shut in the lobby, where the
- * room is the point: "Line up tickets" opens it, and so does starting with nothing lined up.
+ * room is the point: the dealer menu's "Line up tickets" opens it, and so does starting with nothing lined up.
  */
 export function pickerCue(armed: boolean, cue: PickerCue): { armed: boolean; popup: "open" | "close" | null } {
   if (cue.t === "ticketChanged") return { armed: true, popup: "close" };

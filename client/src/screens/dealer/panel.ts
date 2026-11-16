@@ -1,7 +1,22 @@
-// What the dealer's control panel shows, decided from the table view. Pure, so it's tested
-// without a browser; DealerPanel.tsx only draws it and wires the presses.
+// What the dealer menu shows, decided from the table view. Pure, so it's tested without a
+// browser; DealerMenu.tsx only draws it and wires the presses.
 import type { Phase, PublicPlayer, TableView } from "../../../../shared/protocol.ts";
-import { nextInQueue } from "../../../../shared/rules.ts";
+import { nextInQueue, voters } from "../../../../shared/rules.ts";
+
+// ---------------------------------------------------------------- the tabs
+
+export type DealerTab = "round" | "players" | "rules";
+
+export const DEALER_TABS = [
+  { id: "round", label: "Round" },
+  { id: "players", label: "Players" },
+  { id: "rules", label: "House rules" },
+] as const satisfies readonly { id: DealerTab; label: string }[];
+
+/** Where the menu opens: the house rules in the lobby, this round once the game is on. */
+export const landingTab = (room: Pick<TableView, "started">): DealerTab => (room.started ? "round" : "rules");
+
+// ---------------------------------------------------------------- the round tab
 
 export type RoundActionId = "restart" | "skip" | "cancel" | "pick";
 
@@ -13,27 +28,76 @@ export interface RoundAction {
   danger: boolean;
 }
 
-type RoundView = Pick<TableView, "phase" | "queue" | "history" | "skipped" | "ticket">;
+type RoundView = Pick<TableView, "started" | "phase" | "queue" | "history" | "skipped" | "ticket">;
 
 /** A round is live while the cards are being played or are up, before the points are final. */
 export const isLive = (phase: Phase) => phase === "voting" || phase === "revealed";
 
-/** "This round": restart, skip, cancel (live rounds only) and pick a ticket (always). */
+/**
+ * Restart, skip and cancel (live rounds only), then pick a ticket (always; in the lobby it lines
+ * tickets up for the game). Cancel goes last, set apart.
+ */
 export function roundActions(room: RoundView): RoundAction[] {
   const live = isLive(room.phase);
   const next = nextInQueue(room);
   return [
-    { id: "restart", label: "🔁 Restart vote", sub: "everyone picks again", enabled: live, danger: false },
+    { id: "restart", label: "🔁 Restart vote", sub: "Everyone picks again", enabled: live, danger: false },
     {
       id: "skip",
       label: "⏭️ Skip ticket",
-      sub: next ? `no payout · next ${next.key}` : "no payout",
+      sub: next ? `No payout · next up ${next.key}` : "No payout",
       enabled: live,
       danger: false,
     },
-    { id: "cancel", label: "✋ Cancel round", sub: "no payout, clear ticket", enabled: live, danger: true },
-    { id: "pick", label: "🗂️ Pick a ticket", sub: "load or switch", enabled: true, danger: false },
+    { id: "pick", ...pickLabel(room), enabled: true, danger: false },
+    { id: "cancel", label: "✋ Cancel round", sub: "No payout, and the ticket goes", enabled: live, danger: true },
   ];
+}
+
+/** The card at the top of the round tab: the ticket on the table and how the round is going. */
+export function roundCard(room: Pick<TableView, "started" | "phase" | "ticket" | "players">): {
+  key: string;
+  title: string;
+  line: string;
+  empty: boolean;
+} {
+  const { ticket } = room;
+  if (!ticket)
+    return room.started
+      ? { key: "", title: "No ticket on the table", line: "Pick one to start a round.", empty: true }
+      : { key: "", title: "No ticket yet", line: "Line some up now, or pick one once you start.", empty: true };
+  return { key: ticket.key, title: ticket.summary, line: roundLine(room), empty: false };
+}
+
+function roundLine(room: Pick<TableView, "phase" | "players">): string {
+  switch (room.phase) {
+    case "voting": {
+      const playing = voters(room.players);
+      const down = playing.filter((p) => p.hasVoted).length;
+      return `${down} of ${playing.length} cards down`;
+    }
+    case "revealed":
+      return "The cards are up";
+    case "settled":
+      return "Pointed";
+    case "waiting":
+      return "";
+  }
+}
+
+// ---------------------------------------------------------------- the players tab
+
+function pickLabel(room: Pick<RoundView, "started" | "queue" | "ticket">): { label: string; sub: string } {
+  if (!room.started) {
+    const lined = room.queue.length;
+    return {
+      label: "🗂️ Line up tickets",
+      sub: lined ? `${lined} lined up so far` : "Paste an epic, or pick from the sprint",
+    };
+  }
+  return room.ticket
+    ? { label: "🗂️ Pick a different ticket", sub: "Paste one, or choose from the line" }
+    : { label: "🗂️ Pick a ticket", sub: "Paste one, or choose from the line" };
 }
 
 /** Skipping with a ticket lined up deals it, so it waits like any other ticket load. */

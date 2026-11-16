@@ -1,5 +1,5 @@
-// The house rules popup's decisions, from the table view and what the dealer typed. Pure, so
-// it's tested without a browser; HouseRulesDialog.tsx only draws them and wires the presses.
+// The house rules' decisions, from the table view and what the dealer typed. Pure, so
+// it's tested without a browser; HouseRules.tsx only draws them and wires the presses.
 import { CUSTOM_SCALE, customCards, SCALE, SCALE_IDS, type ScaleId } from "../../../../shared/catalog/decks.ts";
 import type { Card, Phase } from "../../../../shared/protocol.ts";
 

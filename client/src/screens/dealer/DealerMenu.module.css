@@ -1,0 +1,116 @@
+/*
+ * The dialog's scrolling body clips to the panel's rounded corners: a little room keeps the
+ * focus glows at the edges from being cut off. The menu keeps one height whichever tab is up,
+ * so it doesn't hop about as you switch (a short screen scrolls instead).
+ */
+.tabs {
+  min-width: 0;
+  min-height: min(410px, 62dvh);
+  padding: var(--pp-space-1);
+}
+
+.stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--pp-space-4);
+}
+
+/* rows on one dark plate: the round's actions, the players */
+.group {
+  margin: 0;
+  padding: var(--pp-space-1);
+  list-style: none;
+  background: var(--pp-color-well);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-lg);
+}
+
+/* the round: the ticket on the table */
+.card {
+  display: grid;
+  gap: 2px;
+  padding: var(--pp-space-3) var(--pp-space-4);
+  background: var(--pp-color-panel-raised);
+  border: var(--pp-border-soft);
+  border-radius: var(--pp-radius-lg);
+}
+.key {
+  font-size: var(--pp-size-sm);
+  font-weight: var(--pp-weight-display);
+  color: var(--pp-color-gold);
+}
+.title {
+  font-family: var(--pp-font-display);
+  font-size: var(--pp-size-lg);
+  font-weight: var(--pp-weight-strong);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.card[data-empty] .title {
+  color: var(--pp-color-dim);
+}
+.line {
+  margin-top: var(--pp-space-1);
+  font-size: var(--pp-size-sm);
+  color: var(--pp-color-dim);
+}
+.danger {
+  color: var(--pp-color-error);
+}
+
+/* the players */
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--pp-space-3);
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--pp-space-1) var(--pp-space-1) var(--pp-space-1) var(--pp-space-3);
+}
+.player + .player {
+  border-top: var(--pp-border-soft);
+}
+.player[data-away] .name {
+  color: var(--pp-color-faint);
+}
+.name {
+  /* the whole name, on two lines if it must: you need to know who you'd kick */
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  font-weight: var(--pp-weight-strong);
+}
+.state {
+  flex: none;
+  font-size: var(--pp-size-sm);
+  color: var(--pp-color-dim);
+}
+.state[data-voted] {
+  color: var(--pp-color-success);
+}
+.kick {
+  flex: none;
+  color: var(--pp-color-error);
+}
+.empty {
+  margin: 0;
+  padding: var(--pp-space-4);
+  text-align: center;
+  color: var(--pp-color-dim);
+  font-size: var(--pp-size-sm);
+  border: 1px dashed var(--pp-color-edge);
+  border-radius: var(--pp-radius-md);
+}
+.invite {
+  width: 100%;
+}
+
+.confirm {
+  margin: 0;
+  color: var(--pp-color-dim);
+}
+/* a long name in a confirm's title wraps instead of running off the panel */
+.wrap {
+  overflow-wrap: anywhere;
+}

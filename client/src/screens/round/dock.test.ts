@@ -241,24 +241,22 @@ test("only http(s) URLs are links", () => {
 
 // ---------------------------------------------------------------- the lobby
 
-test("the lobby: the dealer gets Start and the ways to set the table up, players wait and get their look", () => {
+test("the lobby: the dealer gets just Start (set-up is in the dealer menu), players wait and get their look", () => {
   const room = view({ started: false });
   assert.deepEqual(dock(room, "deb"), {
     key: "lobby",
     title: ["Everyone here?"],
     body: { t: "start", players: 3 },
-    actions: [{ t: "rules" }, { t: "look", main: false }, { t: "lineUp", lined: 0 }],
+    actions: [],
   });
   assert.deepEqual(dock(room, "ann"), {
     key: "lobby",
     title: null,
     body: { t: "waiting", text: "Waiting for DEB to start" },
-    actions: [{ t: "look", main: true }],
+    actions: [{ t: "look" }],
   });
   const alone = view({ started: false, players: [player("deb", { isDealer: true, seat: -1, plays: false })] });
   assert.equal(title(dock(alone, "deb")), "Send the invite, then deal 'em in");
-  const lined = view({ started: false, queue: [{ key: "SD-1", summary: "", points: null, status: "" }] });
-  assert.deepEqual(dock(lined, "deb").actions.at(-1), { t: "lineUp", lined: 1 });
 });
 
 // ---------------------------------------------------------------- other cards

@@ -11,6 +11,7 @@ export { cx } from "./kit/cx.ts";
 export { Panel } from "./kit/Panel.tsx";
 export { Button, ButtonLink, type ButtonProps, type ButtonLinkProps } from "./kit/Button.tsx";
 export { MenuList, type MenuItem } from "./kit/MenuList.tsx";
+export { Tabs, type Tab, type TabsProps } from "./kit/Tabs.tsx";
 export { Carousel } from "./kit/Carousel.tsx";
 export { CodeSlots } from "./kit/CodeSlots.tsx";
 export { Toggle } from "./kit/Toggle.tsx";

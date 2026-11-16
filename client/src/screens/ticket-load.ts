@@ -1,4 +1,4 @@
-// Fetching a ticket for the table: the dock's "Next ticket", the dealer panel's "Skip" and the
+// Fetching a ticket for the table: the dock's "Next ticket", the dealer menu's "Skip" and the
 // picker all share it. The picker shows the spinner and any failure; the latest load wins.
 import { errorMessage } from "../../../shared/errors.ts";
 import { createValue } from "../../../shared/value.ts";
