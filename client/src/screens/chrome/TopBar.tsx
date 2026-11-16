@@ -1,7 +1,7 @@
 // The always-visible top bar: only what you need at a glance, right to left from
-// the corner: the menu (☰, Esc), the mic, your coins (the leaderboard) and, for the dealer, the
-// dealer menu. A line about the connection shows up beside them while it's down.
-// Invite, Character, Sound and Help live in the game menu.
+// the corner: the menu (☰, Esc), the mic, your look (👕, so changing it mid-game is one tap), your
+// coins (the leaderboard) and, for the dealer, the dealer menu. A line about the connection shows
+// up beside them while it's down. Invite, Sound and Help live in the game menu.
 import { useRef } from "react";
 import { Button, CoinCounter, cx, KeyHint, Spinner, Tooltip } from "../../ui/index.ts";
 import { useAppState, useGame, useMe, useMicStatus, usePopup } from "../game.tsx";
@@ -53,6 +53,7 @@ export function TopBar() {
             </Button>
           </Tooltip>
         )}
+        <LookButton />
         <MicButton />
         <Button shape="pill" size="md" className={s.menu} aria-label="Menu" aria-keyshortcuts="Escape" {...menuTap}>
           <span aria-hidden className={s.burger}>
@@ -67,6 +68,19 @@ export function TopBar() {
         </Button>
       </div>
     </nav>
+  );
+}
+
+/** Opens the look screen: body, colour and hat, any time in the game. */
+function LookButton() {
+  const { store } = useGame();
+  const tap = useLetGoAfterTouch(() => store.lookOpened());
+  return (
+    <Tooltip text="Change my look" side="bottom">
+      <Button shape="round" size="md" className={s.look} aria-label="Change my look" {...tap}>
+        <span aria-hidden>👕</span>
+      </Button>
+    </Tooltip>
   );
 }
 

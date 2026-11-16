@@ -28,12 +28,15 @@ export interface RoundAction {
   danger: boolean;
 }
 
-type RoundView = Pick<TableView, "phase" | "queue" | "history" | "skipped" | "ticket">;
+type RoundView = Pick<TableView, "started" | "phase" | "queue" | "history" | "skipped" | "ticket">;
 
 /** A round is live while the cards are being played or are up, before the points are final. */
 export const isLive = (phase: Phase) => phase === "voting" || phase === "revealed";
 
-/** Restart, skip and cancel (live rounds only), then pick a ticket (always). Cancel goes last, set apart. */
+/**
+ * Restart, skip and cancel (live rounds only), then pick a ticket (always; in the lobby it lines
+ * tickets up for the game). Cancel goes last, set apart.
+ */
 export function roundActions(room: RoundView): RoundAction[] {
   const live = isLive(room.phase);
   const next = nextInQueue(room);
@@ -46,13 +49,7 @@ export function roundActions(room: RoundView): RoundAction[] {
       enabled: live,
       danger: false,
     },
-    {
-      id: "pick",
-      label: room.ticket ? "🗂️ Pick a different ticket" : "🗂️ Pick a ticket",
-      sub: "Paste one, or choose from the line",
-      enabled: true,
-      danger: false,
-    },
+    { id: "pick", ...pickLabel(room), enabled: true, danger: false },
     { id: "cancel", label: "✋ Cancel round", sub: "No payout, and the ticket goes", enabled: live, danger: true },
   ];
 }
@@ -68,7 +65,7 @@ export function roundCard(room: Pick<TableView, "started" | "phase" | "ticket" |
   if (!ticket)
     return room.started
       ? { key: "", title: "No ticket on the table", line: "Pick one to start a round.", empty: true }
-      : { key: "", title: "No ticket yet", line: "Start the game, then pick one.", empty: true };
+      : { key: "", title: "No ticket yet", line: "Line some up now, or pick one once you start.", empty: true };
   return { key: ticket.key, title: ticket.summary, line: roundLine(room), empty: false };
 }
 
@@ -89,6 +86,19 @@ function roundLine(room: Pick<TableView, "phase" | "players">): string {
 }
 
 // ---------------------------------------------------------------- the players tab
+
+function pickLabel(room: Pick<RoundView, "started" | "queue" | "ticket">): { label: string; sub: string } {
+  if (!room.started) {
+    const lined = room.queue.length;
+    return {
+      label: "🗂️ Line up tickets",
+      sub: lined ? `${lined} lined up so far` : "Paste an epic, or pick from the sprint",
+    };
+  }
+  return room.ticket
+    ? { label: "🗂️ Pick a different ticket", sub: "Paste one, or choose from the line" }
+    : { label: "🗂️ Pick a ticket", sub: "Paste one, or choose from the line" };
+}
 
 /** Skipping with a ticket lined up deals it, so it waits like any other ticket load. */
 export function skipPlan(room: RoundView): { t: "load"; text: string } | { t: "do" } {

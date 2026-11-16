@@ -58,6 +58,11 @@ test("round actions are only live while voting or revealed; picking a ticket alw
   const pick = (t: ReturnType<typeof ticket> | null) => roundActions(view({ ticket: t })).find((a) => a.id === "pick");
   assert.equal(pick(null)?.label, "🗂️ Pick a ticket");
   assert.equal(pick(ticket("SD-1"))?.label, "🗂️ Pick a different ticket");
+  const lobby = (queue: ReturnType<typeof q>[]) =>
+    roundActions(view({ started: false, queue })).find((a) => a.id === "pick");
+  assert.equal(lobby([])?.label, "🗂️ Line up tickets");
+  assert.equal(lobby([])?.sub, "Paste an epic, or pick from the sprint");
+  assert.equal(lobby([q("SD-1"), q("SD-2")])?.sub, "2 lined up so far");
 });
 
 test("skip says which ticket comes next, and waits for it like a load; with none queued it just skips", () => {

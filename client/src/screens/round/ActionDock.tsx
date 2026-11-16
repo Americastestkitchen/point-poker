@@ -1,7 +1,7 @@
 // The action dock (region "dock", bottom centre): what you can do this phase. dock.ts decides
 // what shows (title, hand, buttons); this draws it and sends the presses through actions.
-// In the lobby it holds the dealer's Start (where Reveal will be) and the ways to the house
-// rules, your look and the ticket picker.
+// In the lobby it holds the dealer's Start (where Reveal will be), and a player's way to their
+// look while they wait. The dealer sets the table up in the dealer menu.
 // It stays within the inherited --dock-max height, so the table stays clear.
 import { Button, ButtonLink, cx, Spinner } from "../../ui/index.ts";
 import { useAppState, useGame, usePopup, useRoom, useTicketLoad } from "../game.tsx";
@@ -195,26 +195,8 @@ function Action({ action }: { action: DockAction }) {
           Choose a different one
         </Button>
       );
-    case "rules":
-      return (
-        <Button variant="link" size="sm" className={s.link} onPress={() => store.popupOpened("dealer")}>
-          House rules
-        </Button>
-      );
     case "look":
-      return action.main ? (
-        <Button onPress={() => store.lookOpened()}>👕 Change my look</Button>
-      ) : (
-        <Button variant="link" size="sm" className={s.link} onPress={() => store.lookOpened()}>
-          Change my look
-        </Button>
-      );
-    case "lineUp":
-      return (
-        <Button variant="link" size="sm" className={s.link} onPress={picker.show}>
-          {action.lined ? `${action.lined} tickets lined up` : "Line up tickets"}
-        </Button>
-      );
+      return <Button onPress={() => store.lookOpened()}>👕 Change my look</Button>;
     case "jira":
       return (
         <ButtonLink href={action.url} variant="link" size="sm" className={s.link}>

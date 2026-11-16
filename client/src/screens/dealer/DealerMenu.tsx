@@ -1,6 +1,6 @@
 // The dealer menu (popup "dealer"): everything the dealer runs, in three tabs.
-// Round: the ticket on the table, then Restart vote, Skip ticket, Pick a ticket and Cancel round
-// (asks first); each one closes the menu. Players: who's here and their state, Kick (asks
+// Round: the ticket on the table, then Restart vote, Skip ticket, Pick a ticket (Line up tickets,
+// in the lobby) and Cancel round (asks first); each one closes the menu. Players: who's here and their state, Kick (asks
 // first) and the invite link. House rules: the cards, who plays, the room (HouseRules.tsx).
 // Opened from the top bar's 🎩 and the lobby dock's "House rules"; it opens on House rules in
 // the lobby and on Round once the game is on. What shows is decided in panel.ts.

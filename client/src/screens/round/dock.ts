@@ -72,12 +72,8 @@ export type DockAction =
   | { t: "picker"; main: boolean }
   | { t: "jira"; url: string }
   // ---- the lobby's
-  /** Open the house rules. */
-  | { t: "rules" }
-  /** Open the look screen: `main` is a player's one button, otherwise a quiet link beside the dealer's. */
-  | { t: "look"; main: boolean }
-  /** Open the ticket picker to line tickets up; `lined` is how many already are. */
-  | { t: "lineUp"; lined: number };
+  /** Open the look screen: a player's one button while they wait (the dealer's set-up lives in the dealer menu). */
+  | { t: "look" };
 
 export interface Dock {
   /** Changes with each phase and round, so the dock plays its entrance again. */
@@ -110,13 +106,13 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
 
   // the lobby: nothing's been dealt, everyone's watching the room fill up
   if (!room.started) {
-    const lined = room.queue.length;
     return dealer
       ? {
           key: "lobby",
           title: [room.players.length > 1 ? "Everyone here?" : "Send the invite, then deal 'em in"],
           body: { t: "start", players: room.players.length },
-          actions: [{ t: "rules" }, { t: "look", main: false }, { t: "lineUp", lined }],
+          // the house rules and lining up tickets are in the dealer menu; your look is in the top bar
+          actions: [],
         }
       : {
           key: "lobby",
@@ -125,7 +121,7 @@ export function dockModel({ room, meId, myVote }: DockInput): Dock {
             t: "waiting",
             text: `Waiting for ${room.players.find((p) => p.isDealer)?.name ?? "the dealer"} to start`,
           },
-          actions: [{ t: "look", main: true }],
+          actions: [{ t: "look" }],
         };
   }
 

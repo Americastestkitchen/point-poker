@@ -6,7 +6,7 @@
 // opens this popup with the reason in the form (ticketLoad already bonked; no toast here).
 // It opens by itself once per stretch without a ticket and closes when one is dealt (picker.ts
 // pickerCue), and waits its turn if another popup or the look editor is open. In the lobby it
-// stays shut (the dock's "Line up tickets" opens it), and after Start it waits for you to sit down. It's always dismissable, even with no ticket: the dock's
+// stays shut (the dealer menu's "Line up tickets" opens it), and after Start it waits for you to sit down. It's always dismissable, even with no ticket: the dock's
 // "＋ Add a Jira ticket" opens it again, and the Esc game menu stays reachable.
 // Dealer only: it follows the role. The decisions live in picker.ts.
 import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
